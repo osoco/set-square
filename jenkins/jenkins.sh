@@ -6,7 +6,7 @@ depend() {
 }
 
 JENKINS_PIDFILE=/var/run/jenkins/jenkins.pid
-JENKINS_WAR=/usr/lib/jenkins/jenkins.war
+JENKINS_WAR=/var/lib/jenkins/jenkins.war
 
 RUN_AS=jenkins
 
