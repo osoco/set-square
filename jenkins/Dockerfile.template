@@ -5,13 +5,14 @@ MAINTAINER ${MAINTAINER}
 ENV HOME /root
 USER root
 RUN echo 'USE="${USE} -X -cups"' >> /etc/portage/make.conf
-#RUN emerge -v dev-java/icedtea-bin
+RUN mkdir -p /etc/portage/package.license /etc/portage/package.keywords/dev-java /etc/portage/package.use/dev-java
+RUN echo 'dev-java/oracle-jdk-bin Oracle-BCLA-JavaSE' >> /etc/portage/package.license/oracle-jdk-bin
+RUN echo 'dev-java/oracle-jdk-bin ~amd64' >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
+RUN echo 'dev-java/oracle-jdk-bin -X -alsa -examples -nsplugin -source -doc' >> /etc/portage/package.use/dev-java/oracle-jdk-bin
 #RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u11-b12/jdk-8u11-linux-x64.tar.gz" -O /usr/portage/distfiles/jdk-8u11-linux-x64.tar.gz
-RUN mkdir -p /etc/portage/package.license /etc/portage/package.keywords
-RUN echo 'dev-java/oracle-jdk-bin Oracle-BCLA-JavaSE' >> /etc/portage/package.license/java
-RUN echo '=dev-java/oracle-jdk-bin-1.8.0.5 ~amd64' >> /etc/portage/package.keywords/java
 RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u5-b13/jdk-8u5-linux-x64.tar.gz -O /usr/portage/distfiles/jdk-8u5-linux-x64.tar.gz
-RUN emerge -uv '=dev-java/oracle-jdk-bin-1.8.0.5'
+#ADD jdk-8u5-linux-x64.tar.gz /usr/portage/distfiles/
+RUN emerge -u 'dev-java/oracle-jdk-bin'
 RUN eselect news read new
 RUN eselect java-vm set system oracle-jdk-bin-1.8
 RUN emerge -C icedtea-bin
@@ -21,12 +22,13 @@ RUN echo 'Mount /usr/portage as a volume should you need it'
 RUN mkdir -p /var/lib/jenkins
 RUN wget -O /var/lib/jenkins/jenkins.war http://mirrors.jenkins-ci.org/war/latest/jenkins.war
 RUN chmod 644 /var/lib/jenkins/jenkins.war
+# /var/lib/jenkins/home should be visible from outside to manage its configuration
 RUN /usr/sbin/useradd -U -m -d /var/lib/jenkins/home -s /bin/bash -c "Jenkins user (/etc/init.d/jenkins)" jenkins
 ADD jenkins-.bashrc /var/lib/jenkins/home/.bashrc
 ADD jenkins.sh /etc/init.d/jenkins
 RUN chmod 777 /etc/init.d/jenkins
 ADD jenkins.conf /etc/conf.d/jenkins
-RUN mkdir /var/run/jenkins /var/log/jenkins
+RUN mkdir /var/run/jenkins /var/log/jenkins 
 RUN chown -R jenkins /var/lib/jenkins /var/run/jenkins /var/log/jenkins
 RUN chmod 755 /var/run/jenkins /var/log/jenkins
 RUN rc-update add jenkins default

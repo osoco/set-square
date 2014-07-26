@@ -38,7 +38,8 @@ RUN echo '=net-irc/irker-1.20 ~amd64' >> /etc/portage/package.accept_keywords
 # [1]: https://gitorious.org/irker/irker/commit/79a38e602ba429fef7d5842d3390c51e631795f6
 # [2]: https://bugs.gentoo.org/show_bug.cgi?id=438240
 # [3]: https://bugs.gentoo.org/show_bug.cgi?id=491808#c0
-RUN echo '=dev-python/irc-8.5.4 ~amd64' >> /etc/portage/package.accept_keywords
+RUN mkdir -p /etc/portage/package.keywords/net-irc
+RUN echo 'dev-python/irc ~amd64' >> /etc/portage/package.keywords/net-irc/irker
 RUN emerge -v dev-python/setuptools
 
 RUN emerge -v net-irc/irker
