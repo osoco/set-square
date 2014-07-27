@@ -7,7 +7,8 @@ USER root
 RUN echo 'USE="${USE} -X -cups"' >> /etc/portage/make.conf
 RUN mkdir -p /etc/portage/package.license /etc/portage/package.keywords/dev-java /etc/portage/package.use/dev-java
 RUN echo 'dev-java/oracle-jdk-bin Oracle-BCLA-JavaSE' >> /etc/portage/package.license/oracle-jdk-bin
-RUN echo 'dev-java/oracle-jdk-bin ~amd64' >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
+RUN echo "dev-java/oracle-jdk-bin ~amd64" >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
+#RUN echo "dev-java/oracle-jdk-bin ~x86" >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
 RUN echo 'dev-java/oracle-jdk-bin -X -alsa -examples -nsplugin -source -doc' >> /etc/portage/package.use/dev-java/oracle-jdk-bin
 #RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u11-b12/jdk-8u11-linux-x64.tar.gz" -O /usr/portage/distfiles/jdk-8u11-linux-x64.tar.gz
 RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u5-b13/jdk-8u5-linux-x64.tar.gz -O /usr/portage/distfiles/jdk-8u5-linux-x64.tar.gz
@@ -16,9 +17,13 @@ RUN emerge -u 'dev-java/oracle-jdk-bin'
 RUN eselect news read new
 RUN eselect java-vm set system oracle-jdk-bin-1.8
 RUN emerge -C icedtea-bin
+RUN echo "dev-java/maven-bin ~amd64" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN echo "dev-java/maven-bin ~x86" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN echo "dev-java/ant ~amd64" >> /etc/portage/package.keywords/dev-java/ant
+#RUN echo "dev-java/ant ~x86" >> /etc/portage/package.keywords/dev-java/ant
+RUN emerge -u dev-vcs/git dev-java/maven-bin
 RUN rm -rf /usr/portage/*
 RUN echo 'Mount /usr/portage as a volume should you need it'
-
 RUN mkdir -p /var/lib/jenkins
 RUN wget -O /var/lib/jenkins/jenkins.war http://mirrors.jenkins-ci.org/war/latest/jenkins.war
 RUN chmod 644 /var/lib/jenkins/jenkins.war
