@@ -1,1 +1,1 @@
-export JENKINS_HOME=/jenkins
+export JENKINS_HOME=/var/lib/jenkins
