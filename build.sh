@@ -216,7 +216,7 @@ build_repo()
 				< "${REPO}/Dockerfile.template" > "${REPO}/Dockerfile"
 
 		msg "build ${NAMESPACE}/${REPO}:${DATE}"
-		"${DOCKER}" build ${BUILD_OPTS} -t "${NAMESPACE}/${REPO}:${DATE}" "${REPO}" || die "failed to build"
+		"${DOCKER}" build ${BUILD_OPTS} -t "${NAMESPACE}/${REPO}:${DATE}" -rm=true "${REPO}" || die "failed to build"
 	fi
 	msg "tag ${NAMESPACE}/${REPO}:latest"
 	"${DOCKER}" tag -f "${NAMESPACE}/${REPO}:${DATE}" "${NAMESPACE}/${REPO}:latest" || die "failed to tag"

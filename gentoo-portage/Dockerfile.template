@@ -26,7 +26,8 @@ FROM ${NAMESPACE}/gentoo:${TAG}
 MAINTAINER ${MAINTAINER}
 RUN echo 'GENTOO_MIRRORS="http://distfiles.gentoo.org/"' >> /etc/portage/make.conf
 #RUN echo 'SYNC="rsync://rsync.us.gentoo.org"' >> /etc/portage/make.conf
-RUN mkdir -p /usr/portage
+RUN mkdir -p /usr/portage/metadata
 RUN chown -R portage:portage /usr/portage
+RUN echo 'masters = gentoo' >> /usr/portage/metadata/layout.conf
 RUN emerge-webrsync --revert=${TAG}
 RUN eselect news read new

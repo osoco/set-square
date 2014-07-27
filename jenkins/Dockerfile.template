@@ -1,4 +1,4 @@
-FROM wking/gentoo-syslog:latest
+FROM ${NAMESPACE}/gentoo-syslog:latest
 MAINTAINER ${MAINTAINER}
 #VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
 # Set correct environment variables.
