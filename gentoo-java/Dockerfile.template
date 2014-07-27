@@ -1,30 +1,25 @@
-# Copyright (C) 2013 W. Trevor King <wking@tremily.us>
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# * Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
-#
-# * Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-
 FROM ${NAMESPACE}/gentoo-syslog:${TAG}
 MAINTAINER ${MAINTAINER}
 #VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
 RUN echo 'USE="${USE} -X -cups"' >> /etc/portage/make.conf
-RUN emerge -v dev-java/icedtea-bin
+RUN mkdir -p /etc/portage/package.license /etc/portage/package.keywords/dev-java /etc/portage/package.use/dev-java
+RUN echo 'dev-java/oracle-jdk-bin Oracle-BCLA-JavaSE' >> /etc/portage/package.license/oracle-jdk-bin
+RUN echo "dev-java/oracle-jdk-bin ~amd64" >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
+#RUN echo "dev-java/oracle-jdk-bin ~x86" >> /etc/portage/package.keywords/dev-java/oracle-jdk-bin
+RUN echo 'dev-java/oracle-jdk-bin -X -alsa -examples -nsplugin -source -doc' >> /etc/portage/package.use/dev-java/oracle-jdk-bin
+#RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u11-b12/jdk-8u11-linux-x64.tar.gz" -O /usr/portage/distfiles/jdk-8u11-linux-x64.tar.gz
+RUN wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u5-b13/jdk-8u5-linux-x64.tar.gz -O /usr/portage/distfiles/jdk-8u5-linux-x64.tar.gz
+#ADD jdk-8u5-linux-x64.tar.gz /usr/portage/distfiles/
+RUN emerge -u 'dev-java/oracle-jdk-bin'
 RUN eselect news read new
+RUN eselect java-vm set system oracle-jdk-bin-1.8
+RUN emerge -C icedtea-bin
+RUN echo "dev-java/maven-bin ~amd64" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN echo "dev-java/maven-bin ~x86" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN echo "dev-java/ant ~amd64" >> /etc/portage/package.keywords/dev-java/ant
+#RUN echo "dev-java/ant ~x86" >> /etc/portage/package.keywords/dev-java/ant
+RUN emerge -u dev-java/maven-bin
+RUN touch /run/openrc/softlevel 
