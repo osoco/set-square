@@ -201,7 +201,7 @@ check() {
 
 #
 ARTIFACTORY_PID=""
-artDefaultFile="/etc/opt/jfrog/artifactory/default"
+artDefaultFile="/etc/artifactory/default"
 
 . $artDefaultFile || errorArtHome "ERROR: $artDefaultFile does not exist or not executable"
 

@@ -9,18 +9,21 @@ RUN emerge -u dev-vcs/git
 RUN rm -rf /usr/portage/*
 RUN echo 'Mount /usr/portage as a volume should you need it'
 
-RUN mkdir -p /var/lib/artifactory
+RUN mkdir -p /var/lib/
 RUN wget -O /var/lib/artifactory-3.3.0.zip http://dl.bintray.com/jfrog/artifactory/artifactory-3.3.0.zip
 RUN cd /var/lib && unzip artifactory-3.3.0.zip && mv artifactory-3.3.0 artifactory
+RUN rm -f /var/lib/artifactory-3.3.0.zip
 # /var/lib/artifactory should be visible from outside to manage its configuration
 RUN /usr/sbin/useradd -U -m -d /var/lib/artifactory -s /bin/bash -c "Artifactory user (/etc/init.d/artifactory)" artifactory
 ADD artifactory-.bashrc /var/lib/artifactory/.bashrc
 ADD artifactory.sh /etc/init.d/artifactory
 RUN chmod 777 /etc/init.d/artifactory
 ADD artifactory.conf /etc/conf.d/artifactory
-RUN mkdir /var/run/artifactory /var/log/artifactory
-RUN chown -R artifactory /var/lib/artifactory /var/run/artifactory /var/log/artifactory
-RUN chmod 755 /var/run/artifactory /var/log/artifactory
+RUN mkdir /etc/artifactory /var/run/artifactory /var/log/artifactory
+RUN chown -R artifactory /etc/artifactory /var/lib/artifactory /var/run/artifactory /var/log/artifactory
+RUN chmod 755 /etc/artifactory /var/run/artifactory /var/log/artifactory
+RUN cd /var/lib/artifactory/tomcat && ln -s /var/log/artifactory logs
+ADD artifactory-default.conf /etc/artifactory/default
 RUN rc-update add artifactory default
 
 EXPOSE 8080
