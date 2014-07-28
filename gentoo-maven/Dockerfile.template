@@ -1,0 +1,11 @@
+FROM ${NAMESPACE}/gentoo-java:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+#RUN echo "dev-java/maven-bin ~amd64" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN echo "dev-java/maven-bin ~x86" >> /etc/portage/package.keywords/dev-java/maven-bin
+#RUN emerge -u dev-java/maven-bin
+RUN wget -O /usr/lib/apache-maven-3.2.2-bin.tar.gz http://apache.mirrors.hoobly.com/maven/maven-3/3.2.2/binaries/apache-maven-3.2.2-bin.tar.gz
+RUN cd /usr/lib && tar xvfz /usr/lib/apache-maven-3.2.2-bin.tar.gz && mv /usr/lib/apache-maven-3.2.2 /usr/lib/apache-maven
