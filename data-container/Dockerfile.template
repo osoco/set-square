@@ -1,0 +1,8 @@
+FROM busybox
+MAINTAINER ${MAINTAINER}
+
+VOLUME /var/lib/jenkins
+VOLUME /var/lib/artifactory
+VOLUME /var/lib/mysql
+
+CMD /bin/sh

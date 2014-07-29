@@ -13,7 +13,7 @@ RUN mkdir -p /var/lib/
 RUN wget -O /var/lib/artifactory-3.3.0.zip http://dl.bintray.com/jfrog/artifactory/artifactory-3.3.0.zip
 RUN cd /var/lib && unzip artifactory-3.3.0.zip && mv artifactory-3.3.0 artifactory
 RUN rm -f /var/lib/artifactory-3.3.0.zip
-# /var/lib/artifactory should be visible from outside to manage its configuration
+VOLUME /var/lib/artifactory
 RUN /usr/sbin/useradd -U -m -d /var/lib/artifactory -s /bin/bash -c "Artifactory user (/etc/init.d/artifactory)" artifactory
 ADD artifactory-.bashrc /var/lib/artifactory/.bashrc
 ADD artifactory.sh /etc/init.d/artifactory

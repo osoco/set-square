@@ -13,7 +13,7 @@ RUN echo 'Mount /usr/portage as a volume should you need it'
 RUN mkdir -p /var/lib/jenkins
 RUN wget -O /var/lib/jenkins/jenkins.war http://mirrors.jenkins-ci.org/war/latest/jenkins.war
 RUN chmod 644 /var/lib/jenkins/jenkins.war
-# /var/lib/jenkins/home should be visible from outside to manage its configuration
+VOLUME /var/lib/jenkins
 RUN /usr/sbin/useradd -U -m -d /var/lib/jenkins/home -s /bin/bash -c "Jenkins user (/etc/init.d/jenkins)" jenkins
 ADD jenkins-.bashrc /var/lib/jenkins/home/.bashrc
 ADD jenkins.sh /etc/init.d/jenkins
