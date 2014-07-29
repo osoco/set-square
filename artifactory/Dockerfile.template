@@ -26,4 +26,4 @@ RUN cd /var/lib/artifactory/tomcat && ln -s /var/log/artifactory logs
 ADD artifactory-default.conf /etc/artifactory/default
 RUN rc-update add artifactory default
 
-EXPOSE 8080
+EXPOSE 8081
