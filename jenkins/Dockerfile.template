@@ -13,7 +13,6 @@ RUN echo 'Mount /usr/portage as a volume should you need it'
 RUN mkdir -p /var/lib/jenkins /opt/jenkins
 RUN wget -O /opt/jenkins/jenkins.war http://mirrors.jenkins-ci.org/war/latest/jenkins.war
 RUN chmod 644 /opt/jenkins/jenkins.war
-VOLUME /var/lib/jenkins
 RUN /usr/sbin/useradd -U -m -d /var/lib/jenkins -s /bin/bash -c "Jenkins user (/etc/init.d/jenkins)" jenkins
 ADD jenkins-.bashrc /var/lib/jenkins/.bashrc
 ADD jenkins.sh /etc/init.d/jenkins
