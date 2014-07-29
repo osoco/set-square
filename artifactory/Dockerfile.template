@@ -8,7 +8,7 @@ USER root
 RUN rm -rf /usr/portage/*
 RUN echo 'Mount /usr/portage as a volume should you need it'
 
-VOLUME /var/lib/artifactory
+VOLUME /var/artifactory
 
 RUN mkdir -p /var/lib/
 RUN wget -O /var/lib/artifactory-3.3.0.zip http://dl.bintray.com/jfrog/artifactory/artifactory-3.3.0.zip
