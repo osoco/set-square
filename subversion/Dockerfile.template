@@ -9,5 +9,8 @@ RUN echo 'dev-vcs/subversion berkdb dso nls apache2 extras' >> /etc/portage/pack
 RUN echo 'www-servers/apache -doc' >> /etc/portage/package.use/www-servers/apache2
 RUN echo 'APACHE2_MODULES="vhost_alias authz_default authz_groupfile authz_host authz_owner authz_user auth_basic auth_digest dav dav_fs dav_lock"' >> /etc/portage/make.conf
 RUN emerge -u 'dev-vcs/subversion'
+RUN mkdir /var/svn
+RUN chown apache:apache /var/svn
+VOLUME /var/svn
 RUN eselect news read new
 RUN touch /run/openrc/softlevel 
