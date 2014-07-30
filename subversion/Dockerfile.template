@@ -1,0 +1,13 @@
+FROM ${NAMESPACE}/gentoo-syslog:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+RUN mkdir -p /etc/portage/package.use/dev-vcs /etc/portage/package.use/www-servers
+RUN echo 'dev-vcs/subversion berkdb dso nls apache2 extras' >> /etc/portage/package.use/dev-vcs/subversion
+RUN echo 'www-servers/apache -doc' >> /etc/portage/package.use/www-servers/apache2
+RUN echo 'APACHE2_MODULES="vhost_alias authz_default authz_groupfile authz_host authz_owner authz_user auth_basic auth_digest dav dav_fs dav_lock"' >> /etc/portage/make.conf
+RUN emerge -u 'dev-vcs/subversion'
+RUN eselect news read new
+RUN touch /run/openrc/softlevel 
