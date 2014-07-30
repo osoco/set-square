@@ -201,7 +201,7 @@ check() {
 
 #
 ARTIFACTORY_PID=""
-artDefaultFile="/etc/artifactory/default"
+artDefaultFile="/etc/conf.d/artifactory"
 
 . $artDefaultFile || errorArtHome "ERROR: $artDefaultFile does not exist or not executable"
 
