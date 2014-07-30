@@ -23,6 +23,7 @@ RUN mkdir /etc/artifactory /var/run/artifactory /var/log/artifactory
 RUN chown -R artifactory /etc/artifactory /var/lib/artifactory /var/run/artifactory /var/log/artifactory
 RUN chmod 755 /etc/artifactory /var/run/artifactory /var/log/artifactory
 RUN cd /var/lib/artifactory/tomcat && ln -s /var/log/artifactory logs
+RUN cd /var/lib/artifactory/tomcat/webapps && ln -s /var/lib/artifactory/webapps/artifactory.war .
 ADD artifactory-default.conf /etc/artifactory/default
 RUN rc-update add artifactory default
 
