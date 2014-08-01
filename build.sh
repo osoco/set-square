@@ -204,17 +204,20 @@ build_repo()
 			extract_busybox "${REPO}"
 		fi
 
-		env -i \
-			NAMESPACE="${NAMESPACE}" \
-			TAG="${DATE}" \
-			MAINTAINER="${AUTHOR}" \
-			envsubst '
-				${NAMESPACE}
-				${TAG}
-				${MAINTAINER}
-				' \
-				< "${REPO}/Dockerfile.template" > "${REPO}/Dockerfile"
-
+		for f in ${REPO}/*.template; do
+			env -i \
+				NAMESPACE="${NAMESPACE}" \
+				TAG="${DATE}" \
+				MAINTAINER="${AUTHOR}" \
+				VHOST="${VHOST}" \
+				envsubst '
+					${NAMESPACE}
+					${TAG}
+					${MAINTAINER}
+					${VHOST}
+					' \
+					< "${REPO}/${f}.template" > "${REPO}/$(basename ${f} .template)"
+		done
 		msg "build ${NAMESPACE}/${REPO}:${DATE}"
 		"${DOCKER}" build ${BUILD_OPTS} -t "${NAMESPACE}/${REPO}:${DATE}" --rm=true "${REPO}" || die "failed to build"
 	fi

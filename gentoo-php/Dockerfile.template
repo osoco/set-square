@@ -1,0 +1,15 @@
+FROM ${NAMESPACE}/gentoo-syslog:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+RUN eselect profile set 1
+RUN find /usr/portage -maxdepth 1 -type d | grep -v profiles | awk '{printf("rm -rf %s\n", $0);}' | sh
+RUN echo 'Mount /usr/portage as a volume should you need it'
+
+RUN mkdir -p /etc/portage/package.keywords/virtual
+RUN echo 'virtual/httpd-php ~amd64' >> /etc/portage/package.keywords/virtual/httpd-php
+RUN emerge -u 'virtual/httpd-php'
+VOLUME /var/www
+RUN eselect news read new

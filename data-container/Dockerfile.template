@@ -3,5 +3,8 @@ MAINTAINER ${MAINTAINER}
 
 VOLUME /var/artifactory
 VOLUME /var/lib/mysql
+VOLUME /var/svn
+VOLUME /var/git
+VOLUME /var/log/
 
 CMD /bin/sh

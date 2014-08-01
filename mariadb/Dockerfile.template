@@ -1,0 +1,18 @@
+FROM ${NAMESPACE}/gentoo-syslog:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+RUN eselect profile set 1
+#RUN mkdir -p /etc/portage/package.use/dev-db
+#RUN echo 'dev-db/mariadb big-tables' >> /etc/portage/package.use/dev-db/mariadb
+RUN mkdir -p /etc/portage/package.keywords/dev-db
+RUN echo 'dev-db/mariadb ~amd64' >> /etc/portage/package.keywords/dev-db/mariadb
+RUN echo 'dev-db/mariadb ~x86' >> /etc/portage/package.keywords/dev-db/mariadb
+RUN emerge -u 'dev-db/mariadb'
+VOLUME /var/lib/mysql
+VOLUME /var/svn
+RUN rc-update add mysql default
+RUN eselect news read new
+RUN touch /run/openrc/softlevel 

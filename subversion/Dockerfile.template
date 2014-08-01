@@ -11,6 +11,8 @@ RUN echo 'APACHE2_MODULES="vhost_alias authz_default authz_groupfile authz_host 
 RUN emerge -u 'dev-vcs/subversion'
 RUN mkdir /var/svn
 RUN chown apache:apache /var/svn
+ADD vhost.conf /etc/apache2/vhosts.d/01-${VHOST}.conf
+ADD apache2.conf /etc/conf.d/apache2
 VOLUME /var/svn
 RUN eselect news read new
 RUN touch /run/openrc/softlevel 

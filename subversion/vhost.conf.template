@@ -1,0 +1,32 @@
+<IfDefine SVN_VHOST>
+Listen 80
+NameVirtualHost *:80
+<VirtualHost *:80>
+     ServerAdmin hostmaster@${VHOST}
+     ServerName ${VHOST}
+     ErrorLog /var/log/apache2/${VHOST}-error_log
+
+    ExpiresActive on
+    ExpiresDefault "access plus 1 years"
+    SetOutputFilter DEFLATE
+    FileETag MTime Size
+
+    <Location />
+      DAV svn
+      SVNPath /var/svn/
+#      SVNAdvertiseV2Protocol off
+#      AuthType Basic
+#      AuthName "Subversion repository"
+#      AuthUserFile /var/svn/.htpasswd
+#      AuthzSVNAccessFile /var/svn/svn_access_control
+      Order allow,deny
+      Allow from all
+
+      # For any operations other than these, require an authenticated user.
+#      <LimitExcept GET PROPFIND OPTIONS>
+#        Require valid-user
+#      </LimitExcept>
+    </Location>
+
+</VirtualHost>
+</IfDefine>
