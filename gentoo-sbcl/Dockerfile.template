@@ -10,7 +10,7 @@ RUN echo 'dev-lisp/sbcl asdf debug doc source threads unicode' > /etc/portage/pa
 RUN echo 'media-libs/gd png fontconfig jpeg truetype' >> /etc/portage/package.use/dev-lisp/sbcl
 RUN emerge -u 'dev-lisp/sbcl'
 # APACHE
-RUN echo 'www-servers/apache 
+RUN echo 'www-servers/apache'
 RUN echo 'APACHE2_MODULES="proxy proxy_balancer rewrite vhost_alias"' >> /etc/portage/make.conf
 RUN emerge -u 'www-servers/apache'
 RUN rc-update add apache2 default
