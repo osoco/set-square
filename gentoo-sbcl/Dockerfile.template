@@ -7,6 +7,7 @@ USER root
 RUN mkdir -p /etc/portage/package.use/dev-lisp /etc/portage/package.use/www-servers /etc/portage/package.use/dev-vcs
 # SBCL
 RUN echo 'dev-lisp/sbcl asdf debug doc source threads unicode' > /etc/portage/package.use/dev-lisp/sbcl
+RUN echo 'media-libs/gd png fontconfig jpeg truetype' >> /etc/portage/package.use/dev-lisp/sbcl
 RUN emerge -u 'dev-lisp/sbcl'
 # APACHE
 RUN echo 'www-servers/apache 
