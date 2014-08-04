@@ -1,0 +1,14 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# User specific aliases and functions
+export ORACLE_HOME=/usr/lib/oracle/11.2/client64
+export TNS_ADMIN=/home/ven24/oracle
+export PATH=${PATH}:${ORACLE_HOME}/bin
+export LD_LIBRARY_PATH=${ORACLE_HOME}/lib
+
+# User specific aliases and functions
