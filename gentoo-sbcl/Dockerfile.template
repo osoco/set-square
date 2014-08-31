@@ -1,0 +1,20 @@
+FROM ${NAMESPACE}/gentoo-syslog:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+RUN mkdir -p /etc/portage/package.use/dev-lisp /etc/portage/package.use/www-servers /etc/portage/package.use/dev-vcs
+# SBCL
+RUN echo 'dev-lisp/sbcl asdf debug doc source threads unicode' > /etc/portage/package.use/dev-lisp/sbcl
+RUN echo 'media-libs/gd png fontconfig jpeg truetype' >> /etc/portage/package.use/dev-lisp/sbcl
+RUN emerge -u 'dev-lisp/sbcl'
+# APACHE
+RUN echo 'www-servers/apache'
+RUN echo 'APACHE2_MODULES="proxy proxy_balancer rewrite vhost_alias"' >> /etc/portage/make.conf
+RUN emerge -u 'www-servers/apache'
+RUN rc-update add apache2 default
+# Clean up
+RUN eselect news read new
+RUN eselect profile set 1
+VOLUME /var/lib/sbcl

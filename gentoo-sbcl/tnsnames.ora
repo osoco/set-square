@@ -1,0 +1,28 @@
+PRO_RAC_VEN01=
+  (DESCRIPTION=
+    (FAILOVER = true)
+    (CONNECT_TIMEOUT=5)
+    (TRANSPORT_CONNECT_TIMEOUT=3)
+    (RETRY_COUNT=2)
+    (SDU=32768)
+    (TDU=32768)
+    (ADDRESS_LIST =
+      (ADDRESS=
+        (PROTOCOL=TCP)
+        (HOST=db-rac-scan-c.live.tipp24.net)
+        (PORT=1521)
+      )
+      (ADDRESS=
+        (PROTOCOL=TCP)
+        (HOST=db-rac-scan-d.live.tipp24.net)
+        (PORT=1521)
+      )
+      (SEND_BUF_SIZE=32768)
+      (RECV_BUF_SIZE=32768)
+   )
+
+   (CONNECT_DATA=
+     (SERVER=dedicated)
+     (SERVICE_NAME=VEN01_RW)
+   )
+  )
