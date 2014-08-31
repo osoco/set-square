@@ -17,5 +17,5 @@ RUN echo 'app-admin/eselect-php fpm' >> /etc/portage/package.use/virtual/httpd-p
 RUN echo 'dev-lang/php apache2 fpm mysqli' >> /etc/portage/package.use/virtual/httpd-php
 RUN echo 'app-admin/eselect-php apache2' >> /etc/portage/package.use/dev-lang/php
 RUN echo 'dev-php/PEAR-MDB2 mysqli' >> /etc/portage/package.use/dev-php/PEAR
-RUN emerge -u 'virtual/httpd-php dev-php/PEAR-DB dev-php/PEAR-MDB2_Driver_mysqli dev-php/PEAR-MDB2'
+RUN emerge -u virtual/httpd-php dev-php/PEAR-DB dev-php/PEAR-MDB2_Driver_mysqli dev-php/PEAR-MDB2
 ADD 70_mod_php5.conf /etc/apache2/modules.d/70_mod_php5.conf
