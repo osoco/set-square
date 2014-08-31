@@ -24,9 +24,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-AUTHOR="${AUTHOR:-W. Trevor King <wking@tremily.us>}"
-NAMESPACE="${NAMESPACE:-wking}"
-DATE="${DATE:-20140717}"
+AUTHOR="${AUTHOR:-rydnr <rydnr@acm-sl.org>}"
+NAMESPACE="${NAMESPACE:-rydnr}"
+DATE="${DATE:-20140724}"
 MIRROR="${MIRROR:-http://distfiles.gentoo.org/}"
 ARCH_URL="${ARCH_URL:-${MIRROR}releases/amd64/autobuilds/${DATE}/}"
 STAGE3="${STAGE3:-stage3-amd64-${DATE}.tar.bz2}"
@@ -39,6 +39,16 @@ PORTAGE_SIG="${PORTAGE_SIG:-${PORTAGE}.gpgsig}"
 DOCKER_IO=$(command -v docker.io)
 DOCKER="${DOCKER:-${DOCKER_IO:-docker}}"
 BUILD_OPTS="${BUILD_OPTS:-}"
+
+GETBOO_DOMAIN="${GETBOO_DOMAIN:-bm.acm-sl.org}"
+HTTPS_DOMAIN="${HTTPS_DOMAIN:-${GETBOO_DOMAIN}}"
+MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-changeme}"
+MYSQL_ADMIN_USER="${MYSQL_ADMIN_USER:-admin}"
+MYSQL_ADMIN_PASSWORD="${MYSQL_ADMIN_PASSWORD:-changeme}"
+GETBOO_DB_NAME="${GETBOO_DB_NAME:-bm}"
+GETBOO_DB_USERNAME="${GETBOO_DB_USERNAME:-bm}"
+GETBOO_DB_PASSWORD="${GETBOO_DB_PASSWORD:-changeme}"
+GETBOO_DB_TABLE_PREFIX="${GETBOO_DB_TABLE_PREFIX:-}"
 
 REPOS="${REPOS:-
 	portage
@@ -66,6 +76,9 @@ REPOS="${REPOS:-
 	redis
 	salt-minion
 	stunnel
+	mariadb
+	gentoo-php
+	getboo
 	}"
 
 die()
@@ -210,13 +223,31 @@ build_repo()
 				TAG="${DATE}" \
 				MAINTAINER="${AUTHOR}" \
 				VHOST="${VHOST}" \
+				GETBOO_DOMAIN="${GETBOO_DOMAIN}" \
+				HTTPS_DOMAIN="${HTTPS_DOMAIN}" \
+				MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD}" \
+				MYSQL_ADMIN_USER="${MYSQL_ADMIN_USER}" \
+				MYSQL_ADMIN_PASSWORD="${MYSQL_ADMIN_PASSWORD}" \
+				GETBOO_DB_NAME="${GETBOO_DB_NAME}" \
+				GETBOO_DB_USERNAME="${GETBOO_DB_USERNAME}" \
+				GETBOO_DB_PASSWORD="${GETBOO_DB_PASSWORD}" \
+				GETBOO_DB_TABLE_PREFIX="${GETBOO_DB_TABLE_PREFIX}" \
 				envsubst '
 					${NAMESPACE}
 					${TAG}
 					${MAINTAINER}
 					${VHOST}
+					${GETBOO_DOMAIN}
+					${HTTPS_DOMAIN}
+					${MYSQL_ROOT_PASSWORD}
+					${MYSQL_ADMIN_USER}
+					${MYSQL_ADMIN_PASSWORD}
+					${GETBOO_DB_NAME}
+					${GETBOO_DB_USERNAME}
+					${GETBOO_DB_PASSWORD}
+					${GETBOO_DB_TABLE_PREFIX}
 					' \
-					< "${REPO}/${f}.template" > "${REPO}/$(basename ${f} .template)"
+					< "${f}" > "${REPO}/$(basename ${f} .template)"
 		done
 		msg "build ${NAMESPACE}/${REPO}:${DATE}"
 		"${DOCKER}" build ${BUILD_OPTS} -t "${NAMESPACE}/${REPO}:${DATE}" --rm=true "${REPO}" || die "failed to build"

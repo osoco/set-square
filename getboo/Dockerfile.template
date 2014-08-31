@@ -1,0 +1,26 @@
+FROM ${NAMESPACE}/gentoo-php:${TAG}
+MAINTAINER ${MAINTAINER}
+#VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
+# Set correct environment variables.
+ENV HOME /root
+USER root
+RUN eselect profile set 1
+
+RUN echo 1
+RUN cd /var/www && wget -O /tmp/getboo-1.04.zip http://downloads.sourceforge.net/project/getboo/getboo/1.04/getboo.1.04.zip
+RUN ls -ltia /tmp
+RUN mkdir /usr/local/src && cd /tmp/ && unzip /tmp/getboo-1.04.zip && mv /tmp/getboo.1.04 /usr/local/src/getboo-1.04 && ln -s /usr/local/src/getboo-1.04 /usr/local/src/getboo
+ADD getboo.conf /etc/apache2/vhosts.d/01-${GETBOO_DOMAIN}.conf
+RUN sed -i 's/APACHE2_OPTS=.*/APACHE2_OPTS="-D PROXY -D GETBOO_VHOST -D PHP -D PHP5 "/g' /etc/conf.d/apache2
+RUN chown -R apache:apache /usr/local/src/getboo*
+ADD config.inc.php /usr/local/src/getboo/config.inc.php
+RUN touch /run/openrc/softlevel
+RUN /etc/init.d/apache2 start
+
+#RUN find /usr/portage -maxdepth 1 -type d | grep -v profiles | awk '{printf("rm -rf %s\n", $0);}' | sh
+RUN echo 'Mount /usr/portage as a volume should you need it'
+
+VOLUME /var/www
+
+EXPOSE 80
+EXPOSE 443

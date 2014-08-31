@@ -29,5 +29,5 @@ RUN echo 'GENTOO_MIRRORS="http://distfiles.gentoo.org/"' >> /etc/portage/make.co
 RUN mkdir -p /usr/portage/metadata
 RUN chown -R portage:portage /usr/portage
 RUN echo 'masters = gentoo' >> /usr/portage/metadata/layout.conf
-RUN emerge-webrsync --revert=${TAG}
+RUN emerge-webrsync #--revert=${TAG}
 RUN eselect news read new

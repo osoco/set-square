@@ -25,7 +25,7 @@
 FROM ${NAMESPACE}/gentoo-openrc:${TAG}
 MAINTAINER ${MAINTAINER}
 #VOLUME ["${PORTAGE}:/usr/portage:ro", "${PORTAGE}/distfiles:/usr/portage/distfiles:rw"]
-RUN emerge -v sys-process/vixie-cron app-admin/syslog-ng app-admin/logrotate
+RUN emerge -v sys-process/vixie-cron app-admin/syslog-ng app-admin/logrotate app-portage/gentoolkit
 RUN rc-update add syslog-ng default
 RUN rc-update add vixie-cron default
 ADD tail-syslog.sh /usr/bin/tail-syslog

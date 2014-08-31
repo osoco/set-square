@@ -1,0 +1,26 @@
+<IfDefine GETBOO_VHOST>
+Listen 80
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+    ServerAdmin webmaster@acm-sl.org
+    ServerName ${GETBOO_DOMAIN}
+    ErrorLog /var/log/apache2/${GETBOO_DOMAIN}-error_log
+
+    DocumentRoot "/usr/local/src/getboo/"
+
+    ExpiresActive on
+    ExpiresDefault "access plus 1 years"
+    SetOutputFilter DEFLATE
+    FileETag MTime Size
+
+    <Directory "/usr/local/src/getboo/">
+      AllowOverride All
+      Order Allow,Deny
+      Allow from All
+      Options Indexes FollowSymLinks
+      AllowOverride None
+    </Directory>
+
+</VirtualHost>
+<IfDefine GETBOO_VHOST>
