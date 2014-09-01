@@ -1,10 +1,11 @@
 FROM busybox
 MAINTAINER ${MAINTAINER}
 
-VOLUME /var/artifactory
+VOLUME /var/lib/artifactory
 VOLUME /var/lib/mysql
 VOLUME /var/svn
 VOLUME /var/git
 VOLUME /var/log/
+VOLUME /var/www
 
 CMD /bin/sh
