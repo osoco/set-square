@@ -8,8 +8,8 @@ USER root
 #RUN echo "dev-java/ant ~x86" >> /etc/portage/package.keywords/dev-java/ant
 RUN emerge -u dev-vcs/git
 RUN eselect profile set 1
-RUN find /usr/portage -maxdepth 1 -type d | grep -v profiles | awk '{printf("rm -rf %s\n", $0);}' | sh
-RUN echo 'Mount /usr/portage as a volume should you need it'
+#RUN find /usr/portage -maxdepth 1 -type d | grep -v profiles | awk '{printf("rm -rf %s\n", $0);}' | sh
+#RUN echo 'Mount /usr/portage as a volume should you need it'
 
 RUN mkdir -p /var/lib/jenkins /opt/jenkins
 RUN wget -O /opt/jenkins/jenkins.war http://mirrors.jenkins-ci.org/war/latest/jenkins.war
@@ -23,5 +23,8 @@ RUN mkdir /var/run/jenkins /var/log/jenkins
 RUN chown -R jenkins /var/lib/jenkins /var/run/jenkins /var/log/jenkins /opt/jenkins
 RUN chmod 755 /var/run/jenkins /var/log/jenkins
 RUN rc-update add jenkins default
+
+VOLUME /opt/jenkins
+VOLUME /var/log/jenkins
 
 EXPOSE 8080
