@@ -28,7 +28,7 @@ function checkRequirements() {
 # Environment
 function defineEnv() {
   
-  export AUTHOR_DEFAULT="rydnr <rydnr@acm-sl.org>";
+  export AUTHOR_DEFAULT="<rydnr@acm-sl.org>";
   export AUTHOR_DESCRIPTION="The author of the image(s) to build";
   if    [ "${AUTHOR+1}" != "1" ] \
      || [ "x${AUTHOR}" == "x" ]; then
@@ -49,6 +49,20 @@ function defineEnv() {
     export DATE="${DATE_DEFAULT}";
   fi
 
+  export TOMCAT_VERSION_DEFAULT="8.0.12";
+  export TOMCAT_VERSION_DESCRIPTION="The version of the Tomcat server";
+  if    [ "${TOMCAT_VERSION+1}" != "1" ] \
+     || [ "x${TOMCAT_VERSION}" == "x" ]; then
+    export TOMCAT_VERSION="${TOMCAT_VERSION_DEFAULT}";
+  fi
+  
+  export NLP_WEBAPP_TAG_DEFAULT="latest-SNAPSHOT";
+  export NLP_WEBAPP_TAG_DESCRIPTION="The version of nlp-webapp-war to release";
+  if    [ "${NLP_WEBAPP_TAG+1}" != "1" ] \
+     || [ "x${NLP_WEBAPP_TAG}" == "x" ]; then
+    export NLP_WEBAPP_TAG="${NLP_WEBAPP_TAG_DEFAULT}";
+  fi
+  
   export MYSQL_ROOT_PASSWORD_DEFAULT="secret";
   export MYSQL_ROOT_PASSWORD_DESCRIPTION="The default password for the root user in MySQL databases";
   if    [ "${MYSQL_ROOT_PASSWORD+1}" != "1" ] \
@@ -115,6 +129,8 @@ function defineEnv() {
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
+    TOMCAT_VERSION \
+    NLP_WEBAPP_TAG \
     MYSQL_ROOT_PASSWORD \
     MYSQL_ADMIN_USER \
     MYSQL_ADMIN_PASSWORD \
@@ -125,7 +141,6 @@ function defineEnv() {
     GETBOO_DOMAIN \
     HTTPS_DOMAIN \
   );
-
  
   export ENV_VARIABLES;
 }
@@ -139,6 +154,8 @@ function defineErrors() {
   export ENVSUBST_NOT_INSTALLED="envsubst is not installed";
   export NO_REPOSITORIES_FOUND="no repositories found";
   export INVALID_URL="Invalid command";
+  export ERROR_BUILDING_REPO="Error building image";
+  export ERROR_TAGGING_REPO="Error tagging image";
 
   ERROR_MESSAGES=(\
     INVALID_OPTION \
@@ -148,6 +165,8 @@ function defineErrors() {
     ENVSUBST_NOT_INSTALLED \
     NO_REPOSITORIES_FOUND \
     INVALID_URL \
+    ERROR_BUILDING_REPO \
+    ERROR_TAGGING_REPO \
   );
 
   export ERROR_MESSAGES;
@@ -155,7 +174,7 @@ function defineErrors() {
  
 # Checking input
 function checkInput() {
- 
+
   local _flags=$(extractFlags $@);
   local _flagCount;
   local _currentCount;
@@ -223,21 +242,35 @@ function repo_exists() {
 function repo_exists() {
   local _repo="${1}"
 
+  local _env="$(
+      for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
+        echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh;
+      done;) NAMESPACE=\"${NAMESPACE}\" TAG=\"${TAG}\" MAINTAINER=\"${AUTHOR}\"";
 
+  local _envsubstDecl=$(echo -n "'"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "$"; echo -n "{NAMESPACE} $"; echo -n "{TAG} $"; echo -n "{MAINTAINER}'";);
+  
   for f in ${_repo}/*.template; do
-    echo env -i \
-      $(for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
-        echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo %s=%s%s{%s}%s ", $0, quote, dollar, $0, quote);}' | sh;
-      done) \
+    echo "${_env} \
       envsubst \
-        ${ENV_VARIABLES[*]} \
-      \
-    < "${f}" > "${_repo}/$(basename ${f} .template)"
+        ${_envsubstDecl} \
+    < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
   done
-  echo "build ${NAMESPACE}/${_repo}:${TAG}"
-  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}" || die "failed to build"
-  echo "tag ${NAMESPACE}/${_repo}:latest"
-  echo docker tag -f "${NAMESPACE}/${_repo}:${TAG}" "${NAMESPACE}/${_repo}:latest" || die "failed to tag"
+  logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
+  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
+  if [ $? -eq 0 ]; then
+    logInfoResult SUCCESS "done"
+  else
+    logInfoResult FAILURE "failed"
+    exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
+  fi
+  logInfo -n "Tagging ${NAMESPACE}/${_repo}:latest"
+  docker tag -f "${NAMESPACE}/${_repo}:${TAG}" "${NAMESPACE}/${_repo}:latest"
+  if [ $? -eq 0 ]; then
+    logInfoResult SUCCESS "done"
+  else
+    logInfoResult FAILURE "failed"
+    exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
+  fi
 }
 
 function main() {
