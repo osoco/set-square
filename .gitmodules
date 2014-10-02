@@ -1,0 +1,6 @@
+[submodule "phusion-baseimage/.rydnr"]
+	path = phusion-baseimage/.rydnr
+	url = http://github.com/rydnr/dockerfile
+[submodule "phusion-baseimage/.dry-wit"]
+	path = phusion-baseimage/.dry-wit
+	url = http://github.com/rydnr/dry-wit

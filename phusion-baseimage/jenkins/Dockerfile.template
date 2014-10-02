@@ -1,0 +1,24 @@
+FROM ${NAMESPACE}/java:${TAG}
+MAINTAINER ${MAINTAINER}
+ENV HOME /root
+USER root
+# Create user jenkins
+RUN groupadd jenkins
+RUN useradd -s /bin/bash -g jenkins -G jenkins,sudo -m -c "Jenkins user running /etc/init.d/jenkins" jenkins
+
+# jenkins user can run jenkins app
+RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart' /etc/sudoers
+
+RUN wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /home/jenkins/jenkins.war
+RUN chmod 644 /home/jenkins/jenkins.war
+ADD jenkins-.bashrc /home/jenkins/.bashrc
+RUN mkdir /etc/service/jenkins
+ADD service.sh /etc/service/jenkins/run
+RUN chmod a+x /etc/service/jenkins/run
+ADD service.sh /etc/init.d/jenkins
+RUN update-rc.d jenkins defaults
+
+VOLUME /home/jenkins
+
+EXPOSE 8080
+
