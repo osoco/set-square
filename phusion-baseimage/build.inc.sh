@@ -24,7 +24,7 @@ function defineEnv() {
   fi
 
   export TOMCAT_VERSION_DEFAULT="8.0.12";
-  export TOMCAT_VERSION_DESCRIPTION="The version of the Tomcat server";
+  export TOMCAT_VERSION_DESCRIPTION="The version of the Apache Tomcat server";
   if    [ "${TOMCAT_VERSION+1}" != "1" ] \
      || [ "x${TOMCAT_VERSION}" == "x" ]; then
     export TOMCAT_VERSION="${TOMCAT_VERSION_DEFAULT}";

@@ -1,0 +1,30 @@
+FROM ${NAMESPACE}/java:${TAG}
+MAINTAINER ${MAINTAINER}
+ENV HOME /root
+USER root
+# Create user tomcat
+RUN groupadd tomcat
+RUN /usr/sbin/useradd -m -d /opt/tomcat -g tomcat -G tomcat,sudo -s /bin/bash -c "Apache Tomcat user (/etc/init.d/tomcat)" tomcat
+# tomcat user can run tomcat app
+RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a tomcat localhost=NOPASSWD: /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers
+
+WORKDIR /opt
+RUN wget -O /opt/apache-tomcat-${TOMCAT_VERSION}.tar.gz http://apache.mirrors.pair.com/tomcat/tomcat-8/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+RUN tar xvfz /opt/apache-tomcat-${TOMCAT_VERSION}.tar.gz
+RUN rm -rf /opt/tomcat
+RUN ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat
+RUN mkdir /var/lock/tomcat /var/run/tomcat /opt/tomcat/contexts
+RUN cd /var/log && ln -s /opt/tomcat/logs tomcat
+RUN chmod 755 /var/run/tomcat
+ADD config /etc/default/tomcat
+RUN mkdir /etc/service/tomcat
+ADD service.sh /etc/service/tomcat/run
+RUN chmod a+x /etc/service/tomcat/run
+ADD service.sh /etc/init.d/tomcat
+RUN chmod a+x /etc/init.d/tomcat
+RUN update-rc.d tomcat defaults
+RUN chmod 755 /etc/init.d/tomcat
+RUN chown -R tomcat:tomcat /var/lock/tomcat /var/run/tomcat /var/log/tomcat /opt/tomcat /opt/apache-tomcat*
+ADD rc.local /etc/rc.local
+RUN chmod +x /etc/rc.local
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

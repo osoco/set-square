@@ -1,0 +1,7 @@
+#!/bin/bash
+
+chown -R jenkins:tomcat /home/jenkins
+chmod -R g+w /home/jenkins
+/etc/init.d/jenkins start &
+
+exit 0

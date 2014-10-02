@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<Context path=""
+         docBase="/opt/tomcat/.jenkins"
+         privileged="false"
+         reloadable="true"
+         tldValidation="false"
+         useHttpOnly="true"
+         unpackWAR="false">
+
+  <Environment name="JENKINS_HOME" value="/home/jenkins" type="java.lang.String" override="false"/>
+</Context>
