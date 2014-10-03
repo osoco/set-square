@@ -11,7 +11,9 @@ RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a artifactory localhost=NOPASSWD: /etc/in
 
 RUN wget -O /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip http://dl.bintray.com/jfrog/artifactory/artifactory-${ARTIFACTORY_VERSION}.zip
 RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
-RUN cd /opt/tomcat && mkdir .artifactory && cd .artifactory && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip
+RUN cd /home/ && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip
+RUN rm -rf /home/artifactory && mv /home/artifactory-${ARTIFACTORY_VERSION} /home/artifactory
+RUN cd /opt/tomcat && mkdir .artifactory && cd .artifactory && /usr/lib/jvm/java/bin/jar -xvf /home/artifactory/webapps/artifactory.war
 ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml artifactory.xml
 ADD artifactory-.bashrc /home/artifactory/.bashrc
