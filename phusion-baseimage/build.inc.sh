@@ -93,6 +93,13 @@ function defineEnv() {
     export HTTPS_DOMAIN="${HTTPS_DOMAIN_DEFAULT}";
   fi
 
+  export ARTIFACTORY_VERSION_DEFAULT="3.4.0";
+  export ARTIFACTORY_VERSION_DESCRIPTION="The version of Artifactory";
+  if    [ "${ARTIFACTORY_VERSION+1}" != "1" ] \
+     || [ "x${ARTIFACTORY_VERSION}" == "x" ]; then
+    export ARTIFACTORY_VERSION="${ARTIFACTORY_VERSION_DEFAULT}";
+  fi
+  
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -106,6 +113,7 @@ function defineEnv() {
     GETBOO_DOMAIN \
     HTTPS_DOMAIN \
     TOMCAT_VERSION \
+    ARTIFACTORY_VERSION \
    );
  
   export ENV_VARIABLES;

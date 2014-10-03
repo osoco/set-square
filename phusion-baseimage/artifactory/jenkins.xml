@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<Context path=""
+         docBase="/opt/tomcat/webapps/jenkins.war"
+         privileged="false"
+         reloadable="true"
+         tldValidation="false"
+         useHttpOnly="true"
+         unpackWAR="true">
+</Context>
