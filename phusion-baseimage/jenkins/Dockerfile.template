@@ -24,8 +24,13 @@ RUN cd /etc/init.d && ln -s tomcat jenkins
 RUN update-rc.d jenkins defaults
 RUN chown -R jenkins:tomcat /home/jenkins /opt/tomcat/.jenkins
 RUN chmod -R g+w /home/jenkins /opt/tomcat/.jenkins
+RUN apt-get update
+RUN apt-get install -y git
+RUN cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${MAVEN_VERSION} apache-maven
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 VOLUME /home/jenkins
 

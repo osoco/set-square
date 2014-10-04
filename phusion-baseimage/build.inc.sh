@@ -100,6 +100,13 @@ function defineEnv() {
     export ARTIFACTORY_VERSION="${ARTIFACTORY_VERSION_DEFAULT}";
   fi
   
+  export MAVEN_VERSION_DEFAULT="3.2.3";
+  export MAVEN_VERSION_DESCRIPTION="The version of Maven";
+  if    [ "${MAVEN_VERSION+1}" != "1" ] \
+     || [ "x${MAVEN_VERSION}" == "x" ]; then
+    export MAVEN_VERSION="${MAVEN_VERSION_DEFAULT}";
+  fi
+  
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -114,6 +121,7 @@ function defineEnv() {
     HTTPS_DOMAIN \
     TOMCAT_VERSION \
     ARTIFACTORY_VERSION \
+    MAVEN_VERSION \
    );
  
   export ENV_VARIABLES;
