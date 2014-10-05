@@ -5,7 +5,7 @@ USER root
 # Create user jenkins
 RUN groupadd jenkins
 RUN useradd -s /bin/bash -g jenkins -G jenkins,tomcat,sudo -m -c "Jenkins user running /etc/init.d/jenkins" jenkins
-
+RUN echo 'jenkins:${JENKINS_PASSWORD}' | chpasswd 
 # jenkins user can run jenkins app
 RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart' /etc/sudoers
 
@@ -14,7 +14,10 @@ RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
 RUN cd /opt/tomcat && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war
 ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml jenkins.xml
-ADD jenkins-.bashrc /home/jenkins/.bashrc
+RUN sed -i '/<\/tomcat-users>/a <role rolename="admin"/>' /opt/tomcat/conf/tomcat-users.xml
+RUN sed -i '/<\/tomcat-users>/a <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"/>' /opt/tomcat/conf/tomcat-users.xml
+RUN sed -i '/<Connector port="8080" protocol="HTTP/1.1"/a       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml
+
 RUN rm -rf /opt/tomcat/webapps/*
 ADD config /etc/default/tomcat
 RUN mkdir /etc/service/jenkins
@@ -25,8 +28,10 @@ RUN update-rc.d jenkins defaults
 RUN chown -R jenkins:tomcat /home/jenkins /opt/tomcat/.jenkins
 RUN chmod -R g+w /home/jenkins /opt/tomcat/.jenkins
 RUN apt-get update
-RUN apt-get install -y git
+RUN apt-get install -y git graphviz
 RUN cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${MAVEN_VERSION} apache-maven
+ADD prepare-release.sh /usr/local/bin/prepare-release.sh
+RUN chmod +x /usr/local/bin/prepare-release.sh
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 

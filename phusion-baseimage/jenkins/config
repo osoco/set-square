@@ -1,1 +1,1 @@
-export JAVA_OPTS="-XX:MaxPermSize=128m -Djenkins.home=/home/jenkins ${JAVA_OPTS}"
+export JAVA_OPTS="-XX:MaxPermSize=128m -Djenkins.home=/home/jenkins -Dorg.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true ${JAVA_OPTS}"

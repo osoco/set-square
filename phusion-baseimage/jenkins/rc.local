@@ -2,6 +2,7 @@
 
 chown -R jenkins:tomcat /home/jenkins
 chmod -R g+w /home/jenkins
+[ -d /home/jenkins/secrets ] && chmod g+x /home/jenkins/secrets
 /etc/init.d/jenkins start &
 
 exit 0
