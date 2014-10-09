@@ -106,7 +106,21 @@ function defineEnv() {
      || [ "x${MAVEN_VERSION}" == "x" ]; then
     export MAVEN_VERSION="${MAVEN_VERSION_DEFAULT}";
   fi
-  
+
+  export JENKINS_PASSWORD_DEFAULT="secret";
+  export JENKINS_PASSWORD_DESCRIPTION="The password for the jenkins user";
+  if    [ "${JENKINS_PASSWORD+1}" != "1" ] \
+     || [ "x${JENKINS_PASSWORD}" == "x" ]; then
+    export JENKINS_PASSWORD="${JENKINS_PASSWORD_DEFAULT}";
+  fi
+
+  export RELEASE_ISSUE_REF_DEFAULT="";
+  export RELEASE_ISSUE_REF_DESCRIPTION="Text referencing a 'Release issue', to be used in commits done by Jenkins while releasing artifacts. ex: 'Ref T10' for Phabricator, 'refs #33' for Trac or Redmine";
+  if    [ "${RELEASE_ISSUE_REF+1}" != "1" ] \
+     || [ "x${RELEASE_ISSUE_REF}" == "x" ]; then
+    export RELEASE_ISSUE_REF="${RELEASE_ISSUE_REF_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -122,6 +136,8 @@ function defineEnv() {
     TOMCAT_VERSION \
     ARTIFACTORY_VERSION \
     MAVEN_VERSION \
+    JENKINS_PASSWORD \
+    RELEASE_ISSUE_REF \
    );
  
   export ENV_VARIABLES;
