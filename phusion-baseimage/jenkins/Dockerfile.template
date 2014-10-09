@@ -16,9 +16,9 @@ RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
 RUN cd /opt/tomcat && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war
 ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml jenkins.xml
-RUN sed -i '/<\/tomcat-users>/a <role rolename="admin"/>' /opt/tomcat/conf/tomcat-users.xml
-RUN sed -i '/<\/tomcat-users>/a <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"/>' /opt/tomcat/conf/tomcat-users.xml
-RUN sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml
+RUN sed -i '/<\/tomcat-users>/  <role rolename="admin"\/>\n<\/tomcat-users>/g' /opt/tomcat/conf/tomcat-users.xml
+RUN sed -i '/<\/tomcat-users>/  <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"\/>\n<\/tomcat-users>/g' /opt/tomcat/conf/tomcat-users.xml
+RUN sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a       URIEncoding="UTF-8"/g' /opt/tomcat/conf/server.xml
 
 RUN rm -rf /opt/tomcat/webapps/*
 ADD config /etc/default/tomcat
