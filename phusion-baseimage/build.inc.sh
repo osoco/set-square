@@ -121,6 +121,20 @@ function defineEnv() {
     export RELEASE_ISSUE_REF="${RELEASE_ISSUE_REF_DEFAULT}";
   fi
 
+  export ACTIVEMQ_CLIENT_PASSWORD_DEFAULT="secret";
+  export ACTIVEMQ_CLIENT_PASSWORD_DESCRIPTION="The password for the ActiveMQ client";
+  if    [ "${ACTIVEMQ_CLIENT_PASSWORD+1}" != "1" ] \
+     || [ "x${ACTIVEMQ_CLIENT_PASSWORD}" == "x" ]; then
+    export ACTIVEMQ_CLIENT_PASSWORD="${ACTIVEMQ_CLIENT_PASSWORD_DEFAULT}";
+  fi
+
+  export ACTIVEMQ_SERVER_PASSWORD_DEFAULT="secret";
+  export ACTIVEMQ_SERVER_PASSWORD_DESCRIPTION="The password for the ActiveMQ server";
+  if    [ "${ACTIVEMQ_SERVER_PASSWORD+1}" != "1" ] \
+     || [ "x${ACTIVEMQ_SERVER_PASSWORD}" == "x" ]; then
+    export ACTIVEMQ_SERVER_PASSWORD="${ACTIVEMQ_SERVER_PASSWORD_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -138,6 +152,8 @@ function defineEnv() {
     MAVEN_VERSION \
     JENKINS_PASSWORD \
     RELEASE_ISSUE_REF \
+    ACTIVEMQ_CLIENT_PASSWORD \
+    ACTIVEMQ_SERVER_PASSWORD \
    );
  
   export ENV_VARIABLES;
