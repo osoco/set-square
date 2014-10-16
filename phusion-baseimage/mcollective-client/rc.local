@@ -1,6 +1,9 @@
 #!/bin/bash
 
-sed -e "s/##ACTIVEMQ_SERVER/${ACTIVEMQ_SERVER}/g" /etc/mcollective/client.cfg.tpl > /etc/mcollective/client.cfg
+sed -e "s/##ACTIVEMQ_PORT_61613_TCP_PORT##/${ACTIVEMQ_PORT_61613_TCP_PORT}/g" /etc/mcollective/client.cfg.tpl > /etc/mcollective/client.cfg
+
+chmod 640 /etc/mcollective/client.cfg
+chown root:root /etc/mcollective/client.cfg
 
 #/etc/init.d/mcollective-client start &
 
