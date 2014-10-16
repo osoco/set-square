@@ -114,6 +114,13 @@ function defineEnv() {
     export JENKINS_PASSWORD="${JENKINS_PASSWORD_DEFAULT}";
   fi
 
+  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT="Run mvn --encrypt-password \${JENKINS_PASSWORD}";
+  export JENKINS_ENCRYPTED_PASSWORD_DESCRIPTION="The encrypted password for the jenkins user";
+  if    [ "${JENKINS_ENCRYPTED_PASSWORD+1}" != "1" ] \
+     || [ "x${JENKINS_ENCRYPTED_PASSWORD}" == "x" ]; then
+    export JENKINS_ENCRYPTED_PASSWORD="${JENKINS_ENCRYPTED_PASSWORD_DEFAULT}";
+  fi
+
   export RELEASE_ISSUE_REF_DEFAULT="";
   export RELEASE_ISSUE_REF_DESCRIPTION="Text referencing a 'Release issue', to be used in commits done by Jenkins while releasing artifacts. ex: 'Ref T10' for Phabricator, 'refs #33' for Trac or Redmine";
   if    [ "${RELEASE_ISSUE_REF+1}" != "1" ] \
@@ -135,6 +142,13 @@ function defineEnv() {
     export ACTIVEMQ_SERVER_PASSWORD="${ACTIVEMQ_SERVER_PASSWORD_DEFAULT}";
   fi
 
+  export ACTIVEMQ_PRE_SHARED_KEY_DEFAULT="secret";
+  export ACTIVEMQ_PRE_SHARED_KEY_DESCRIPTION="The pre-shared key for ActiveMQ";
+  if    [ "${ACTIVEMQ_PRE_SHARED_KEY+1}" != "1" ] \
+     || [ "x${ACTIVEMQ_PRE_SHARED_KEY}" == "x" ]; then
+    export ACTIVEMQ_PRE_SHARED_KEY="${ACTIVEMQ_PRE_SHARED_KEY_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -151,9 +165,11 @@ function defineEnv() {
     ARTIFACTORY_VERSION \
     MAVEN_VERSION \
     JENKINS_PASSWORD \
+    JENKINS_ENCRYPTED_PASSWORD \
     RELEASE_ISSUE_REF \
     ACTIVEMQ_CLIENT_PASSWORD \
     ACTIVEMQ_SERVER_PASSWORD \
+    ACTIVEMQ_PRE_SHARED_KEY \
    );
  
   export ENV_VARIABLES;

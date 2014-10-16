@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sed -e "s/##ACTIVEMQ_SERVER/${ACTIVEMQ_SERVER}/g" /etc/mcollective/server.cfg.tpl > /etc/mcollective/server.cfg
+
+/etc/init.d/mcollective start &
+
+exit 0

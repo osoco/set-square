@@ -7,23 +7,22 @@
     <server>
       <id>releases</id>
       <username>jenkins-admin</username>
-      <password>${JENKINS_PASSWORD}</password>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
     <server>
       <id>snapshots</id>
       <username>jenkins-admin</username>
-      <password>${JENKINS_PASSWORD}</password>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
     <server>
       <id>plugin-snapshots</id>
       <username>jenkins-admin</username>
-      <password>${JENKINS_PASSWORD}</password>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
     <server>
       <id>plugin-releases</id>
-      <username>chous</username>
       <username>jenkins-admin</username>
-      <password>${JENKINS_PASSWORD}</password>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
     <server>
       <id>site</id>
@@ -39,13 +38,13 @@
       <repositories>
         <repository>
           <id>libs-releases-local</id>
-          <url>http://maven.acm-sl.org:8082/libs-releases-local</url>
+          <url>http://maven.acm-sl.org/libs-releases-local</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>false</enabled></snapshots>
         </repository>
         <repository>
           <id>libs-snapshots-local</id>
-          <url>http://maven.acm-sl.org:8082/libs-snapshots-local</url>
+          <url>http://maven.acm-sl.org/libs-snapshots-local</url>
           <releases><enabled>false</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </repository>
@@ -53,7 +52,7 @@
       <pluginRepositories>
         <pluginRepository>
           <id>plugins-releases-local</id>
-          <url>http://maven.acm-sl.org:8082/plugins-releases-local</url>
+          <url>http://maven.acm-sl.org/plugins-releases-local</url>
           <releases>
             <enabled>true</enabled>
           </releases>
@@ -63,7 +62,7 @@
         </pluginRepository>
         <pluginRepository>
           <id>plugins-snapshots-local</id>
-          <url>http://maven.acm-sl.org:8082/plugins-snapshots-local</url>
+          <url>http://maven.acm-sl.org/plugins-snapshots-local</url>
           <releases>
             <enabled>false</enabled>
           </releases>
@@ -78,7 +77,7 @@
     <mirror>
       <id>artifactory</id>
       <name>artifactory Mirror of http://repo1.maven.org/maven2/</name>
-      <url>http://maven.acm-sl.org:8082/everything</url>
+      <url>http://maven.acm-sl.org/everything</url>
       <mirrorOf>*</mirrorOf>
     </mirror>
   </mirrors>

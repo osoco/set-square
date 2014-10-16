@@ -13,7 +13,7 @@ RUN mkdir /home/jenkins/.m2
 ADD settings.xml /home/jenkins/.m2/settings.xml
 RUN wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /opt/tomcat/webapps/jenkins.war
 RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
-RUN cd /opt/tomcat && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war
+RUN cd /opt/tomcat && ln -s /home/jenkins/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war 
 ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml jenkins.xml
 RUN sed -i '/<\/tomcat-users>/i \  <role rolename="admin"\/>' /opt/tomcat/conf/tomcat-users.xml
