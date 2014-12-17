@@ -3,11 +3,12 @@
 # to `latest`! See
 # https://github.com/phusion/baseimage-docker/blob/master/Changelog.md
 # for a list of version numbers.
-FROM phusion/baseimage:0.9.14
+FROM phusion/baseimage:0.9.15
 
 MAINTAINER rydnr "docker@acm-sl.org"
 
 RUN apt-get update
+RUN apt-get install -y iptables facter
 
 RUN cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
 

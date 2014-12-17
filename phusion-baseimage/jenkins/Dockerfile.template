@@ -20,15 +20,27 @@ RUN sed -i '/<\/tomcat-users>/i \  <role rolename="admin"\/>' /opt/tomcat/conf/t
 RUN sed -i '/<\/tomcat-users>/i \  <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"\/>' /opt/tomcat/conf/tomcat-users.xml
 RUN sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml
 
+# TODO: add cron job for mvn versions:update-properties
+# TODO: gem install bouncy-castle-java
+# /home/jenkins/identity.key.enc not found
+
 RUN rm -rf /opt/tomcat/webapps/*
+RUN gpasswd -a tomcat jenkins
 ADD config /etc/default/tomcat
 RUN mkdir /etc/service/jenkins
 RUN cd /etc/service/jenkins && ln -s ../tomcat/run .
 RUN cd /etc/service/jenkins && ln -s tomcat jenkins
 RUN cd /etc/init.d && ln -s tomcat jenkins
+RUN cd /etc/default && ln -s tomcat jenkins
 RUN update-rc.d jenkins defaults
-RUN chown -R jenkins:tomcat /home/jenkins /opt/tomcat/.jenkins
-RUN chmod -R g+w /home/jenkins /opt/tomcat/.jenkins
+RUN chmod -R g+w /home/jenkins /opt/tomcat/.jenkins /opt/tomcat/.m2
+RUN mkdir /opt/tomcat/.ssh
+ADD ssh-config /opt/tomcat/.ssh/config
+ADD known_hosts /opt/tomcat/.ssh/known_hosts
+RUN chmod 644 /opt/tomcat/.ssh/*
+RUN chown -R jenkins:tomcat /home/jenkins /opt/tomcat/.jenkins /opt/tomcat/.m2
+RUN chmod 700 /opt/tomcat/.ssh
+RUN chown -R tomcat:tomcat /opt/tomcat/.ssh
 RUN apt-get update
 RUN apt-get install -y git graphviz
 RUN cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${MAVEN_VERSION} apache-maven
@@ -37,6 +49,7 @@ RUN chmod +x /usr/local/bin/prepare-release.sh
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 
+RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 VOLUME /home/jenkins

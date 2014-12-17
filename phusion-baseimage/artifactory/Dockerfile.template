@@ -29,6 +29,9 @@ RUN chmod -R g+w /home/artifactory /opt/tomcat/.artifactory
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 
+RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 VOLUME /home/artifactory
 
 EXPOSE 8080

@@ -1,1 +1,2 @@
-export JAVA_OPTS="-XX:MaxPermSize=128m -Xmx1024m -Djenkins.home=/home/jenkins -Dorg.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true ${JAVA_OPTS}"
+export JAVA_OPTS="-XX:MaxPermSize=256m -Xmx2048m -Djenkins.home=/home/jenkins -Dorg.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true -Djava.awt.headless=true"
+# DO NOT APPEND ${JAVA_OPTS} since /etc/rc3.d/S20tomcat injects -Xmx128m and takes precedence to your -Xmx setting here

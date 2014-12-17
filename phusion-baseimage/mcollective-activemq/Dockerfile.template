@@ -6,43 +6,28 @@ RUN apt-get update
 RUN wget https://apt.puppetlabs.com/puppetlabs-release-trusty.deb
 RUN dpkg -i puppetlabs-release-trusty.deb
 RUN apt-get update
-RUN apt-get install -y activemq
+RUN apt-get install -y activemq patch
 RUN update-rc.d activemq defaults
-WORKDIR /etc/activemq
+RUN cd /etc/activemq/instances-enabled; ln -s ../instances-available/main .
+WORKDIR /etc/activemq/instances-enabled/main
 #RUN /usr/bin/activemq setup /etc/default/activemq
 #RUN chown root:nogroup /etc/default/activemq && chmod 600 /etc/default/activemq
+RUN mv activemq.xml activemq.xml.dist
 RUN wget https://svn.apache.org/repos/asf/activemq/trunk/assembly/src/release/conf/activemq.xml
-RUN sed -i 's/^\(.*\)<broker \(.*\)>\(.*\)$/\1<broker \2 schedulePeriodForDestinationPurge="60000">\3/g' /etc/activemq/activemq.xml
-RUN sed -i 's/ producerFlowControl="true"/ producerFlowControl="false"/g' /etc/activemq/activemq.xml
-RUN sed -i '/<\/destinationPolicy>/a \        <plugins>' /etc/activemq/activemq.xml
-RUN sed -i '/<plugins>/a \          <simpleAuthenticationPlugin>' /etc/activemq/activemq.xml
-RUN sed -i '/<simpleAuthenticationPlugin>/a \            <users>' /etc/activemq/activemq.xml
-RUN sed -i '/<users>/a \              <authenticationUser username="client" password="${ACTIVEMQ_CLIENT_PASSWORD}" groups="servers,clients,everyone"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authenticationUser username="client"/a \              <authenticationUser username="server" password="${ACTIVEMQ_SERVER_PASSWORD}" groups="servers,everyone"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authenticationUser username="server"/a \            </users>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/users>/a \          <\/simpleAuthenticationPlugin>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/simpleAuthenticationPlugin>/a \          <authorizationPlugin>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationPlugin>/a \            <map>' /etc/activemq/activemq.xml
-RUN sed -i '/<map>/a \              <authorizationMap>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationMap>/a \                <authorizationEntries>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntries>/a \                  <authorizationEntry queue="mcollective.>" write="clients" read="clients" admin="clients"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry queue="mcollective.>"/a \                  <authorizationEntry topic="mcollective.>" write="clients" read="clients" admin="clients"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry topic="mcollective.>"/a \                  <authorizationEntry queue="mcollective.nodes" read="servers" admin="servers"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry queue="mcollective.nodes"/a \                  <authorizationEntry queue="mcollective.reply.>" write="servers" admin="servers"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry queue="mcollective.reply.>"/a \                  <authorizationEntry topic="mcollective.*.agent" read="servers" admin="servers"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry topic="mcollective.*.agent"/a \                  <authorizationEntry topic="mcollective.registration.agent" write="servers" read="servers" admin="servers"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry topic="mcollective.registration.agent"/a \                  <authorizationEntry topic="ActiveMQ.Advisory.>" read="everyone" write="everyone" admin="everyone"/>' /etc/activemq/activemq.xml
-RUN sed -i '/<authorizationEntry topic="ActiveMQ.Advisory.>"/a \                <\/authorizationEntries>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/authorizationEntries>/a \              <\/authorizationMap>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/authorizationMap>/a \            <\/map>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/map>/a \          <\/authorizationPlugin>' /etc/activemq/activemq.xml
-RUN sed -i '/<\/authorizationPlugin>/a \        <\/plugins>' /etc/activemq/activemq.xml
-RUN sed -i 's/^\(.*\)<transportConnector \(.*\)>\(.*\)$/\1<!--transportConnector \2-->\3/g' /etc/activemq/activemq.xml
-RUN sed -i '/<\/transportConnectors>/i \            <transportConnector name="stomp+nio" uri="stomp+nio://[::0]:61613"/>' /etc/activemq/activemq.xml
-RUN sed -i 's/<import resource="jetty.xml"\/>/<!--import resource="jetty.xml"\/-->/g' /etc/activemq/activemq.xml
+ADD activemq_xml.patch /etc/activemq/instances-enabled/main/activemq_xml.patch
+RUN cp activemq.xml activemq.xml.svn
+RUN patch activemq.xml activemq_xml.patch
+
+RUN cp /usr/share/activemq/activemq-options /etc/activemq/instances-enabled/main/options
+RUN sed -i 's/JAVA_HOME="\/usr\/lib\/jvm\/java-6-openjdk\/"/JAVA_HOME="\/usr\/lib\/jvm\/java-7-oracle\/"/g' /etc/activemq/instances-enabled/main/options
+RUN touch /etc/activemq/instances-enabled/main/credentials.properties
+RUN cd /var/log ; ln -s /var/lib/activemq/main/data/activemq.log .; ln -s /var/lib/activemq/main/data/audit.log activemq-audit.log
+RUN chown -R activemq:activemq /var/lib/activemq
 
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
+
+RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-EXPOSE 61613
+EXPOSE ${ACTIVEMQ_PORT}

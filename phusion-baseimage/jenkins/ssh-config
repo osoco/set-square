@@ -1,0 +1,4 @@
+Host github-with-jenkins-ssh-key
+  Hostname github.com
+  User git
+  IdentityFile ~/.ssh/id_rsa-github-jenkins

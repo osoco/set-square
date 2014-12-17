@@ -23,11 +23,18 @@ function defineEnv() {
     export DATE="${DATE_DEFAULT}";
   fi
 
-  export TOMCAT_VERSION_DEFAULT="8.0.12";
+  export TOMCAT_VERSION_DEFAULT="8.0.15";
   export TOMCAT_VERSION_DESCRIPTION="The version of the Apache Tomcat server";
   if    [ "${TOMCAT_VERSION+1}" != "1" ] \
      || [ "x${TOMCAT_VERSION}" == "x" ]; then
     export TOMCAT_VERSION="${TOMCAT_VERSION_DEFAULT}";
+  fi
+  
+  export JAVA_VERSION_DEFAULT="8";
+  export JAVA_VERSION_DESCRIPTION="The version of the JDK";
+  if    [ "${JAVA_VERSION+1}" != "1" ] \
+     || [ "x${JAVA_VERSION}" == "x" ]; then
+    export JAVA_VERSION="${JAVA_VERSION_DEFAULT}";
   fi
   
   export MYSQL_ROOT_PASSWORD_DEFAULT="secret";
@@ -128,6 +135,13 @@ function defineEnv() {
     export RELEASE_ISSUE_REF="${RELEASE_ISSUE_REF_DEFAULT}";
   fi
 
+  export ACTIVEMQ_PORT_DEFAULT="61613";
+  export ACTIVEMQ_CLIENT_PASSWORD_DESCRIPTION="The ActiveMQ port";
+  if    [ "${ACTIVEMQ_PORT+1}" != "1" ] \
+     || [ "x${ACTIVEMQ_PORT}" == "x" ]; then
+    export ACTIVEMQ_PORT="${ACTIVEMQ_PORT_DEFAULT}";
+  fi
+
   export ACTIVEMQ_CLIENT_PASSWORD_DEFAULT="secret";
   export ACTIVEMQ_CLIENT_PASSWORD_DESCRIPTION="The password for the ActiveMQ client";
   if    [ "${ACTIVEMQ_CLIENT_PASSWORD+1}" != "1" ] \
@@ -161,12 +175,14 @@ function defineEnv() {
     GETBOO_DB_TABLE_PREFIX \
     GETBOO_DOMAIN \
     HTTPS_DOMAIN \
+    JAVA_VERSION \
     TOMCAT_VERSION \
     ARTIFACTORY_VERSION \
     MAVEN_VERSION \
     JENKINS_PASSWORD \
     JENKINS_ENCRYPTED_PASSWORD \
     RELEASE_ISSUE_REF \
+    ACTIVEMQ_PORT \
     ACTIVEMQ_CLIENT_PASSWORD \
     ACTIVEMQ_SERVER_PASSWORD \
     ACTIVEMQ_PRE_SHARED_KEY \

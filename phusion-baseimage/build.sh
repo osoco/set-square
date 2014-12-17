@@ -122,19 +122,21 @@ function repo_exists() {
 function repo_exists() {
   local _repo="${1}"
 
-  local _env="$(
+  local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
-        echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh;
+        echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
       done;) NAMESPACE=\"${NAMESPACE}\" TAG=\"${TAG}\" MAINTAINER=\"${AUTHOR}\"";
 
   local _envsubstDecl=$(echo -n "'"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "$"; echo -n "{NAMESPACE} $"; echo -n "{TAG} $"; echo -n "{MAINTAINER}'";);
   
-  for f in ${_repo}/*.template; do
-    echo "${_env} \
-      envsubst \
-        ${_envsubstDecl} \
-    < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
-  done
+  if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
+    for f in ${_repo}/*.template; do
+      echo "${_env} \
+        envsubst \
+          ${_envsubstDecl} \
+      < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
+    done
+  fi
   logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
   docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
   if [ $? -eq 0 ]; then
