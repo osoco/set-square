@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[ ! -e /home/jenkins/id_rsa-github-jenkins ] && echo "Missing required ssh key" && exit 1
+#[ ! -e /home/jenkins/id_rsa-github-jenkins ] && echo "Missing required ssh key" && exit 1
 chown -R jenkins:tomcat /home/jenkins
 chmod -R g+w /home/jenkins
 [ -d /home/jenkins/secrets ] && chmod g+x /home/jenkins/secrets
