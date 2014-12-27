@@ -121,7 +121,7 @@ function defineEnv() {
     export JENKINS_PASSWORD="${JENKINS_PASSWORD_DEFAULT}";
   fi
 
-  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT="$(mvn --encrypt-password ${JENKINS_PASSWORD})";
+  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT="$(mvn --encrypt-password ${JENKINS_PASSWORD} 2> /dev/null)";
   export JENKINS_ENCRYPTED_PASSWORD_DESCRIPTION="The encrypted password for the jenkins user";
   if    [ "${JENKINS_ENCRYPTED_PASSWORD+1}" != "1" ] \
      || [ "x${JENKINS_ENCRYPTED_PASSWORD}" == "x" ]; then
