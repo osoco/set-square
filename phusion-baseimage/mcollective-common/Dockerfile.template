@@ -1,0 +1,11 @@
+FROM ${NAMESPACE}/java:${TAG}
+MAINTAINER ${MAINTAINER}
+
+# From Learning MCollective
+RUN apt-get update
+RUN apt-get install -y puppet-common
+RUN apt-get install -y puppet mcollective-common
+
+ADD facts.sh /usr/local/bin/facts.sh
+RUN chmod +x /usr/local/bin/facts.sh
+ADD facts.cron /etc/cron.d/facts.sh

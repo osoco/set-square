@@ -1,0 +1,1 @@
+*/30 * * * * /usr/local/bin/facts.sh > /etc/mcollective/facts.yaml && touch /tmp/facter.lastrun
