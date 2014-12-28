@@ -9,6 +9,7 @@ chown -R jenkins:tomcat /home/jenkins
 chmod -R g+w /home/jenkins
 chmod 600 /opt/tomcat/.ssh/id_rsa*
 chmod 644 /opt/tomcat/.ssh/id_rsa*.pub
+chmod -R g+w /home/jenkins /opt/tomcat/.jenkins /opt/tomcat/.m2
 chown -R tomcat:tomcat /opt/tomcat/.ssh
 /etc/init.d/jenkins start
 
