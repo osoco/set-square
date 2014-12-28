@@ -9,8 +9,8 @@ RUN echo 'jenkins:${JENKINS_PASSWORD}' | chpasswd
 # jenkins user can run jenkins app
 RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart, /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers
 
-RUN mkdir /home/jenkins/.m2
-ADD settings.xml /home/jenkins/.m2/settings.xml
+RUN mkdir -p /usr/local/jenkins/.m2
+ADD settings.xml /usr/local/jenkins/.m2/settings.xml
 RUN wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /opt/tomcat/webapps/jenkins.war
 RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
 RUN cd /opt/tomcat && ln -s /home/jenkins/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war 
