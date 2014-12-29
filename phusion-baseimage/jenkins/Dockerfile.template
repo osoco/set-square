@@ -44,8 +44,6 @@ RUN chown -R tomcat:tomcat /opt/tomcat/.ssh
 RUN apt-get update
 RUN apt-get install -y git graphviz
 RUN cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${MAVEN_VERSION} apache-maven
-ADD prepare-release.sh /usr/local/bin/prepare-release.sh
-RUN chmod +x /usr/local/bin/prepare-release.sh
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 

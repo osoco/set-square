@@ -23,7 +23,7 @@ function defineEnv() {
     export DATE="${DATE_DEFAULT}";
   fi
 
-  export TOMCAT_VERSION_DEFAULT="8.0.15";
+  export TOMCAT_VERSION_DEFAULT="$(curl -s -k http://apache.mirrors.pair.com/tomcat/tomcat-8/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1 | sed 's ^v  g')";
   export TOMCAT_VERSION_DESCRIPTION="The version of the Apache Tomcat server";
   if    [ "${TOMCAT_VERSION+1}" != "1" ] \
      || [ "x${TOMCAT_VERSION}" == "x" ]; then
@@ -100,14 +100,14 @@ function defineEnv() {
     export HTTPS_DOMAIN="${HTTPS_DOMAIN_DEFAULT}";
   fi
 
-  export ARTIFACTORY_VERSION_DEFAULT="3.4.0";
+  export ARTIFACTORY_VERSION_DEFAULT="$(curl -s -k http://dl.bintray.com/jfrog/artifactory/ | grep zip | tail -n 1 | cut -d'"' -f 4 | cut -d '-' -f 2 | sed 's .zip  g')";
   export ARTIFACTORY_VERSION_DESCRIPTION="The version of Artifactory";
   if    [ "${ARTIFACTORY_VERSION+1}" != "1" ] \
      || [ "x${ARTIFACTORY_VERSION}" == "x" ]; then
     export ARTIFACTORY_VERSION="${ARTIFACTORY_VERSION_DEFAULT}";
   fi
   
-  export MAVEN_VERSION_DEFAULT="3.2.3";
+  export MAVEN_VERSION_DEFAULT="$(curl -s -k https://www.eu.apache.org/dist/maven/maven-3/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1)";
   export MAVEN_VERSION_DESCRIPTION="The version of Maven";
   if    [ "${MAVEN_VERSION+1}" != "1" ] \
      || [ "x${MAVEN_VERSION}" == "x" ]; then
