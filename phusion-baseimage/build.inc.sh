@@ -163,6 +163,34 @@ function defineEnv() {
     export ACTIVEMQ_PRE_SHARED_KEY="${ACTIVEMQ_PRE_SHARED_KEY_DEFAULT}";
   fi
 
+  export FIREFOX_SYNC_DOMAIN_DEFAULT="firefox-sync.acm-sl.org";
+  export FIREFOX_SYNC_DOMAIN_DESCRIPTION="The secret string for the firefox sync server";
+  if    [ "${FIREFOX_SYNC_DOMAIN+1}" != "1" ] \
+     || [ "x${FIREFOX_SYNC_DOMAIN}" == "x" ]; then
+    export FIREFOX_SYNC_DOMAIN="${FIREFOX_SYNC_DOMAIN_DEFAULT}";
+  fi
+
+  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum db8a203aed5fe3e4594d4b75990acb76242efd35 -)";
+  export FIREFOX_SYNC_SECRET_DESCRIPTION="The secret string for the firefox sync server";
+  if    [ "${FIREFOX_SYNC_SECRET+1}" != "1" ] \
+     || [ "x${FIREFOX_SYNC_SECRET}" == "x" ]; then
+    export FIREFOX_SYNC_SECRET="${FIREFOX_SYNC_SECRET_DEFAULT}";
+  fi
+
+  export FIREFOX_SYNC_DB_USER_DEFAULT="ffsync";
+  export FIREFOX_SYNC_DB_USER_DESCRIPTION="The username to connect to the firefox sync database";
+  if    [ "${FIREFOX_SYNC_DB_USER+1}" != "1" ] \
+     || [ "x${FIREFOX_SYNC_DB_USER}" == "x" ]; then
+    export FIREFOX_SYNC_DB_USER="${FIREFOX_SYNC_DB_USER_DEFAULT}";
+  fi
+
+  export FIREFOX_SYNC_DB_PASSWORD_DEFAULT="secret";
+  export FIREFOX_SYNC_DB_PASSWORD_DESCRIPTION="The password to connect to the firefox sync database";
+  if    [ "${FIREFOX_SYNC_DB_PASSWORD+1}" != "1" ] \
+     || [ "x${FIREFOX_SYNC_DB_PASSWORD}" == "x" ]; then
+    export FIREFOX_SYNC_DB_PASSWORD="${FIREFOX_SYNC_DB_PASSWORD_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -186,6 +214,10 @@ function defineEnv() {
     ACTIVEMQ_CLIENT_PASSWORD \
     ACTIVEMQ_SERVER_PASSWORD \
     ACTIVEMQ_PRE_SHARED_KEY \
+    FIREFOX_SYNC_DOMAIN \
+    FIREFOX_SYNC_SECRET \
+    FIREFOX_SYNC_DB_USER \
+    FIREFOX_SYNC_DB_PASSWORD \
    );
  
   export ENV_VARIABLES;
