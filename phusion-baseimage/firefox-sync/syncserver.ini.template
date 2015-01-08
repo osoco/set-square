@@ -13,7 +13,7 @@ public_url = http://${FIREFOX_SYNC_DOMAIN}
 
 # This defines the database in which to store all server data.
 #sqluri = sqlite:////tmp/syncserver.db
-sqluri = pymysql://${FIREFOX_SYNC_DB_USER}:${FIREFOX_SYNC_DB_PASSWORD}@___DB___/sync
+sqluri = pymysql://${FIREFOX_SYNC_DB_USER}:${FIREFOX_SYNC_DB_PASSWORD}@___DB___/${FIREFOX_SYNC_DB_NAME}
 
 # This is a secret key used for signing authentication tokens.
 # It should be long and randomly-generated.

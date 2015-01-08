@@ -1,6 +1,0 @@
-#!/bin/bash
-
-cd /usr/local/src/syncserver/
-mv syncserver.ini syncserver.ini.master
-sed "s ___DB___ ${DB_PORT#tcp://} g" syncserver.ini.tpl > syncserver.ini
-local/bin/pserve syncserver.ini 2>& 1 >> /var/log/firefox-sync &

@@ -8,6 +8,7 @@ RUN apt-get -y dist-upgrade
 #RUN apt-get install software-properties-common
 RUN apt-get -y install mariadb-server
 RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
+ADD setup.sql /var/lib/mysql/setup.sql.tpl
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 

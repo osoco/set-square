@@ -37,25 +37,25 @@ function defineEnv() {
     export JAVA_VERSION="${JAVA_VERSION_DEFAULT}";
   fi
   
-  export MYSQL_ROOT_PASSWORD_DEFAULT="secret";
-  export MYSQL_ROOT_PASSWORD_DESCRIPTION="The default password for the root user in MySQL databases";
-  if    [ "${MYSQL_ROOT_PASSWORD+1}" != "1" ] \
-     || [ "x${MYSQL_ROOT_PASSWORD}" == "x" ]; then
-    export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD_DEFAULT}";
+  export MARIADB_ROOT_PASSWORD_DEFAULT="secret";
+  export MARIADB_ROOT_PASSWORD_DESCRIPTION="The default password for the root user in MySQL databases";
+  if    [ "${MARIADB_ROOT_PASSWORD+1}" != "1" ] \
+     || [ "x${MARIADB_ROOT_PASSWORD}" == "x" ]; then
+    export MARIADB_ROOT_PASSWORD="${MARIADB_ROOT_PASSWORD_DEFAULT}";
   fi
 
-  export MYSQL_ADMIN_USER_DEFAULT="admin";
-  export MYSQL_ADMIN_USER_DESCRIPTION="The name of the admin user in MySQL databases";
-  if    [ "${MYSQL_ADMIN_USER+1}" != "1" ] \
-     || [ "x${MYSQL_ADMIN_USER}" == "x" ]; then
-    export MYSQL_ADMIN_USER="${MYSQL_ADMIN_USER_DEFAULT}";
+  export MARIADB_ADMIN_USER_DEFAULT="admin";
+  export MARIADB_ADMIN_USER_DESCRIPTION="The name of the admin user in MySQL databases";
+  if    [ "${MARIADB_ADMIN_USER+1}" != "1" ] \
+     || [ "x${MARIADB_ADMIN_USER}" == "x" ]; then
+    export MARIADB_ADMIN_USER="${MARIADB_ADMIN_USER_DEFAULT}";
   fi
 
-  export MYSQL_ADMIN_PASSWORD_DEFAULT="secret";
-  export MYSQL_ADMIN_PASSWORD_DESCRIPTION="The default password for the admin user in MySQL databases";
-  if    [ "${MYSQL_ADMIN_PASSWORD+1}" != "1" ] \
-     || [ "x${MYSQL_ADMIN_PASSWORD}" == "x" ]; then
-    export MYSQL_ADMIN_PASSWORD="${MYSQL_ADMIN_PASSWORD_DEFAULT}";
+  export MARIADB_ADMIN_PASSWORD_DEFAULT="secret";
+  export MARIADB_ADMIN_PASSWORD_DESCRIPTION="The default password for the admin user in MySQL databases";
+  if    [ "${MARIADB_ADMIN_PASSWORD+1}" != "1" ] \
+     || [ "x${MARIADB_ADMIN_PASSWORD}" == "x" ]; then
+    export MARIADB_ADMIN_PASSWORD="${MARIADB_ADMIN_PASSWORD_DEFAULT}";
   fi
 
   export GETBOO_DB_NAME_DEFAULT="bm";
@@ -170,11 +170,18 @@ function defineEnv() {
     export FIREFOX_SYNC_DOMAIN="${FIREFOX_SYNC_DOMAIN_DEFAULT}";
   fi
 
-  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum db8a203aed5fe3e4594d4b75990acb76242efd35 -)";
+  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum db8a203aed5fe3e4594d4b75990acb76242efd35 | awk '{print $1;}')";
   export FIREFOX_SYNC_SECRET_DESCRIPTION="The secret string for the firefox sync server";
   if    [ "${FIREFOX_SYNC_SECRET+1}" != "1" ] \
      || [ "x${FIREFOX_SYNC_SECRET}" == "x" ]; then
     export FIREFOX_SYNC_SECRET="${FIREFOX_SYNC_SECRET_DEFAULT}";
+  fi
+
+  export FIREFOX_SYNC_DB_NAME_DEFAULT="ffsync";
+  export FIREFOX_SYNC_DB_NAME_DESCRIPTION="The Firefox Sync database";
+  if    [ "${FIREFOX_SYNC_DB_NAME+1}" != "1" ] \
+     || [ "x${FIREFOX_SYNC_DB_NAME}" == "x" ]; then
+    export FIREFOX_SYNC_DB_NAME="${FIREFOX_SYNC_DB_NAME_DEFAULT}";
   fi
 
   export FIREFOX_SYNC_DB_USER_DEFAULT="ffsync";
@@ -194,9 +201,9 @@ function defineEnv() {
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
-    MYSQL_ROOT_PASSWORD \
-    MYSQL_ADMIN_USER \
-    MYSQL_ADMIN_PASSWORD \
+    MARIADB_ROOT_PASSWORD \
+    MARIADB_ADMIN_USER \
+    MARIADB_ADMIN_PASSWORD \
     GETBOO_DB_NAME \
     GETBOO_DB_USERNAME \
     GETBOO_DB_PASSWORD \
@@ -216,6 +223,7 @@ function defineEnv() {
     ACTIVEMQ_PRE_SHARED_KEY \
     FIREFOX_SYNC_DOMAIN \
     FIREFOX_SYNC_SECRET \
+    FIREFOX_SYNC_DB_NAME \
     FIREFOX_SYNC_DB_USER \
     FIREFOX_SYNC_DB_PASSWORD \
    );

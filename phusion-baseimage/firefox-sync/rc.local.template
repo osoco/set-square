@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cd /usr/local/src/syncserver/
+mv syncserver.ini syncserver.ini.master
+db_port="${DB_PORT#tcp://}";
+db="${db_port%:*}";
+ip="$(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}')";
+sed "s ___DB___ ${db_port} g" syncserver.ini.tpl > syncserver.ini
+sed "s ___IP___ ${ip} g" /usr/local/src/setup.sql.tpl > /usr/local/src/setup.sql
+/usr/bin/mysql -u root --password="${MARIADB_ROOT_PASSWORD}" -h ${db} < /usr/local/src/setup.sql
+local/bin/pserve syncserver.ini 2>& 1 >> /var/log/firefox-sync &
