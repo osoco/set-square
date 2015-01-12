@@ -1,0 +1,14 @@
+#!/bin/bash
+
+cd /usr/local/src/getboo/
+db_ip_port="${DB_PORT#tcp://}";
+db_ip="${db_ip_port%:*}";
+db_port="${db_ip_port#*:}";
+ip="$(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}')";
+sed "s ___DB_IP___ ${db_ip} g" config.inc.php.tpl | sed "s ___DB_PORT___ ${db_port} g" > config.inc.php
+sed "s ___IP___ ${ip} g" /usr/local/src/setup.sql.tpl > /usr/local/src/setup.sql
+/usr/bin/mysql -u root --password="${MARIADB_ROOT_PASSWORD}" -h ${db} < /usr/local/src/setup.sql
+
+/etc/init.d/apache2 start
+
+exit 0

@@ -58,6 +58,13 @@ function defineEnv() {
     export MARIADB_ADMIN_PASSWORD="${MARIADB_ADMIN_PASSWORD_DEFAULT}";
   fi
 
+  export GETBOO_VERSION_DEFAULT="1.04";
+  export GETBOO_VERSION_DESCRIPTION="The version of Getboo";
+  if    [ "${GETBOO_VERSION+1}" != "1" ] \
+     || [ "x${GETBOO_VERSION}" == "x" ]; then
+    export GETBOO_VERSION="${GETBOO_VERSION_DEFAULT}";
+  fi
+  
   export GETBOO_DB_NAME_DEFAULT="bm";
   export GETBOO_DB_NAME_DESCRIPTION="The database name for getboo schema";
   if    [ "${GETBOO_DB_NAME+1}" != "1" ] \
@@ -91,6 +98,34 @@ function defineEnv() {
   if    [ "${GETBOO_DOMAIN+1}" != "1" ] \
      || [ "x${GETBOO_DOMAIN}" == "x" ]; then
     export GETBOO_DOMAIN="${GETBOO_DOMAIN_DEFAULT}";
+  fi
+
+  export GETBOO_ADMIN_USERNAME_DEFAULT="bmadmin";
+  export GETBOO_ADMIN_USERNAME_DESCRIPTION="The admin username in Getboo";
+  if    [ "${GETBOO_ADMIN_USERNAME+1}" != "1" ] \
+     || [ "x${GETBOO_ADMIN_USERNAME}" == "x" ]; then
+    export GETBOO_ADMIN_USERNAME="${GETBOO_ADMIN_USERNAME_DEFAULT}";
+  fi
+
+  export GETBOO_ADMIN_PASSWORD_DEFAULT="secret";
+  export GETBOO_ADMIN_PASSWORD_DESCRIPTION="The admin password in Getboo";
+  if    [ "${GETBOO_ADMIN_PASSWORD+1}" != "1" ] \
+     || [ "x${GETBOO_ADMIN_PASSWORD}" == "x" ]; then
+    export GETBOO_ADMIN_PASSWORD="${GETBOO_ADMIN_PASSWORD_DEFAULT}";
+  fi
+
+  export GETBOO_ADMIN_EMAIL_DEFAULT="admin-getboo@${GETBOO_DOMAIN}";
+  export GETBOO_ADMIN_EMAIL_DESCRIPTION="The admin email in Getboo";
+  if    [ "${GETBOO_ADMIN_EMAIL+1}" != "1" ] \
+     || [ "x${GETBOO_ADMIN_EMAIL}" == "x" ]; then
+    export GETBOO_ADMIN_EMAIL="${GETBOO_ADMIN_EMAIL_DEFAULT}";
+  fi
+
+  export GETBOO_DEFAULT_LANGUAGE_DEFAULT="en_US";
+  export GETBOO_DEFAULT_LANGUAGE_DESCRIPTION="The default language in Getboo";
+  if    [ "${GETBOO_DEFAULT_LANGUAGE+1}" != "1" ] \
+     || [ "x${GETBOO_DEFAULT_LANGUAGE}" == "x" ]; then
+    export GETBOO_DEFAULT_LANGUAGE="${GETBOO_DEFAULT_LANGUAGE_DEFAULT}";
   fi
 
   export HTTPS_DOMAIN_DEFAULT="${GETBOO_DOMAIN}";
@@ -204,11 +239,16 @@ function defineEnv() {
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \
     MARIADB_ADMIN_PASSWORD \
+    GETBOO_VERSION \
     GETBOO_DB_NAME \
     GETBOO_DB_USERNAME \
     GETBOO_DB_PASSWORD \
     GETBOO_DB_TABLE_PREFIX \
     GETBOO_DOMAIN \
+    GETBOO_ADMIN_USERNAME \
+    GETBOO_ADMIN_PASSWORD \
+    GETBOO_ADMIN_EMAIL \
+    GETBOO_DEFAULT_LANGUAGE \
     HTTPS_DOMAIN \
     JAVA_VERSION \
     TOMCAT_VERSION \
