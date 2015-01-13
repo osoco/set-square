@@ -9,6 +9,8 @@ ADD config.inc.php /usr/local/src/getboo/config.inc.php.tpl
 RUN mv /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf.orig
 ADD 000-default.conf /etc/apache2/sites-available/000-default.conf
 ADD setup.sql /usr/local/src/setup.sql.tpl
+ADD ddl.sql /usr/local/src/ddl.sql
+ADD dml.sql /usr/local/src/dml.sql
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 

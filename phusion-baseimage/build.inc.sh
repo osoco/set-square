@@ -205,7 +205,7 @@ function defineEnv() {
     export FIREFOX_SYNC_DOMAIN="${FIREFOX_SYNC_DOMAIN_DEFAULT}";
   fi
 
-  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum db8a203aed5fe3e4594d4b75990acb76242efd35 | awk '{print $1;}')";
+  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum | awk '{print $1;}')";
   export FIREFOX_SYNC_SECRET_DESCRIPTION="The secret string for the firefox sync server";
   if    [ "${FIREFOX_SYNC_SECRET+1}" != "1" ] \
      || [ "x${FIREFOX_SYNC_SECRET}" == "x" ]; then

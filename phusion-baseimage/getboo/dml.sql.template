@@ -1,0 +1,59 @@
+--
+-- Dumping data for table `activation`
+--
+
+LOCK TABLES `activation` WRITE;
+/*!40000 ALTER TABLE `activation` DISABLE KEYS */;
+INSERT INTO `activation` VALUES ('admin','0','Y',NULL,'${GETBOO_ADMIN_EMAIL}');
+/*!40000 ALTER TABLE `activation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `configs`
+--
+
+LOCK TABLES `configs` WRITE;
+/*!40000 ALTER TABLE `configs` DISABLE KEYS */;
+INSERT INTO `configs` VALUES
+('WEBSITE_NAME','Bookmarks','Name of the GetBoo installation','string',1,''),
+('WEBSITE_LOCALE','en_US','Locale for the translation in use','choices',1,'en_US,fr_FR,es_ES,cs_CZ,de_DE'),
+('WEBSITE_ROOT','${GETBOO_ADMIN_EMAIL%/}/','Root of the installation. Add slash / at the end of the url','string',1,''),
+('WEBSITE_DIR','/usr/local/src/getboo','Real directory path where the script resides on the server (no localhost or www url)','string',1,''),
+('TAGS','1','The users can add and modify their bookmarks to make them public','boolean',1,''),
+('DEBUG','0','Functions to debug if you need to test your scripts/add-ons. Not recommended for production mode.','boolean',1,''),
+('USE_DEMO','0','Display the demo account to visitors. Is created during installation, otherwise create a demo/demo account yourself if enabled after','boolean',1,''),
+('USECACHE','1','Use caching of public bookmarks pages for faster execution','boolean',1,''),
+('CACHE_DIR','/usr/local/src/getboo/cache/','Directory to store the cached pages. Must be writable by the server.','string',1,''),
+('NEWS','0','Enable news module','boolean',1,''),
+('CURL_AVAILABLE','1','Enable curl (library) functions','boolean',1,''),
+('USE_SCREENSHOT','1','Enable screen shot capture of public bookmarks','boolean',1,''),
+('SCREENSHOT_URL','http://images.websnapr.com/?size=S&url=%s','Screen shot application, with %s as the placeholder for the url variable','choices',1,'http://images.websnapr.com/?size=S&url=%s,http://spa.snap.com/preview/?url=%s,http://www.artviper.net/screenshots/screener.php?q=100&w=120&h=90&sdx=1024&sdy=768&url=%s&.jpg'),
+('ANTI_SPAM','1','Enable anti-spam measures if the site experiences spamming','boolean',2,''),
+('CAPTCHA','1','Enable captcha security during new user registration','boolean',2,''),
+('DATE_FORMAT','F d, Y h:i:s A','The date format is the same as the PHP date function. Do not specify the timezone paramater (e).','string',3,''),
+('USER_MAX_TIMEOUT','3600','Maximum number of seconds the member can be inactive before his session expires','integer',3,''),
+('PUBLIC_TIMEOUT','60','Minimum number of days the member has to be registered before being able to display its public bookmarks in the recent tags page','integer',2,''),
+('MAXIMUM_PAGES_RECENT_TAGS','5','Maximum number of pages for the recent tags (bookmarks)','integer',3,''),
+('NEWS_PER_PAGE','5','Number of news to display in the news section','integer',3,''),
+('SAME_IP_NEW_ACCONT_DELAY','48','Delay (hours) for a member to register a new account with the same IP address','integer',2,''),
+('USER_TIMEOUT','1800','Delay of inactivity for users before their session expires, in seconds','integer',3,''),
+('NEWS_MSG_LENGTH','325','Number of chars to display in the news section for the truncated version of the news','integer',3,''),
+('TAGS_PER_PAGE','10','Number of bookmarks displayed per page for the social bookmarking part','choices',3,'10,20,30,40,50'),
+('MAIN_FID','0','Folder ID (virtual) of the main folder containing the user\'s bookmarks','integer',0,''),
+('ONLINE_TIMEOUT','600','Delay of inactivity for users to be considered online, in seconds','integer',3,''),
+('GROUPS_FID','-1','Folder ID (virtual) of the groups folder','integer',0,''),
+('WAITTIME','600','Time to wait after a user has 3 unsuccessful login attemps, in seconds','integer',2,''),
+('IS_GETBOO','0','True only for GetBoo.com','boolean',0,''),
+('VERSION','1.04','Version number of the application','string',0,'');
+/*!40000 ALTER TABLE `configs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping data for table `configs_groups`
+--
+
+LOCK TABLES `configs_groups` WRITE;
+/*!40000 ALTER TABLE `configs_groups` DISABLE KEYS */;
+INSERT INTO `configs_groups` VALUES (0,'Hidden','Hidden Configuration values'),(1,'Basic','Minimal Configuration settings'),(2,'Security','Security features'),(3,'Constants','GetBoo contants');
+/*!40000 ALTER TABLE `configs_groups` ENABLE KEYS */;
+UNLOCK TABLES;
