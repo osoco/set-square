@@ -99,12 +99,12 @@ function checkInput() {
   fi 
 }
 
-# Does "${NAMESPACE}/${REPO}:${TAG}" exist?
-# Returns 0 (exists) or 1 (missing).
-#
-# Arguments:
-#
-# 1: REPO
+## Does "${NAMESPACE}/${REPO}:${TAG}" exist?
+## Returns 0 (exists) or 1 (missing).
+##
+## Arguments:
+##
+## 1: REPO
 function repo_exists() {
   local _repo="${1}"
   local _images=$("${DOCKER}" images "${NAMESPACE}/${_repo}")
@@ -119,7 +119,11 @@ function repo_exists() {
   return ${_rescode};
 }
 
-function repo_exists() {
+## Builds "${NAMESPACE}/${REPO}:${TAG}"
+## Arguments:
+##
+## 1: REPO
+function build_repo() {
   local _repo="${1}"
 
   local _env="$( \
@@ -137,7 +141,9 @@ function repo_exists() {
       < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
     done
   fi
+
   logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
+  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
   docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
@@ -155,14 +161,15 @@ function repo_exists() {
   fi
 }
 
-[ -e "$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(basename ${SCRIPT_NAME} .sh).inc.sh"
+echo $(dirname ${SCRIPT_NAME})
+echo $(basename ${SCRIPT_NAME})
+[ -e "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh"
 
-[ -e "$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && echo "$(basename ${SCRIPT_NAME} .sh).inc.sh"
 function main() {
   local _repo;
   for _repo in ${REPOS}; do
     if ! repo_exists "${_repo}"; then
-      buildRepo "_repo"
+      build_repo "${_repo}"
     fi
   done
 }
