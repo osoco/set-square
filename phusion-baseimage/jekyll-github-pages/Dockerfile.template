@@ -1,0 +1,12 @@
+FROM ${NAMESPACE}/jekyll:${TAG}
+MAINTAINER ${MAINTAINER}
+
+USER jekyll
+WORKDIR /var/www/jekyll
+
+RUN git clone https://github.com/${GITHUB_USER}/${GITHUB_USER}.github.io.git
+COPY _config.yml /var/www/jekyll/_config.yml
+COPY rc.local /etc/rc.local
+RUN chmod +x /etc/rc.local
+
+VOLUME /var/www/jekyll

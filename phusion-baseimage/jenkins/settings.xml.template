@@ -7,12 +7,22 @@
   <servers>
     <server>
       <id>acmsl-libs-releases</id>
-      <username>jenkins-admin</username>
+      <username>${JENKINS_USER}</username>
       <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
     <server>
       <id>acmsl-libs-snapshots</id>
-      <username>jenkins-admin</username>
+      <username>${JENKINS_USER}</username>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
+    </server>
+    <server>
+      <id>acmsl-plugin-releases</id>
+      <username>${JENKINS_USER}</username>
+      <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
+    </server>
+    <server>
+      <id>acmsl-plugin-snapshots</id>
+      <username>${JENKINS_USER}</username>
       <password>${JENKINS_ENCRYPTED_PASSWORD}</password>
     </server>
   </servers>
@@ -49,12 +59,12 @@
             <enabled>false</enabled>
           </snapshots>
           <id>acmsl-plugins-releases</id>
-          <name>plugins-releases</name>
+          <name>acmsl-plugins-releases</name>
           <url>http://maven.acm-sl.org/plugins-releases-local</url>
         </pluginRepository>
         <pluginRepository>
           <snapshots />
-          <id>snapshots</id>
+          <id>acmsl-plugins-snapshots</id>
           <name>acmsl-plugins-snapshots</name>
           <url>http://maven.acm-sl.org/plugins-snapshots-local</url>
         </pluginRepository>

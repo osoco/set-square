@@ -1,19 +1,12 @@
 FROM ${NAMESPACE}/mcollective-common:${TAG}
 MAINTAINER ${MAINTAINER}
 
+COPY rc.local /etc/rc.local
+
 # From Learning MCollective
-RUN apt-get update
-RUN apt-get install -y ruby-stomp mcollective-plugins-facts-facter
-RUN apt-get install -y mcollective
-RUN apt-get install -y mcollective-filemgr-agent mcollective-nettest-agent mcollective-package-agent mcollective-service-agent mcollective-puppet-agent
-RUN update-rc.d mcollective defaults
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y ruby-stomp mcollective-plugins-facts-facter mcollective mcollective-filemgr-agent mcollective-nettest-agent mcollective-package-agent mcollective-service-agent mcollective-puppet-agent && \
+    update-rc.d mcollective defaults && \
+    chmod +x /etc/rc.local && \
+    echo "RUN=yes" > /etc/default/mcollective
 
-#TODO: install mcollective-shell-agent and iptables-agent
-ADD server.cfg /etc/mcollective/server.cfg
-
-ADD rc.local /etc/rc.local
-RUN chmod +x /etc/rc.local
-RUN echo "RUN=yes" > /etc/default/mcollective
-
-RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+COPY server.cfg /etc/mcollective/server.cfg

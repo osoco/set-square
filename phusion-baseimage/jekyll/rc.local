@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd /var/www/jekyll
+
+jekyll serve
+
+exit 0

@@ -1,0 +1,34 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+
+# From http://docs.docker.com/examples/postgresql_service
+
+# Add the PostgreSQL PGP key to verify their Debian packages.
+# It should be the same key as https://www.postgresql.org/media/keys/ACCC4CF8.asc
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 && \
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get install -y python-software-properties software-properties-common postgresql-${POSTGRESQL_VERSION} postgresql-client-${POSTGRESQL_VERSION} postgresql-contrib-${POSTGRESQL_VERSION} && \
+    chmod +x /etc/rc.local
+
+# Run the rest of the commands as the ``postgres`` user created by the ``postgres-${POSTGRESQL_VERSION}`` package when it was ``apt-get installed``
+USER postgres
+
+# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
+# then create a database `docker` owned by the ``docker`` role.
+# Note: here we use ``&&\`` to run commands one after the other - the ``\``
+#       allows the RUN command to span multiple lines.
+RUN    /etc/init.d/postgresql start && \
+    psql --command "CREATE USER ${POSTGRESQL_ROOT_USER} WITH SUPERUSER PASSWORD '${POSTGRESQL_ROOT_PASSWORD}';" && \
+    sed -i 's_^local\(\s\+\)all\(\s\+\)all\(\s\+\)peer\(.*\)$_local\1all\2all\3md5\4_g' /etc/postgresql/9.3/main/pg_hba.conf && \
+    echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
+    echo "listen_addresses='*'" >> /etc/postgresql/9.3/main/postgresql.conf
+
+# Expose the PostgreSQL port
+EXPOSE 5432
+
+# Add VOLUMEs to allow backup of config, logs and databases
+# This have to be done in child Dockerfiles, in order to make Dockerfile DB changes persist.
+# See http://stackoverflow.com/questions/27377876/docker-postgres-with-initial-data-is-not-persisted-over-commits
+#VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]

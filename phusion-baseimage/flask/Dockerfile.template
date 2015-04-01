@@ -1,0 +1,24 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y wget python python-pip python-dev build-essential && \
+    pip install --upgrade pip && \
+    pip install --upgrade virtualenv && \
+    pip install --upgrade flask-restful && \
+    pip install --upgrade flask && \
+    pip install --upgrade flask-login && \
+    pip install --upgrade flask-openid && \
+    pip install --upgrade flask-mail && \
+    pip install --upgrade flask-sqlalchemy && \
+    pip install --upgrade flask-whooshalchemy && \
+    pip install --upgrade flask-wtf && \
+    pip install --upgrade flask-babel && \
+    pip install --upgrade guess_language && \
+    pip install --upgrade flipflop && \
+    pip install --upgrade coverage && \
+    groupadd flask && \
+    useradd -s /bin/bash -g flask -G flask,www-data -m -d /var/www -c "Flask user running /var/www/run.py" flask
+
+VOLUME /var/www
+
+EXPOSE 5000

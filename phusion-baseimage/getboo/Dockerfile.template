@@ -1,22 +1,21 @@
 FROM ${NAMESPACE}/base:${TAG}
 MAINTAINER ${MAINTAINER}
 
-RUN apt-get -y update
-RUN apt-get -y dist-upgrade
-RUN apt-get -y install mariadb-client apache2 libapache2-mod-php5 php-pear php5-mysql wget unzip
-RUN cd /usr/local/src && wget http://downloads.sourceforge.net/project/getboo/getboo/1.04/getboo.${GETBOO_VERSION}.zip && unzip getboo.${GETBOO_VERSION}.zip && ln -s getboo.${GETBOO_VERSION} getboo && chown www-data.www-data -R /usr/local/src/getboo* && rm -rf /usr/local/src/getboo/install
-ADD config.inc.php /usr/local/src/getboo/config.inc.php.tpl
-RUN mv /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf.orig
-ADD 000-default.conf /etc/apache2/sites-available/000-default.conf
-ADD setup.sql /usr/local/src/setup.sql.tpl
-ADD ddl.sql /usr/local/src/ddl.sql
-ADD dml.sql /usr/local/src/dml.sql
-ADD rc.local /etc/rc.local
-RUN chmod +x /etc/rc.local
+RUN apt-get -y install mariadb-client apache2 libapache2-mod-php5 php-pear php5-mysql wget unzip && \
+    cd /usr/local/src && wget http://downloads.sourceforge.net/project/getboo/getboo/${GETBOO_VERSION}/getboo.${GETBOO_VERSION}.zip && \
+    unzip getboo.${GETBOO_VERSION}.zip && ln -s getboo.${GETBOO_VERSION} getboo && \
+    chown www-data.www-data -R /usr/local/src/getboo* && rm -rf /usr/local/src/getboo/install && \
+     mv /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf.orig
+COPY config.inc.php /usr/local/src/getboo/config.inc.php.tpl
+COPY ports.conf /etc/apache2/ports.conf
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY setup.sql /usr/local/src/setup.sql.tpl
+COPY ddl.sql /usr/local/src/ddl.sql
+COPY dml.sql /usr/local/src/dml.sql
+COPY rc.local /etc/rc.local
 
-RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN chmod +x /etc/rc.local
 
 VOLUME /var/log
 
-EXPOSE 80
+EXPOSE 8080

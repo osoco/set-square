@@ -1,0 +1,19 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+
+# From http://rethinkdb.com/docs/install/ubuntu/
+RUN DEBIAN_FRONTEND=noninteractive source /etc/lsb-release && echo "deb http://download.rethinkdb.com/apt $DISTRIB_CODENAME main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list && \
+    apt-get install -y wget && \
+    wget -qO- http://download.rethinkdb.com/apt/pubkey.gpg | sudo apt-key add - && \
+    apt-get update && \
+    apt-get install -y rethinkdb && \
+    wget -q -O /etc/rethinkdb/instances.d/instance1.conf https://github.com/rethinkdb/rethinkdb/raw/next/packaging/assets/config/default.conf.sample && \
+    sed -i 's_# bind=127.0.0.1_bind=all_g' /etc/rethinkdb/instances.d/instance1.conf && \
+    chmod +x /etc/rc.local
+
+EXPOSE 8080
+#EXPOSE 28015
+#EXPOSE 29015
+VOLUME /var/lib/rethinkdb

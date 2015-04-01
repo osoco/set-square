@@ -16,10 +16,12 @@ Where:
   * tag: the tag to use once the image is built successfully.
 EOF
 }
- 
+
+DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
+
 # Requirements
 function checkRequirements() {
-  checkReq docker DOCKER_NOT_INSTALLED;
+  checkReq ${DOCKER} DOCKER_NOT_INSTALLED;
   checkReq date DATE_NOT_INSTALLED;
   checkReq realpath REALPATH_NOT_INSTALLED;
   checkReq envsubst ENVSUBST_NOT_INSTALLED;
@@ -107,7 +109,7 @@ function checkInput() {
 # 1: REPO
 function repo_exists() {
   local _repo="${1}"
-  local _images=$("${DOCKER}" images "${NAMESPACE}/${_repo}")
+  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}")
   local _matches=$(echo "${_images}" | grep "${TAG}")
   local _rescode;
   if [ -z "${MATCHES}" ]; then
@@ -119,16 +121,16 @@ function repo_exists() {
   return ${_rescode};
 }
 
-function repo_exists() {
+function build_repo() {
   local _repo="${1}"
 
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) NAMESPACE=\"${NAMESPACE}\" TAG=\"${TAG}\" MAINTAINER=\"${AUTHOR}\"";
+      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR}\"";
 
-  local _envsubstDecl=$(echo -n "'"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "$"; echo -n "{NAMESPACE} $"; echo -n "{TAG} $"; echo -n "{MAINTAINER}'";);
-  
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
       echo "${_env} \
@@ -137,12 +139,14 @@ function repo_exists() {
       < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
     done
   fi
-  logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
-  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
+  logInfo "Building ${NAMESPACE}/${_repo}:${TAG}"
+  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}" 
   if [ $? -eq 0 ]; then
-    logInfoResult SUCCESS "done"
+    logInfo -n "${NAMESPACE}/${_repo}:${TAG}";
+    logInfoResult SUCCESS "built"
   else
-    logInfoResult FAILURE "failed"
+    logInfo -n "${NAMESPACE}/${_repo}:${TAG}";
+    logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
   logInfo -n "Tagging ${NAMESPACE}/${_repo}:latest"
@@ -157,12 +161,12 @@ function repo_exists() {
 
 [ -e "$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(basename ${SCRIPT_NAME} .sh).inc.sh"
 
-[ -e "$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && echo "$(basename ${SCRIPT_NAME} .sh).inc.sh"
+#[ -e "$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && echo "$(basename ${SCRIPT_NAME} .sh).inc.sh"
 function main() {
   local _repo;
   for _repo in ${REPOS}; do
     if ! repo_exists "${_repo}"; then
-      buildRepo "_repo"
+      build_repo "${_repo}"
     fi
   done
 }

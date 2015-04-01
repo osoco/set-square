@@ -149,6 +149,13 @@ function defineEnv() {
     export MAVEN_VERSION="${MAVEN_VERSION_DEFAULT}";
   fi
 
+  export JENKINS_USER_DEFAULT="jenkins-admin";
+  export JENKINS_USER_DESCRIPTION="The Jenkins user";
+  if    [ "${JENKINS_USER+1}" != "1" ] \
+     || [ "x${JENKINS_USER}" == "x" ]; then
+    export JENKINS_USER="${JENKINS_USER_DEFAULT}";
+  fi
+
   export JENKINS_PASSWORD_DEFAULT="secret";
   export JENKINS_PASSWORD_DESCRIPTION="The password for the jenkins user";
   if    [ "${JENKINS_PASSWORD+1}" != "1" ] \
@@ -233,6 +240,111 @@ function defineEnv() {
     export FIREFOX_SYNC_DB_PASSWORD="${FIREFOX_SYNC_DB_PASSWORD_DEFAULT}";
   fi
 
+  export RABBITMQ_USER_DEFAULT="openbadges";
+  export RABBITMQ_USER_DESCRIPTION="The RabbitMQ user";
+  if    [ "${RABBITMQ_USER+1}" != "1" ] \
+     || [ "x${RABBITMQ_USER}" == "x" ]; then
+    export RABBITMQ_USER="${RABBITMQ_USER_DEFAULT}";
+  fi
+
+  export RABBITMQ_PASSWORD_DEFAULT="openbadges";
+  export RABBITMQ_PASSWORD_DESCRIPTION="The password of the RabbitMQ user";
+  if    [ "${RABBITMQ_PASSWORD+1}" != "1" ] \
+     || [ "x${RABBITMQ_PASSWORD}" == "x" ]; then
+    export RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD_DEFAULT}";
+  fi
+
+  export RABBITMQ_EXCHANGE_DEFAULT="${NAMESPACE}";
+  export RABBITMQ_EXCHANGE_DESCRIPTION="The RabbitMQ exchange";
+  if    [ "${RABBITMQ_EXCHANGE+1}" != "1" ] \
+     || [ "x${RABBITMQ_EXCHANGE}" == "x" ]; then
+    export RABBITMQ_EXCHANGE="${RABBITMQ_EXCHANGE_DEFAULT}";
+  fi
+
+  export RABBITMQ_VIRTUALHOST_DEFAULT="${NAMESPACE}";
+  export RABBITMQ_VIRTUALHOST_DESCRIPTION="The RabbitMQ virtual host";
+  if    [ "${RABBITMQ_VIRTUALHOST+1}" != "1" ] \
+     || [ "x${RABBITMQ_VIRTUALHOST}" == "x" ]; then
+    export RABBITMQ_VIRTUALHOST="${RABBITMQ_VIRTUALHOST_DEFAULT}";
+  fi
+
+  export RABBITMQ_QUEUE_DEFAULT="commands#game-core";
+  export RABBITMQ_QUEUE_DESCRIPTION="The queue in RabbitMQ";
+  if    [ "${RABBITMQ_QUEUE+1}" != "1" ] \
+     || [ "x${RABBITMQ_QUEUE}" == "x" ]; then
+    export RABBITMQ_QUEUE="${RABBITMQ_QUEUE_DEFAULT}";
+  fi
+
+  export RABBITMQ_ROUTING_KEY_DEFAULT="#";
+  export RABBITMQ_ROUTING_KEY_DESCRIPTION="The routing key in RabbitMQ";
+  if    [ "${RABBITMQ_ROUTING_KEY+1}" != "1" ] \
+     || [ "x${RABBITMQ_ROUTING_KEY}" == "x" ]; then
+    export RABBITMQ_ROUTING_KEY="${RABBITMQ_ROUTING_KEY_DEFAULT}";
+  fi
+
+  export POSTGRESQL_VERSION_DEFAULT="9.3";
+  export POSTGRESQL_VERSION_DESCRIPTION="The PostgreSQL version";
+  if    [ "${POSTGRESQL_VERSION+1}" != "1" ] \
+     || [ "x${POSTGRESQL_VERSION}" == "x" ]; then
+    export POSTGRESQL_VERSION="${POSTGRESQL_VERSION_DEFAULT}";
+  fi
+
+  export POSTGRESQL_ROOT_USER_DEFAULT="docker";
+  export POSTGRESQL_ROOT_USER_DESCRIPTION="The name of the admin user in PostgreSQL databases";
+  if    [ "${POSTGRESQL_ROOT_USER+1}" != "1" ] \
+     || [ "x${POSTGRESQL_ROOT_USER}" == "x" ]; then
+    export POSTGRESQL_ROOT_USER="${POSTGRESQL_ROOT_USER_DEFAULT}";
+  fi
+
+  export POSTGRESQL_ROOT_PASSWORD_DEFAULT="secret";
+  export POSTGRESQL_ROOT_PASSWORD_DESCRIPTION="The default password for the root user in PostgreSQL databases";
+  if    [ "${POSTGRESQL_ROOT_PASSWORD+1}" != "1" ] \
+     || [ "x${POSTGRESQL_ROOT_PASSWORD}" == "x" ]; then
+    export POSTGRESQL_ROOT_PASSWORD="${POSTGRESQL_ROOT_PASSWORD_DEFAULT}";
+  fi
+
+  export OSOCOGAME_DB_DEFAULT="openbadges";
+  export OSOCOGAME_DB_DESCRIPTION="The name of Osoco's Game";
+  if    [ "${OSOCOGAME_DB+1}" != "1" ] \
+     || [ "x${OSOCOGAME_DB}" == "x" ]; then
+    export OSOCOGAME_DB="${OSOCOGAME_DB_DEFAULT}";
+  fi
+
+  export OSOCOGAME_DB_ROLE_DEFAULT="openbadges";
+  export OSOCOGAME_DB_ROLE_DESCRIPTION="The DB role in used by Osoco's Game";
+  if    [ "${OSOCOGAME_DB_ROLE+1}" != "1" ] \
+     || [ "x${OSOCOGAME_DB_ROLE}" == "x" ]; then
+    export OSOCOGAME_DB_ROLE="${OSOCOGAME_DB_ROLE_DEFAULT}";
+  fi
+
+  export OSOCOGAME_DB_USER_DEFAULT="openbadges";
+  export OSOCOGAME_DB_USER_DESCRIPTION="The name of the DB user in used by Osoco's Game";
+  if    [ "${OSOCOGAME_DB_USER+1}" != "1" ] \
+     || [ "x${OSOCOGAME_DB_USER}" == "x" ]; then
+    export OSOCOGAME_DB_USER="${OSOCOGAME_DB_USER_DEFAULT}";
+  fi
+
+  export OSOCOGAME_DB_PASSWORD_DEFAULT="openbadges";
+  export OSOCOGAME_DB_PASSWORD_DESCRIPTION="The password of the DB user used by Osoco's Game";
+  if    [ "${OSOCOGAME_DB_PASSWORD+1}" != "1" ] \
+     || [ "x${OSOCOGAME_DB_PASSWORD}" == "x" ]; then
+    export OSOCOGAME_DB_PASSWORD="${OSOCOGAME_DB_PASSWORD_DEFAULT}";
+  fi
+
+  export MONGODB_VERSION_DEFAULT="3.0";
+  export MONGODB_VERSION_DESCRIPTION="The MongoDB version";
+  if    [ "${MONGODB_VERSION+1}" != "1" ] \
+     || [ "x${MONGODB_VERSION}" == "x" ]; then
+    export MONGODB_VERSION="${MONGODB_VERSION_DEFAULT}";
+  fi
+
+  export OPENBADGES_MONGODB_DB_DEFAULT="openbadges";
+  export OPENBADGES_MONGODB_DB_DESCRIPTION="The OpenBadges MongoDB database name";
+  if    [ "${OPENBADGES_MONGODB_DB+1}" != "1" ] \
+     || [ "x${OPENBADGES_MONGODB_DB}" == "x" ]; then
+    export OPENBADGES_MONGODB_DB="${OPENBADGES_MONGODB_DB_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     NAMESPACE \
@@ -254,6 +366,7 @@ function defineEnv() {
     TOMCAT_VERSION \
     ARTIFACTORY_VERSION \
     MAVEN_VERSION \
+    JENKINS_USER \
     JENKINS_PASSWORD \
     JENKINS_ENCRYPTED_PASSWORD \
     RELEASE_ISSUE_REF \
@@ -266,6 +379,21 @@ function defineEnv() {
     FIREFOX_SYNC_DB_NAME \
     FIREFOX_SYNC_DB_USER \
     FIREFOX_SYNC_DB_PASSWORD \
+    RABBITMQ_USER \
+    RABBITMQ_PASSWORD \
+    RABBITMQ_VIRTUALHOST \
+    RABBITMQ_EXCHANGES \
+    RABBITMQ_QUEUE \
+    RABBITMQ_ROUTING_KEY \
+    POSTGRESQL_VERSION \
+    POSTGRESQL_ROOT_USER \
+    POSTGRESQL_ROOT_PASSWORD \
+    OSOCOGAME_DB \
+    OSOCOGAME_DB_USER \
+    OSOCOGAME_DB_PASSWORD \
+    OSOCOGAME_DB_ROLE \
+    MONGODB_VERSION \
+    OPENBADGES_MONGODB_DB \
    );
  
   export ENV_VARIABLES;

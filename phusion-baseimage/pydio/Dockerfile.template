@@ -1,0 +1,19 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+#COPY rc.local /etc/rc.local
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install wget && \
+    echo 'deb http://dl.ajaxplorer.info/repos/apt stable main' >> /etc/apt/sources.list && \
+    echo 'deb-src http://dl.ajaxplorer.info/repos/apt stable main' >> /etc/apt/sources.list && \
+    wget -O - http://dl.ajaxplorer.info/repos/charles@ajaxplorer.info.gpg.key | sudo apt-key add - && \
+    apt-get -y update && \
+    apt-get -y dist-upgrade && \
+    apt-get -y install apache2 pydio && \
+    cp /usr/share/doc/pydio/apache2.sample.conf /etc/apache2/sites-available/pydio.conf && a2ensite pydio && a2enmod rewrite && \
+    php5enmod mcrypt
+#    chmod +x /etc/rc.local
+
+VOLUME /var/log
+
+EXPOSE 8080

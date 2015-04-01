@@ -15,6 +15,7 @@ RUN cd /home/ && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/artifactory-
 RUN rm -rf /home/artifactory && mv /home/artifactory-${ARTIFACTORY_VERSION} /home/artifactory
 RUN cd /opt/tomcat && mkdir .artifactory && cd .artifactory && /usr/lib/jvm/java/bin/jar -xvf /home/artifactory/webapps/artifactory.war
 ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
+#RUN sed -i 's_<Connector port="8080" protocol="HTTP/1.1"_<Connector port="80" protocol="HTTP/1.1"_g' /opt/tomcat/conf/server.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml artifactory.xml
 ADD artifactory-.bashrc /home/artifactory/.bashrc
 RUN rm -rf /opt/tomcat/webapps/*
@@ -28,11 +29,9 @@ RUN chown -R artifactory:tomcat /home/artifactory /opt/tomcat/.artifactory
 RUN chmod -R g+w /home/artifactory /opt/tomcat/.artifactory
 ADD rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
-
 RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 VOLUME /home/artifactory
 
 EXPOSE 8080
-

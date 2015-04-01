@@ -1,24 +1,28 @@
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
-ENV HOME /root
-USER root
-# Create user jenkins
-RUN groupadd jenkins
-RUN useradd -s /bin/bash -g jenkins -G jenkins,tomcat,sudo -m -c "Jenkins user running /etc/init.d/jenkins" jenkins
-RUN echo 'jenkins:${JENKINS_PASSWORD}' | chpasswd 
-# jenkins user can run jenkins app
-RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart, /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers
 
-RUN mkdir -p /usr/local/jenkins/.m2
-ADD settings.xml /usr/local/jenkins/.m2/settings.xml
-RUN wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /opt/tomcat/webapps/jenkins.war
-RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
-RUN cd /opt/tomcat && ln -s /home/jenkins/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war 
-ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
+ENV HOME /root
+
+
+# Create user jenkins
+RUN groupadd jenkins && \
+    useradd -s /bin/bash -g jenkins -G jenkins,tomcat,sudo -m -c "Jenkins user running /etc/init.d/jenkins" jenkins && \
+    echo 'jenkins:${JENKINS_PASSWORD}' | chpasswd && \
+    sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart, /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers && \
+    mkdir -p /usr/local/jenkins/.m2 && \
+
+COPY settings.xml /usr/local/jenkins/.m2/settings.xml
+COPY context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
+
+RUN wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /opt/tomcat/webapps/jenkins.war && \
+    mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome && \
+    cd /opt/tomcat && ln -s /home/jenkins/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war && \
+#RUN sed -i 's_<Connector port="8080" protocol="HTTP/1.1"_<Connector port="80" protocol="HTTP/1.1"_g' /opt/tomcat/conf/server.xml
 #RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml jenkins.xml
 RUN sed -i '/<\/tomcat-users>/i \  <role rolename="admin"\/>' /opt/tomcat/conf/tomcat-users.xml
 RUN sed -i '/<\/tomcat-users>/i \  <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"\/>' /opt/tomcat/conf/tomcat-users.xml
-RUN sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml
+RUN [ -e /opt/tomcat/conf/server.xml ] && sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml
+#RUN [ -e /opt/tomcat/conf/server.xml.tpl ] && sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml.tpl
 
 # TODO: add cron job for mvn versions:update-properties
 # TODO: gem install bouncy-castle-java

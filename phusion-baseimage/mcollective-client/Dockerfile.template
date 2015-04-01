@@ -1,15 +1,11 @@
 FROM ${NAMESPACE}/mcollective-common:${TAG}
 MAINTAINER ${MAINTAINER}
 
+COPY rc.local /etc/rc.local
+
 # From Learning MCollective
-RUN apt-get update
-RUN apt-get install -y mcollective-client
-RUN apt-get install -y mcollective-filemgr-client mcollective-nettest-client mcollective-package-client mcollective-service-client mcollective-puppet-client
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y mcollective-client mcollective-filemgr-client mcollective-nettest-client mcollective-package-client \
+        mcollective-service-client mcollective-puppet-client && \
+    chmod +x /etc/rc.local
 
-ADD client.cfg /etc/mcollective/client.cfg
-
-ADD rc.local /etc/rc.local
-RUN chmod +x /etc/rc.local
-
-RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+COPY client.cfg /etc/mcollective/client.cfg

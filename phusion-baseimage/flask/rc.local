@@ -1,0 +1,5 @@
+#!/bin/bash
+
+su - flask -c 'cd /var/www && ./run.py' &
+
+exit 0
