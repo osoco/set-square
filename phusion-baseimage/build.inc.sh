@@ -1,12 +1,18 @@
 # Environment
 function defineEnv() {
   
-  echo "defining env"
-  export AUTHOR_DEFAULT="<rydnr@acm-sl.org>";
+  export AUTHOR_DEFAULT="rydnr";
   export AUTHOR_DESCRIPTION="The author of the image(s) to build";
   if    [ "${AUTHOR+1}" != "1" ] \
      || [ "x${AUTHOR}" == "x" ]; then
     export AUTHOR="${AUTHOR_DEFAULT}";
+  fi
+
+  export AUTHOR_EMAIL="<rydnr@acm-sl.org>";
+  export AUTHOR_EMAIL_DESCRIPTION="The author of the image(s) to build";
+  if    [ "${AUTHOR_EMAIL+1}" != "1" ] \
+     || [ "x${AUTHOR_EMAIL}" == "x" ]; then
+    export AUTHOR_EMAIL="${AUTHOR_EMAIL_DEFAULT}";
   fi
 
   export NAMESPACE_DEFAULT="acmsl";
@@ -303,34 +309,6 @@ function defineEnv() {
     export POSTGRESQL_ROOT_PASSWORD="${POSTGRESQL_ROOT_PASSWORD_DEFAULT}";
   fi
 
-  export OSOCOGAME_DB_DEFAULT="openbadges";
-  export OSOCOGAME_DB_DESCRIPTION="The name of Osoco's Game";
-  if    [ "${OSOCOGAME_DB+1}" != "1" ] \
-     || [ "x${OSOCOGAME_DB}" == "x" ]; then
-    export OSOCOGAME_DB="${OSOCOGAME_DB_DEFAULT}";
-  fi
-
-  export OSOCOGAME_DB_ROLE_DEFAULT="openbadges";
-  export OSOCOGAME_DB_ROLE_DESCRIPTION="The DB role in used by Osoco's Game";
-  if    [ "${OSOCOGAME_DB_ROLE+1}" != "1" ] \
-     || [ "x${OSOCOGAME_DB_ROLE}" == "x" ]; then
-    export OSOCOGAME_DB_ROLE="${OSOCOGAME_DB_ROLE_DEFAULT}";
-  fi
-
-  export OSOCOGAME_DB_USER_DEFAULT="openbadges";
-  export OSOCOGAME_DB_USER_DESCRIPTION="The name of the DB user in used by Osoco's Game";
-  if    [ "${OSOCOGAME_DB_USER+1}" != "1" ] \
-     || [ "x${OSOCOGAME_DB_USER}" == "x" ]; then
-    export OSOCOGAME_DB_USER="${OSOCOGAME_DB_USER_DEFAULT}";
-  fi
-
-  export OSOCOGAME_DB_PASSWORD_DEFAULT="openbadges";
-  export OSOCOGAME_DB_PASSWORD_DESCRIPTION="The password of the DB user used by Osoco's Game";
-  if    [ "${OSOCOGAME_DB_PASSWORD+1}" != "1" ] \
-     || [ "x${OSOCOGAME_DB_PASSWORD}" == "x" ]; then
-    export OSOCOGAME_DB_PASSWORD="${OSOCOGAME_DB_PASSWORD_DEFAULT}";
-  fi
-
   export MONGODB_VERSION_DEFAULT="3.0";
   export MONGODB_VERSION_DESCRIPTION="The MongoDB version";
   if    [ "${MONGODB_VERSION+1}" != "1" ] \
@@ -338,15 +316,37 @@ function defineEnv() {
     export MONGODB_VERSION="${MONGODB_VERSION_DEFAULT}";
   fi
 
-  export OPENBADGES_MONGODB_DB_DEFAULT="openbadges";
-  export OPENBADGES_MONGODB_DB_DESCRIPTION="The OpenBadges MongoDB database name";
-  if    [ "${OPENBADGES_MONGODB_DB+1}" != "1" ] \
-     || [ "x${OPENBADGES_MONGODB_DB}" == "x" ]; then
-    export OPENBADGES_MONGODB_DB="${OPENBADGES_MONGODB_DB_DEFAULT}";
+  export RUNDECK_VERSION_DEFAULT="$(wget -o /dev/null -O- http://dl.bintray.com/rundeck/rundeck-deb/ | grep deb | tail -n 1 | sed 's <.\?pre>  g' | cut -d '>' -f 2 | cut -d '<' -f 1 | sed 's ^rundeck-  g' | sed 's \.deb$  g')";
+  export RUNDECK_VERSION_DESCRIPTION="The Rundeck version";
+  if    [ "${RUNDECK_VERSION+1}" != "1" ] \
+     || [ "x${RUNDECK_VERSION}" == "x" ]; then
+    export RUNDECK_VERSION="${RUNDECK_VERSION_DEFAULT}";
+  fi
+  
+  export RUNDECK_ADMIN_USER_DEFAULT="rundeck";
+  export RUNDECK_ADMIN_USER_DESCRIPTION="The name of the admin user in Rundeck";
+  if    [ "${RUNDECK_ADMIN_USER+1}" != "1" ] \
+     || [ "x${RUNDECK_ADMIN_USER}" == "x" ]; then
+    export RUNDECK_ADMIN_USER="${RUNDECK_ADMIN_USER_DEFAULT}";
+  fi
+
+  export RUNDECK_ADMIN_PASSWORD_DEFAULT="secret";
+  export RUNDECK_ADMIN_PASSWORD_DESCRIPTION="The default password for the admin user in Rundeck";
+  if    [ "${RUNDECK_ADMIN_PASSWORD+1}" != "1" ] \
+     || [ "x${RUNDECK_ADMIN_PASSWORD}" == "x" ]; then
+    export RUNDECK_ADMIN_PASSWORD="${RUNDECK_ADMIN_PASSWORD_DEFAULT}";
+  fi
+
+  export CURA_VERSION_DEFAULT="15.02.1";
+  export CURA_VERSION_DESCRIPTION="The Cura version";
+  if    [ "${CURA_VERSION+1}" != "1" ] \
+     || [ "x${CURA_VERSION}" == "x" ]; then
+    export CURA_VERSION="${CURA_VERSION_DEFAULT}";
   fi
 
   ENV_VARIABLES=(\
     AUTHOR \
+    AUTHOR_EMAIL \
     NAMESPACE \
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \
@@ -388,12 +388,11 @@ function defineEnv() {
     POSTGRESQL_VERSION \
     POSTGRESQL_ROOT_USER \
     POSTGRESQL_ROOT_PASSWORD \
-    OSOCOGAME_DB \
-    OSOCOGAME_DB_USER \
-    OSOCOGAME_DB_PASSWORD \
-    OSOCOGAME_DB_ROLE \
     MONGODB_VERSION \
-    OPENBADGES_MONGODB_DB \
+    RUNDECK_VERSION \
+    RUNDECK_ADMIN_USER \
+    RUNDECK_ADMIN_PASSWORD \
+    CURA_VERSION \
    );
  
   export ENV_VARIABLES;

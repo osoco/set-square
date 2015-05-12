@@ -1,36 +1,29 @@
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
-ENV HOME /root
-USER root
-# Create user artifactory
-RUN groupadd artifactory
-RUN useradd -s /bin/bash -g artifactory -G artifactory,tomcat,sudo -m -c "Artifactory user running /etc/init.d/artifactory" artifactory
 
-# artifactory user can run artifactory app
-RUN sed -i '/%sudo   ALL=(ALL:ALL) ALL/a artifactory localhost=NOPASSWD: /etc/init.d/artifactory stop,/etc/init.d/artifactory start,/etc/init.d/artifactory restart,/sbin/services artifactory stop,/sbin/services artifactory start,/sbin/services artifactory restart' /etc/sudoers
-
-RUN wget -O /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip http://dl.bintray.com/jfrog/artifactory/artifactory-${ARTIFACTORY_VERSION}.zip
-RUN mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome
-RUN cd /home/ && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip
-RUN rm -rf /home/artifactory && mv /home/artifactory-${ARTIFACTORY_VERSION} /home/artifactory
-RUN cd /opt/tomcat && mkdir .artifactory && cd .artifactory && /usr/lib/jvm/java/bin/jar -xvf /home/artifactory/webapps/artifactory.war
-ADD context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
-#RUN sed -i 's_<Connector port="8080" protocol="HTTP/1.1"_<Connector port="80" protocol="HTTP/1.1"_g' /opt/tomcat/conf/server.xml
-#RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml artifactory.xml
-ADD artifactory-.bashrc /home/artifactory/.bashrc
-RUN rm -rf /opt/tomcat/webapps/*
-ADD config /etc/default/tomcat
-RUN mkdir /etc/service/artifactory
-RUN cd /etc/service/artifactory && ln -s ../tomcat/run .
-RUN cd /etc/service/artifactory && ln -s tomcat artifactory
-RUN cd /etc/init.d && ln -s tomcat artifactory
-RUN update-rc.d artifactory defaults
-RUN chown -R artifactory:tomcat /home/artifactory /opt/tomcat/.artifactory
-RUN chmod -R g+w /home/artifactory /opt/tomcat/.artifactory
-ADD rc.local /etc/rc.local
-RUN chmod +x /etc/rc.local
-RUN rm -rf /etc/service/sshd /etc/my_init.d/00_regen_ssh_host_keys.sh
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN groupadd artifactory && \
+    useradd -s /bin/bash -g artifactory -G artifactory,tomcat,sudo -m -c "Artifactory user running /etc/init.d/artifactory" artifactory && \
+    sed -i '/%sudo   ALL=(ALL:ALL) ALL/a artifactory localhost=NOPASSWD: /etc/init.d/artifactory stop,/etc/init.d/artifactory start,/etc/init.d/artifactory restart,/sbin/services artifactory stop,/sbin/services artifactory start,/sbin/services artifactory restart' /etc/sudoers && \
+    wget -O /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip http://dl.bintray.com/jfrog/artifactory/artifactory-${ARTIFACTORY_VERSION}.zip && \
+    mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome && \
+    cd /home/ && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/artifactory-${ARTIFACTORY_VERSION}.zip && \
+    rm -rf /home/artifactory && mv /home/artifactory-${ARTIFACTORY_VERSION} /home/artifactory && \
+    cd /opt/tomcat && mkdir .artifactory && cd .artifactory && /usr/lib/jvm/java/bin/jar -xvf /home/artifactory/webapps/artifactory.war && \
+    rm -rf /opt/tomcat/webapps/* && \
+    mkdir /etc/service/artifactory && \
+    cd /etc/service/artifactory && ln -s ../tomcat/run . && \
+    cd /etc/service/artifactory && ln -s tomcat artifactory && \
+    cd /etc/init.d && ln -s tomcat artifactory && \
+    update-rc.d artifactory defaults && \
+    chown -R artifactory:tomcat /home/artifactory /opt/tomcat/.artifactory && \
+    chmod -R g+w /home/artifactory /opt/tomcat/.artifactory && \
+    touch /etc/rc.local && \
+    chmod +x /etc/rc.local
+    
+COPY context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
+COPY artifactory-.bashrc /home/artifactory/.bashrc
+COPY config /etc/default/tomcat
+COPY rc.local /etc/rc.local
 
 VOLUME /home/artifactory
 

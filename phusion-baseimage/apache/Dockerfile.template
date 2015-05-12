@@ -1,0 +1,18 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+COPY watch_module_changes.sh /usr/local/bin/watch_module_changes.sh
+
+RUN \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get install -y apache2 apache2-dev apache2-utils libtool && \
+  mkdir /usr/local/lib/apache2 && \
+  chmod +x /etc/rc.local /usr/local/bin/watch_module_changes.sh
+
+VOLUME ["/var/www", "/usr/local/lib/apache2"]
+
+EXPOSE 80
+# Run with
+# cd [apache-module-workdir];
+# docker run -d -p 8888:80 -v $PWD:/usr/local/lib/apache2 ${NAMESPACE}/apache
