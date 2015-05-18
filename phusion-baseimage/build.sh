@@ -145,7 +145,7 @@ function build_repo() {
   fi
 
   logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
-  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
+#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
   docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
   if [ $? -eq 0 ]; then
     logInfo -n "${NAMESPACE}/${_repo}:${TAG}";
@@ -165,8 +165,8 @@ function build_repo() {
   fi
 }
 
-echo $(dirname ${SCRIPT_NAME})
-echo $(basename ${SCRIPT_NAME})
+#echo $(dirname ${SCRIPT_NAME})
+#echo $(basename ${SCRIPT_NAME})
 [ -e "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh"
 
 function main() {
