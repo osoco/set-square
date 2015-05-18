@@ -1,11 +1,18 @@
 # Environment
 function defineEnv() {
   
-  export AUTHOR_DEFAULT="<rydnr@acm-sl.org>";
+  export AUTHOR_DEFAULT="rydnr";
   export AUTHOR_DESCRIPTION="The author of the image(s) to build";
   if    [ "${AUTHOR+1}" != "1" ] \
      || [ "x${AUTHOR}" == "x" ]; then
     export AUTHOR="${AUTHOR_DEFAULT}";
+  fi
+
+  export AUTHOR_EMAIL="<rydnr@acm-sl.org>";
+  export AUTHOR_EMAIL_DESCRIPTION="The author of the image(s) to build";
+  if    [ "${AUTHOR_EMAIL+1}" != "1" ] \
+     || [ "x${AUTHOR_EMAIL}" == "x" ]; then
+    export AUTHOR_EMAIL="${AUTHOR_EMAIL_DEFAULT}";
   fi
 
   export NAMESPACE_DEFAULT="acmsl";
@@ -330,8 +337,16 @@ function defineEnv() {
     export RUNDECK_ADMIN_PASSWORD="${RUNDECK_ADMIN_PASSWORD_DEFAULT}";
   fi
 
+  export CURA_VERSION_DEFAULT="15.02.1";
+  export CURA_VERSION_DESCRIPTION="The Cura version";
+  if    [ "${CURA_VERSION+1}" != "1" ] \
+     || [ "x${CURA_VERSION}" == "x" ]; then
+    export CURA_VERSION="${CURA_VERSION_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
+    AUTHOR_EMAIL \
     NAMESPACE \
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \
@@ -377,6 +392,7 @@ function defineEnv() {
     RUNDECK_VERSION \
     RUNDECK_ADMIN_USER \
     RUNDECK_ADMIN_PASSWORD \
+    CURA_VERSION \
    );
  
   export ENV_VARIABLES;
