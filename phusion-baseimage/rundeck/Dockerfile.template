@@ -1,0 +1,16 @@
+FROM ${NAMESPACE}/java7:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+
+RUN apt-get install -y wget && \
+    wget http://dl.bintray.com/rundeck/rundeck-deb/rundeck-${RUNDECK_VERSION}.deb && \
+    dpkg -i rundeck-${RUNDECK_VERSION}.deb && \
+    sed -i 's ^RDECK_HTTP_PORT=.*$ RDECK_HTTP_PORT=8080 g' /etc/rundeck/profile && \
+    echo 'RDECK_JVM="-Dserver.http.host=0.0.0.0 ${RDECK_JVM}";' >> /etc/rundeck/profile && \
+    sed -i 's admin:admin,\(.*\)$ ${RUNDECK_ADMIN_USER}:${RUNDECK_ADMIN_PASSWORD},\1 g' /etc/rundeck/realm.properties && \
+    chmod +x /etc/rc.local
+
+VOLUME /var/lib/rundeck, /var/log/rundeck
+
+EXPOSE 8080

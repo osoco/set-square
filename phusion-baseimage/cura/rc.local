@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cura &
+
+exit 0;
