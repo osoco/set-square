@@ -8,7 +8,7 @@ function defineEnv() {
     export AUTHOR="${AUTHOR_DEFAULT}";
   fi
 
-  export AUTHOR_EMAIL="<rydnr@acm-sl.org>";
+  export AUTHOR_EMAIL="rydnr@acm-sl.org";
   export AUTHOR_EMAIL_DESCRIPTION="The author of the image(s) to build";
   if    [ "${AUTHOR_EMAIL+1}" != "1" ] \
      || [ "x${AUTHOR_EMAIL}" == "x" ]; then
@@ -22,11 +22,25 @@ function defineEnv() {
     export NAMESPACE="${NAMESPACE_DEFAULT}";
   fi
 
+  export STACK_DEFAULT="";
+  export STACK_DESCRIPTION="The stack the image will belong to";
+  if    [ "${STACK+1}" != "1" ] \
+     || [ "x${STACK}" == "x" ]; then
+    export STACK="${STACK_DEFAULT}";
+  fi
+
   export DATE_DEFAULT="$(date '+%Y%m')";
   export DATE_DESCRIPTION="The date used to tag images";
   if    [ "${DATE+1}" != "1" ] \
      || [ "x${DATE}" == "x" ]; then
     export DATE="${DATE_DEFAULT}";
+  fi
+
+  export TUTUM_NAMESPACE_DEFAULT="rydnr";
+  export TUTUM_NAMESPACE_DESCRIPTION="The tutum.co namespace";
+  if    [ "${TUTUM_NAMESPACE+1}" != "1" ] \
+     || [ "x${TUTUM_NAMESPACE}" == "x" ]; then
+    export TUTUM_NAMESPACE="${TUTUM_NAMESPACE_DEFAULT}";
   fi
 
   export TOMCAT_VERSION_DEFAULT="$(curl -s -k http://apache.mirrors.pair.com/tomcat/tomcat-8/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1 | sed 's ^v  g')";
@@ -344,10 +358,68 @@ function defineEnv() {
     export CURA_VERSION="${CURA_VERSION_DEFAULT}";
   fi
 
+  export APIARYIO_TOKEN_DEFAULT="cd1fc9d91d5046fc51fc31fd61a28d2a";
+  export APIARYIO_TOKEN_DESCRIPTION="The apiary.io token";
+  if    [ "${APIARYIO_TOKEN+1}" != "1" ] \
+     || [ "x${APIARYIO_TOKEN}" == "x" ]; then
+    export APIARYIO_TOKEN="${APIARYIO_TOKEN_DEFAULT}";
+  fi
+  
+  export APIARYIO_API_NAME_DEFAULT="testapi468";
+  export APIARYIO_API_NAME_DESCRIPTION="The apiary.io token";
+  if    [ "${APIARYIO_API_NAME+1}" != "1" ] \
+     || [ "x${APIARYIO_API_NAME}" == "x" ]; then
+    export APIARYIO_API_NAME="${APIARYIO_API_NAME_DEFAULT}";
+  fi
+  
+  export APIARYIO_PRIVATE_URL_DEFAULT="http://private-03998-${APIARYIO_API_NAME}.apiary-mock.com";
+  export APIARYIO_PRIVATE_URL_DESCRIPTION="The private url in apiary.io";
+  if    [ "${APIARYIO_PRIVATE_URL+1}" != "1" ] \
+     || [ "x${APIARYIO_PRIVATE_URL}" == "x" ]; then
+    export APIARYIO_PRIVATE_URL="${APIARYIO_PRIVATE_URL_DEFAULT}";
+  fi
+
+  export PLONE3_MAJOR_VERSION_DEFAULT="1";
+  export PLONE3_MAJOR_VERSION_DESCRIPTION="The Plone3 major version";
+  if    [ "${PLONE3_MAJOR_VERSION+1}" != "1" ] \
+     || [ "x${PLONE3_MAJOR_VERSION}" == "x" ]; then
+    export PLONE3_MAJOR_VERSION="${PLONE3_MAJOR_VERSION_DEFAULT}";
+  fi
+
+  export PLONE3_VERSION_DEFAULT="3.1.7";
+  export PLONE3_VERSION_DESCRIPTION="The Plone3 version";
+  if    [ "${PLONE3_VERSION+1}" != "1" ] \
+     || [ "x${PLONE3_VERSION}" == "x" ]; then
+    export PLONE3_VERSION="${PLONE3_VERSION_DEFAULT}";
+  fi
+
+  export PLONE3_UNIFIED_INSTALLER_DEFAULT="Plone-3.1.7ex-UnifiedInstaller";
+  export PLONE3_UNIFIED_INSTALLER_DESCRIPTION="The Plone3 unified installer";
+  if    [ "${PLONE3_UNIFIED_INSTALLER+1}" != "1" ] \
+     || [ "x${PLONE3_UNIFIED_INSTALLER}" == "x" ]; then
+    export PLONE3_UNIFIED_INSTALLER="${PLONE3_UNIFIED_INSTALLER_DEFAULT}";
+  fi
+
+  export MEDIATOMB_USER_DEFAULT="mediatomb";
+  export MEDIATOMB_USER_DESCRIPTION="The MediaTomb user";
+  if    [ "${MEDIATOMB_USER+1}" != "1" ] \
+     || [ "x${MEDIATOMB_USER}" == "x" ]; then
+    export MEDIATOMB_USER="${MEDIATOMB_USER_DEFAULT}";
+  fi
+
+  export MEDIATOMB_PASSWORD_DEFAULT="secret";
+  export MEDIATOMB_PASSWORD_DESCRIPTION="The MediaTomb user";
+  if    [ "${MEDIATOMB_PASSWORD+1}" != "1" ] \
+     || [ "x${MEDIATOMB_PASSWORD}" == "x" ]; then
+    export MEDIATOMB_PASSWORD="${MEDIATOMB_PASSWORD_DEFAULT}";
+  fi
+
   ENV_VARIABLES=(\
     AUTHOR \
     AUTHOR_EMAIL \
     NAMESPACE \
+    STACK \
+    TUTUM_NAMESPACE \
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \
     MARIADB_ADMIN_PASSWORD \
@@ -393,6 +465,14 @@ function defineEnv() {
     RUNDECK_ADMIN_USER \
     RUNDECK_ADMIN_PASSWORD \
     CURA_VERSION \
+    APIARYIO_TOKEN \
+    APIARYIO_API_NAME \
+    APIARYIO_PRIVATE_URL \
+    PLONE3_MAJOR_VERSION \
+    PLONE3_VERSION \
+    PLONE3_UNIFIED_INSTALLER \
+    MEDIATOMB_USER \
+    MEDIATOMB_PASSWORD \
    );
  
   export ENV_VARIABLES;

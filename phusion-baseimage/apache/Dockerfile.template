@@ -1,17 +1,14 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/base:${TAG}
 MAINTAINER ${MAINTAINER}
 
 COPY rc.local /etc/rc.local
 
 RUN \
-  DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y apache2
+  apt-get install -y apache2 && \
+  chmod +x /etc/rc.local
 
-# COPY proxy.conf /etc/apache2/conf/proxy.conf
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 
-VOLUME ["/var/www", "/etc/apache2"]
-
-EXPOSE 80
 # Run with
-# cd [apache-module-workdir];
-# docker run -d -p [port]:80 ${NAMESPACE}/apache
+# docker run -d -p [port]:80 ${NAMESPACE}/${REPO}-${STACK}

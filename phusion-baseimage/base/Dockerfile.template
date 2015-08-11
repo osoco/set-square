@@ -1,17 +1,14 @@
-# Use phusion/baseimage as base image. To make your builds
-# reproducible, make sure you lock down to a specific version, not
-# to `latest`! See
-# https://github.com/phusion/baseimage-docker/blob/master/Changelog.md
-# for a list of version numbers.
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM phusion/baseimage:0.9.16
 
-MAINTAINER ${AUTHOR} "${AUTHOR_EMAIL}"
+MAINTAINER ${MAINTAINER}
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get update
-RUN apt-get install -y iptables facter
+RUN mkdir /Dockerfiles && apt-get -y update && apt-get install -y iptables facter
 
 RUN cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
 
 CMD ["/sbin/my_init"]
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

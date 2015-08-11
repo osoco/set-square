@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-v[v]] [-q|--quiet] [-t|--tag tagName] [repo]
+$SCRIPT_NAME [-v[v]] [-q|--quiet] [-t|--tag tagName] [-T|--tutum] [repo]
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -14,6 +14,7 @@ Builds Docker images from templates, similar to wking's. If no repo is specified
 Where:
   * repo: the repository image to build.
   * tag: the tag to use once the image is built successfully.
+  * tutum: whether to push the image to tutum.co.
 EOF
 }
 
@@ -38,6 +39,7 @@ function defineErrors() {
   export INVALID_URL="Invalid command";
   export ERROR_BUILDING_REPO="Error building image";
   export ERROR_TAGGING_REPO="Error tagging image";
+  export ERROR_PUSHING_IMAGE_TO_TUTUM="Error pushing image to tutum.co";
 
   ERROR_MESSAGES=(\
     INVALID_OPTION \
@@ -49,6 +51,7 @@ function defineErrors() {
     INVALID_URL \
     ERROR_BUILDING_REPO \
     ERROR_TAGGING_REPO \
+    ERROR_PUSHING_IMAGE_TO_TUTUM \
   );
 
   export ERROR_MESSAGES;
@@ -72,6 +75,11 @@ function checkInput() {
       -t | --tag)
          shift;
 	 TAG="${1}";
+         shift;
+	 ;;
+      -T | --tutum)
+         shift;
+	 TUTUM=1;
          shift;
 	 ;;
       *) exitWithErrorCode INVALID_OPTION ${_flag};
@@ -108,8 +116,9 @@ function checkInput() {
 ##
 ## 1: REPO
 function repo_exists() {
-  local _repo="${1}"
-  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}")
+  local _repo="${1}";
+  local _stack="${2}";
+  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}${_stack}")
   local _matches=$(echo "${_images}" | grep "${TAG}")
   local _rescode;
   if [ -z "${MATCHES}" ]; then
@@ -126,14 +135,15 @@ function repo_exists() {
 ##
 ## 1: REPO
 function build_repo() {
-  local _repo="${1}"
-
+  local _repo="${1}";
+  local _stack="${2}";
+  
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR}\"";
+      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\"";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
@@ -144,24 +154,45 @@ function build_repo() {
     done
   fi
 
-  logInfo -n "Building ${NAMESPACE}/${_repo}:${TAG}"
-#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
-  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${TAG}" --rm=true "${_repo}"
+  logInfo -n "Building ${NAMESPACE}/${_repo}${_stack}:${TAG}"
+#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${TAG}" --rm=true "${_repo}"
+  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${TAG}" --rm=true "${_repo}"
   if [ $? -eq 0 ]; then
-    logInfo -n "${NAMESPACE}/${_repo}:${TAG}";
+    logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
     logInfoResult SUCCESS "built"
   else
-    logInfo -n "${NAMESPACE}/${_repo}:${TAG}";
+    logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
-  logInfo -n "Tagging ${NAMESPACE}/${_repo}:latest"
-  docker tag -f "${NAMESPACE}/${_repo}:${TAG}" "${NAMESPACE}/${_repo}:latest"
+  logInfo -n "Tagging ${NAMESPACE}/${_repo}${_stack}:latest"
+  docker tag -f "${NAMESPACE}/${_repo}${_stack}:${TAG}" "${NAMESPACE}/${_repo}${_stack}:latest"
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
     exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
+  fi
+}
+
+function tutum_push() {
+  local _repo="${1}";
+  local _stack="${2}";
+  logInfo -n "Tagging image for uploading to tutum.co";
+  docker tag "${NAMESPACE}/${_repo}${_stack}:${TAG}" "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stack}:${TAG}";
+  if [ $? -eq 0 ]; then
+    logInfoResult SUCCESS "done"
+  else
+    logInfoResult FAILURE "failed"
+    exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
+  fi
+  logInfo -n "Pushing image to tutum";
+  docker push "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stack}:${TAG}"
+  if [ $? -eq 0 ]; then
+    logInfoResult SUCCESS "done"
+  else
+    logInfoResult FAILURE "failed"
+    exitWithErrorCode ERROR_PUSHING_IMAGE "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stack}:${TAG}"
   fi
 }
 
@@ -171,9 +202,16 @@ function build_repo() {
 
 function main() {
   local _repo;
+  local _stack="${STACK}";
+  if [ "x${_stack}" != "x" ]; then
+    _stack="_${_stack}";
+  fi
   for _repo in ${REPOS}; do
-    if ! repo_exists "${_repo}"; then
-      build_repo "${_repo}"
+    if ! repo_exists "${_repo}" "${_stack}"; then
+      build_repo "${_repo}" "${_stack}"
+      if [ "x${TUTUM}" == "x1" ]; then
+        tutum_push "${_repo}" "${_stack}"
+      fi
     fi
   done
 }
