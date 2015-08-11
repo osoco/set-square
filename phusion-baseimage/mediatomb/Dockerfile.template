@@ -1,0 +1,15 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+
+RUN apt-get -y update && \
+    apt-get install -y mediatomb && \
+    cd /etc/mediatomb && \
+    mv config.xml config.xml.official && \
+    chmod +x /etc/rc.local
+
+COPY config.xml /etc/mediatomb/config.xml
+COPY Dockerfile /Dockerfile
+
+EXPOSE 49152

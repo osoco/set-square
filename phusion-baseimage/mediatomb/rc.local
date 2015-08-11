@@ -1,0 +1,9 @@
+#!/bin/bash
+
+ps -ef | grep mediatomb
+
+while [ $? -ne 0 ]; do
+    service mediatomb restart
+    sleep 5s
+    ps -ef | grep mediatomb
+done

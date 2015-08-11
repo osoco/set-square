@@ -1,0 +1,11 @@
+FROM ${NAMESPACE}/base:${TAG}
+MAINTAINER ${MAINTAINER}
+
+RUN apt-get install -y wget gcc build-essential libc6-dev g++-multilib libc6-dev-i386 alien rpm libstdc++5 python-libxml2 && \
+    wget -O /opt/plone3.tar.gz https://launchpad.net/plone/3.${PLONE3_MAJOR_VERSION}/${PLONE3_VERSION}/+download/${PLONE3_UNIFIED_INSTALLER}.tgz && \
+    tar xvfz /opt/plone3.tar.gz -C /opt
+
+RUN cd /opt/${PLONE3_UNIFIED_INSTALLER} && \
+    ./install.sh standalone
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-plone3.${TAG}
