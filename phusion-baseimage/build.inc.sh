@@ -36,6 +36,20 @@ function defineEnv() {
     export DATE="${DATE_DEFAULT}";
   fi
 
+  export ROOT_IMAGE_DEFAULT="phusion/baseimage:0.9.16"
+  export ROOT_IMAGE_DESCRIPTION="The default root image";
+  if    [ "${ROOT_IMAGE+1}" != "1" ] \
+     || [ "x${ROOT_IMAGE}" == "x" ]; then
+    export ROOT_IMAGE="${ROOT_IMAGE_DEFAULT}";
+  fi
+
+  export ROOT_IMAGE_32BIT_DEFAULT="phusion/ubuntu-lucid-32:latest"
+  export ROOT_IMAGE_32BIT_DESCRIPTION="The default root image for 32 bits";
+  if    [ "${ROOT_IMAGE_32BIT+1}" != "1" ] \
+     || [ "x${ROOT_IMAGE_32BIT}" == "x" ]; then
+    export ROOT_IMAGE_32BIT="${ROOT_IMAGE_32BIT_DEFAULT}";
+  fi
+
   export TUTUM_NAMESPACE_DEFAULT="rydnr";
   export TUTUM_NAMESPACE_DESCRIPTION="The tutum.co namespace";
   if    [ "${TUTUM_NAMESPACE+1}" != "1" ] \
@@ -419,6 +433,8 @@ function defineEnv() {
     AUTHOR_EMAIL \
     NAMESPACE \
     STACK \
+    ROOT_IMAGE \
+    ROOT_IMAGE_32BIT \
     TUTUM_NAMESPACE \
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \

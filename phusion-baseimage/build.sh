@@ -137,11 +137,14 @@ function repo_exists() {
 function build_repo() {
   local _repo="${1}";
   local _stack="${2}";
-  
+  local _rootImage="${ROOT_IMAGE}";
+  if is_32bit; then
+    _rootImage="${ROOT_IMAGE_32BIT}";
+  fi
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\"";
+      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\"";
 
   local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
@@ -194,6 +197,10 @@ function tutum_push() {
     logInfoResult FAILURE "failed"
     exitWithErrorCode ERROR_PUSHING_IMAGE "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stack}:${TAG}"
   fi
+}
+
+function is_32bit() {
+  [ "$(uname -m)" == "i686" ]
 }
 
 #echo $(dirname ${SCRIPT_NAME})

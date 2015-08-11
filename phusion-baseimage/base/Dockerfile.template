@@ -1,5 +1,5 @@
 # ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
-FROM phusion/baseimage:0.9.16
+FROM ${ROOT_IMAGE}
 
 MAINTAINER ${MAINTAINER}
 
