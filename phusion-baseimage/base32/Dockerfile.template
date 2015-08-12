@@ -9,6 +9,6 @@ RUN mkdir /Dockerfiles && apt-get -y update && apt-get install -y iptables facte
 
 RUN cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
 
-CMD["/etc/rc.local"]
+CMD ["/etc/rc.local"]
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
