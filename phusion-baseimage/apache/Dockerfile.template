@@ -1,5 +1,5 @@
 # ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
-FROM ${NAMESPACE}/base:${TAG}
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 COPY rc.local /etc/rc.local

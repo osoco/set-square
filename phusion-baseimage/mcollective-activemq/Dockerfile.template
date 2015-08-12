@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/java:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -30,3 +31,9 @@ RUN patch activemq.xml activemq_xml.patch && \
     chmod +x /etc/rc.local
 
 EXPOSE ${ACTIVEMQ_PORT}
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:${ACTIVEMQ_PORT} ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+

@@ -50,6 +50,20 @@ function defineEnv() {
     export ROOT_IMAGE_32BIT="${ROOT_IMAGE_32BIT_DEFAULT}";
   fi
 
+  export BASE_IMAGE_DEFAULT="${NAMESPACE}/base"
+  export BASE_IMAGE_DESCRIPTION="The base image";
+  if    [ "${BASE_IMAGE+1}" != "1" ] \
+     || [ "x${BASE_IMAGE}" == "x" ]; then
+    export BASE_IMAGE="${BASE_IMAGE_DEFAULT}";
+  fi
+
+  export BASE_IMAGE_32BIT_DEFAULT="${BASE_IMAGE_DEFAULT}32"
+  export BASE_IMAGE_32BIT_DESCRIPTION="The base image for 32 bits";
+  if    [ "${BASE_IMAGE_32BIT+1}" != "1" ] \
+     || [ "x${BASE_IMAGE_32BIT}" == "x" ]; then
+    export BASE_IMAGE_32BIT="${BASE_IMAGE_32BIT_DEFAULT}";
+  fi
+
   export TUTUM_NAMESPACE_DEFAULT="rydnr";
   export TUTUM_NAMESPACE_DESCRIPTION="The tutum.co namespace";
   if    [ "${TUTUM_NAMESPACE+1}" != "1" ] \
@@ -435,6 +449,8 @@ function defineEnv() {
     STACK \
     ROOT_IMAGE \
     ROOT_IMAGE_32BIT \
+    BASE_IMAGE \
+    BASE_IMAGE_32BIT \
     TUTUM_NAMESPACE \
     MARIADB_ROOT_PASSWORD \
     MARIADB_ADMIN_USER \

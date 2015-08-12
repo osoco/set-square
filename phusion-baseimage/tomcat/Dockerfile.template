@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/java${JAVA_VERSION}:${TAG}
 MAINTAINER ${MAINTAINER}
 ENV HOME /root
@@ -29,3 +30,5 @@ RUN groupadd tomcat && \
 COPY config /etc/default/tomcat
 COPY service.sh /etc/service/tomcat/run
 COPY service.sh /etc/init.d/tomcat
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

@@ -26,6 +26,9 @@ function checkRequirements() {
   checkReq date DATE_NOT_INSTALLED;
   checkReq realpath REALPATH_NOT_INSTALLED;
   checkReq envsubst ENVSUBST_NOT_INSTALLED;
+  checkReq head HEAD_NOT_INSTALLED;
+  checkReq grep GREP_NOT_INSTALLED;
+  checkReq awk AWK_NOT_INSTALLED;
 }
  
 # Error messages
@@ -35,6 +38,9 @@ function defineErrors() {
   export DATE_NOT_INSTALLED="date is not installed";
   export REALPATH_NOT_INSTALLED="realpath is not installed";
   export ENVSUBST_NOT_INSTALLED="envsubst is not installed";
+  export HEAD_NOT_INSTALLED="head is not installed";
+  export GREP_NOT_INSTALLED="grep is not installed";
+  export AWK_NOT_INSTALLED="awk is not installed";
   export NO_REPOSITORIES_FOUND="no repositories found";
   export INVALID_URL="Invalid command";
   export ERROR_BUILDING_REPO="Error building image";
@@ -47,6 +53,9 @@ function defineErrors() {
     DATE_NOT_INSTALLED \
     REALPATH_NOT_INSTALLED \
     ENVSUBST_NOT_INSTALLED \
+    HEAD_NOT_INSTALLED \
+    GREP_NOT_INSTALLED \
+    AWK_NOT_INSTALLED \
     NO_REPOSITORIES_FOUND \
     INVALID_URL \
     ERROR_BUILDING_REPO \
@@ -130,6 +139,16 @@ function repo_exists() {
   return ${_rescode};
 }
 
+function build_repo_if_defined_locally() {
+  local _repo="${1}";
+  local _stack="${2}";
+  if [[ -n ${_repo} ]] && \
+     [[ -d ${_repo} ]] && \
+     ! repo_exists "${_repo}" "${_stack}"; then
+    build_repo "${_repo}" "${_stack}"
+  fi
+}
+
 ## Builds "${NAMESPACE}/${REPO}:${TAG}"
 ## Arguments:
 ##
@@ -203,18 +222,49 @@ function is_32bit() {
   [ "$(uname -m)" == "i686" ]
 }
 
+function find_parent_repo() {
+    local _repo="${1}"
+    local _result=$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}' | awk -F':' '{print $1;}')
+    if [[ -n ${_result} ]] && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
+        # parent under our namespace
+        _result="${_result#\$\{NAMESPACE\}/}"
+    fi
+    export RESULT="${_result}"
+    echo ${_result}
+}
+
+find_parents() {
+    local _repo="${1}"
+    local _result=();
+    declare -a _result;
+    find_parent_repo "${_repo}"
+    local _parent="${RESULT}"
+    while [[ -n ${_parent} ]] && [[ "${_parent#.*/}" == "${_parent}" ]]; do
+        _result[${#_result[@]}]="${_parent}"
+        find_parent_repo "${_parent}"
+        _parent="${RESULT}"
+    done;
+    export RESULT="${_result[@]}"
+}
+
 #echo $(dirname ${SCRIPT_NAME})
 #echo $(basename ${SCRIPT_NAME})
 [ -e "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh"
 
 function main() {
   local _repo;
+  local _parents;
   local _stack="${STACK}";
   if [ "x${_stack}" != "x" ]; then
     _stack="_${_stack}";
   fi
   for _repo in ${REPOS}; do
     if ! repo_exists "${_repo}" "${_stack}"; then
+      find_parents "${_repo}"
+      _parents="${RESULT}"
+      for _parent in ${_parents}; do
+        build_repo_if_defined_locally "${_parent}" "" # stack is empty for parent images
+      done
       build_repo "${_repo}" "${_stack}"
       if [ "x${TUTUM}" == "x1" ]; then
         tutum_push "${_repo}" "${_stack}"

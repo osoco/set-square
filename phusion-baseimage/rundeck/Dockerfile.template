@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/java7:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -11,6 +12,12 @@ RUN apt-get install -y wget && \
     sed -i 's admin:admin,\(.*\)$ ${RUNDECK_ADMIN_USER}:${RUNDECK_ADMIN_PASSWORD},\1 g' /etc/rundeck/realm.properties && \
     chmod +x /etc/rc.local
 
-VOLUME /var/lib/rundeck, /var/log/rundeck
+VOLUME /var/lib/rundeck
 
 EXPOSE 8080
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+

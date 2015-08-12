@@ -1,4 +1,5 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 COPY rc.local /etc/rc.local
@@ -12,5 +13,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install mariadb-server && \
 
 COPY setup.sql /var/lib/mysql/setup.sql.tpl
 
-VOLUME /var/lib/mysql/
+VOLUME /var/lib/mysql
+
 EXPOSE 3306
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Preferably run with
+# docker run -d --name db ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# otherwise with
+# docker run -d -p [port]:3306 -v [host-path]:/var/lib/mysql ${NAMESPACE}/${REPO}-${STACK}:${TAG}

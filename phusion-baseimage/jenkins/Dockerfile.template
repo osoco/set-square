@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -51,4 +52,9 @@ COPY known_hosts /opt/tomcat/.ssh/known_hosts
 VOLUME /home/jenkins
 
 EXPOSE 8080
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:8080 -v [host-path]:/home/jenkins ${NAMESPACE}/${REPO}-${STACK}:${TAG}
 

@@ -1,6 +1,9 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qqy x11-apps
 
 ENV DISPLAY :0
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

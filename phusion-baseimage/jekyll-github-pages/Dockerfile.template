@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/jekyll:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -10,3 +11,11 @@ COPY rc.local /etc/rc.local
 RUN chmod +x /etc/rc.local
 
 VOLUME /var/www/jekyll
+
+EXPOSE 4000
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:4000 -v [host-path]:/var/www/jekyll ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+

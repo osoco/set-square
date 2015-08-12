@@ -1,4 +1,5 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 #COPY rc.local /etc/rc.local
@@ -14,6 +15,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install wget && \
     php5enmod mcrypt
 #    chmod +x /etc/rc.local
 
-VOLUME /var/log
-
 EXPOSE 8080
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}-${STACK}:${TAG}

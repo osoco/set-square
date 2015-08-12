@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/mcollective-common:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -9,3 +10,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y mcollective-client mcollec
     chmod +x /etc/rc.local
 
 COPY client.cfg /etc/mcollective/client.cfg
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+

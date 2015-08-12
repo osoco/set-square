@@ -1,4 +1,5 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 # From https://www.digitalocean.com/community/tutorials/how-to-install-java-on-ubuntu-with-apt-get
@@ -9,3 +10,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y python-software-properties
     wget -nv --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie;gpw_e24=http://edelivery.oracle.com" http://download.oracle.com/otn-pub/java/jce/8/jce_policy-8.zip -O /opt/UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && \
     cd /opt && jar xvf UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && cd UnlimitedJCEPolicy* && cp *.jar /usr/lib/jvm/java-${JAVA_VERSION}-oracle/jre/lib/security/ && rm -rf UnlimitedJCEPolicy*  && \
     cd /usr/lib/jvm && ln -s java-${JAVA_VERSION}-oracle java
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

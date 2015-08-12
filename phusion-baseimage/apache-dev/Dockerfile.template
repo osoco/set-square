@@ -1,4 +1,5 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 COPY rc.local /etc/rc.local
@@ -13,6 +14,9 @@ RUN \
 VOLUME ["/var/www", "/usr/local/lib/apache2"]
 
 EXPOSE 80
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
 # Run with
 # cd [apache-module-workdir];
-# docker run -d -p 8888:80 -v $PWD:/usr/local/lib/apache2 ${NAMESPACE}/apache-dev
+# docker run -d -p [port]:80 -v $PWD:/usr/local/lib/apache2 ${NAMESPACE}/${REPO}-${STACK}

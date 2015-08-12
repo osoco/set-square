@@ -1,3 +1,4 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${NAMESPACE}/java:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -7,3 +8,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y puppet-common puppet mcoll
 COPY facts.sh /usr/local/bin/facts.sh
 RUN chmod +x /usr/local/bin/facts.sh
 COPY facts.cron /etc/cron.d/facts.sh
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

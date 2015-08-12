@@ -1,4 +1,5 @@
-FROM ${NAMESPACE}/base:${TAG}
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
 COPY rc.local /etc/rc.local
@@ -17,3 +18,11 @@ EXPOSE 8080
 #EXPOSE 28015
 #EXPOSE 29015
 VOLUME /var/lib/rethinkdb
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Preferably run with
+# docker run -d -d [port]:8080 --name db ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# otherwise with
+# docker run -d -p [port]:8080 -v [host-path]:/var/lib/rethinkdb ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+
