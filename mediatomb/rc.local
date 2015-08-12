@@ -1,10 +1,13 @@
 #!/bin/bash
 
 ps -ef | grep mediatomb | grep -v grep > /dev/null
-
-while [ $? -ne 0 ]; do
+_cmdResult=$?
+while [ ${_cmdResult} -ne 0 ]; do
     echo "(Re)starting mediatomb ..."
     service mediatomb restart
     sleep 5s
     ps -ef | grep mediatomb | grep -v grep > /dev/null
+    _cmdResult=$?
 done
+
+exit 0
