@@ -12,6 +12,8 @@ RUN apt-get -y update && \
 
 COPY config.xml /etc/mediatomb/config.xml
 
+RUN chown -R mediatomb:mediatomb /etc/mediatomb
+
 EXPOSE 49152
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
