@@ -50,14 +50,14 @@ function defineEnv() {
     export ROOT_IMAGE_32BIT="${ROOT_IMAGE_32BIT_DEFAULT}";
   fi
 
-  export BASE_IMAGE_DEFAULT="${NAMESPACE}/base"
-  export BASE_IMAGE_DESCRIPTION="The base image";
-  if    [ "${BASE_IMAGE+1}" != "1" ] \
-     || [ "x${BASE_IMAGE}" == "x" ]; then
-    export BASE_IMAGE="${BASE_IMAGE_DEFAULT}";
+  export BASE_IMAGE_64BIT_DEFAULT="${NAMESPACE}/base"
+  export BASE_IMAGE_64BIT_DESCRIPTION="The base image for 64 bits";
+  if    [ "${BASE_IMAGE_64BIT+1}" != "1" ] \
+     || [ "x${BASE_IMAGE_64BIT}" == "x" ]; then
+    export BASE_IMAGE_64BIT="${BASE_IMAGE_64BIT_DEFAULT}";
   fi
 
-  export BASE_IMAGE_32BIT_DEFAULT="${BASE_IMAGE_DEFAULT}32"
+  export BASE_IMAGE_32BIT_DEFAULT="${BASE_IMAGE_64BIT_DEFAULT%%64}32"
   export BASE_IMAGE_32BIT_DESCRIPTION="The base image for 32 bits";
   if    [ "${BASE_IMAGE_32BIT+1}" != "1" ] \
      || [ "x${BASE_IMAGE_32BIT}" == "x" ]; then
@@ -449,7 +449,7 @@ function defineEnv() {
     STACK \
     ROOT_IMAGE \
     ROOT_IMAGE_32BIT \
-    BASE_IMAGE \
+    BASE_IMAGE_64BIT \
     BASE_IMAGE_32BIT \
     TUTUM_NAMESPACE \
     MARIADB_ROOT_PASSWORD \

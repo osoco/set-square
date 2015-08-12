@@ -163,9 +163,9 @@ function build_repo() {
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\"";
+      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{BASE_IMAGE} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
@@ -247,6 +247,15 @@ find_parents() {
     export RESULT="${_result[@]}"
 }
 
+function define_base_image() {
+  if is_32bit; then
+    BASE_IMAGE=${BASE_IMAGE_32BIT}
+  else
+    BASE_IMAGE=${BASE_IMAGE_64BIT}
+  fi
+  export BASE_IMAGE
+}
+
 #echo $(dirname ${SCRIPT_NAME})
 #echo $(basename ${SCRIPT_NAME})
 [ -e "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh"
@@ -258,6 +267,7 @@ function main() {
   if [ "x${_stack}" != "x" ]; then
     _stack="_${_stack}";
   fi
+  define_base_image
   for _repo in ${REPOS}; do
     if ! repo_exists "${_repo}" "${_stack}"; then
       find_parents "${_repo}"
