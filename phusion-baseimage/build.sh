@@ -223,31 +223,36 @@ function is_32bit() {
 }
 
 function find_parent_repo() {
-    local _repo="${1}"
-    local _result=$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}' | awk -F':' '{print $1;}')
-    if [[ -n ${_result} ]] && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
-        # parent under our namespace
-        _result="${_result#\$\{NAMESPACE\}/}"
-    fi
-    export RESULT="${_result}"
-    echo ${_result}
+  local _repo="${1}"
+  local _result=$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}' | awk -F':' '{print $1;}')
+  if [[ -n ${_result} ]] && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
+    # parent under our namespace
+    _result="${_result#\$\{NAMESPACE\}/}"
+  fi
+  if [[ -n ${_result} ]] && [[ ! -n ${_result#\$\{BASE_IMAGE\}} ]]; then
+    _result=$(echo ${BASE_IMAGE} | awk -F'/' '{print $2;}')
+  fi
+  if [[ -n ${_result} ]] && [[ ! -n ${_result#\$\{ROOT_IMAGE\}} ]]; then
+    _result=${ROOT_IMAGE}
+  fi
+   export RESULT="${_result}"
 }
 
-find_parents() {
-    local _repo="${1}"
-    local _result=();
-    declare -a _result;
-    find_parent_repo "${_repo}"
-    local _parent="${RESULT}"
-    while [[ -n ${_parent} ]] && [[ "${_parent#.*/}" == "${_parent}" ]]; do
-        _result[${#_result[@]}]="${_parent}"
-        find_parent_repo "${_parent}"
-        _parent="${RESULT}"
-    done;
-    export RESULT="${_result[@]}"
+function find_parents() {
+  local _repo="${1}"
+  local _result=();
+  declare -a _result;
+  find_parent_repo "${_repo}"
+  local _parent="${RESULT}"
+  while [[ -n ${_parent} ]] && [[ "${_parent#.*/}" == "${_parent}" ]]; do
+    _result[${#_result[@]}]="${_parent}"
+    find_parent_repo "${_parent}"
+    _parent="${RESULT}"
+  done;
+  export RESULT="${_result[@]}"
 }
 
-function define_base_image() {
+function resolve_base_image() {
   if is_32bit; then
     BASE_IMAGE=${BASE_IMAGE_32BIT}
   else
@@ -267,7 +272,7 @@ function main() {
   if [ "x${_stack}" != "x" ]; then
     _stack="_${_stack}";
   fi
-  define_base_image
+  resolve_base_image
   for _repo in ${REPOS}; do
     if ! repo_exists "${_repo}" "${_stack}"; then
       find_parents "${_repo}"

@@ -1,0 +1,14 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${ROOT_IMAGE}
+
+MAINTAINER ${MAINTAINER}
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN mkdir /Dockerfiles && apt-get -y update && apt-get install -y iptables facter
+
+RUN cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
+
+CMD["/etc/rc.local"]
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
