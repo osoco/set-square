@@ -71,7 +71,8 @@ function defineEnv() {
     export TUTUM_NAMESPACE="${TUTUM_NAMESPACE_DEFAULT}";
   fi
 
-  export TOMCAT_VERSION_DEFAULT="$(curl -s -k http://apache.mirrors.pair.com/tomcat/tomcat-8/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1 | sed 's ^v  g')";
+  export TOMCAT_VERSION_DEFAULT_COMMAND="curl -s -k http://apache.mirrors.pair.com/tomcat/tomcat-8/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1 | sed 's ^v  g'";
+  export TOMCAT_VERSION_DEFAULT="8.0.24";
   export TOMCAT_VERSION_DESCRIPTION="The version of the Apache Tomcat server";
   if    [ "${TOMCAT_VERSION+1}" != "1" ] \
      || [ "x${TOMCAT_VERSION}" == "x" ]; then
@@ -183,14 +184,16 @@ function defineEnv() {
     export HTTPS_DOMAIN="${HTTPS_DOMAIN_DEFAULT}";
   fi
 
-  export ARTIFACTORY_VERSION_DEFAULT="$(curl -s -k http://dl.bintray.com/jfrog/artifactory/ | grep zip | tail -n 1 | cut -d'"' -f 4 | cut -d '-' -f 2 | sed 's .zip  g')";
+  export ARTIFACTORY_VERSION_DEFAULT_COMMAND="curl -s -k http://dl.bintray.com/jfrog/artifactory/ | grep zip | grep -v asc | tail -n 1 | cut -d'\"' -f 4 | cut -d'-' -f 4 | sed 's .zip  g'"
+  export ARTIFACTORY_VERSION_DEFAULT="4.0.1";
   export ARTIFACTORY_VERSION_DESCRIPTION="The version of Artifactory";
   if    [ "${ARTIFACTORY_VERSION+1}" != "1" ] \
      || [ "x${ARTIFACTORY_VERSION}" == "x" ]; then
     export ARTIFACTORY_VERSION="${ARTIFACTORY_VERSION_DEFAULT}";
   fi
   
-  export MAVEN_VERSION_DEFAULT="$(curl -s -k https://www.eu.apache.org/dist/maven/maven-3/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1)";
+  export MAVEN_VERSION_DEFAULT_COMMAND="curl -s -k https://www.eu.apache.org/dist/maven/maven-3/ | grep folder.gif | tail -n 1 | cut -d '>' -f 3 | cut -d '/' -f 1";
+  export MAVEN_VERSION_DEFAULT="3.3.3"
   export MAVEN_VERSION_DESCRIPTION="The version of Maven";
   if    [ "${MAVEN_VERSION+1}" != "1" ] \
      || [ "x${MAVEN_VERSION}" == "x" ]; then
@@ -211,7 +214,8 @@ function defineEnv() {
     export JENKINS_PASSWORD="${JENKINS_PASSWORD_DEFAULT}";
   fi
 
-  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT="$(mvn --encrypt-password ${JENKINS_PASSWORD} 2> /dev/null)";
+  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT_COMMAND="mvn --encrypt-password ${JENKINS_PASSWORD} 2> /dev/null";
+  export JENKINS_ENCRYPTED_PASSWORD_DEFAULT="not-computed-automatically";
   export JENKINS_ENCRYPTED_PASSWORD_DESCRIPTION="The encrypted password for the jenkins user";
   if    [ "${JENKINS_ENCRYPTED_PASSWORD+1}" != "1" ] \
      || [ "x${JENKINS_ENCRYPTED_PASSWORD}" == "x" ]; then
@@ -260,7 +264,8 @@ function defineEnv() {
     export FIREFOX_SYNC_DOMAIN="${FIREFOX_SYNC_DOMAIN_DEFAULT}";
   fi
 
-  export FIREFOX_SYNC_SECRET_DEFAULT="$(head -c 20 /dev/urandom | sha1sum | awk '{print $1;}')";
+  export FIREFOX_SYNC_SECRET_DEFAULT_COMMAND="$(head -c 20 /dev/urandom | sha1sum | awk '{print $1;}')";
+  export FIREFOX_SYNC_SECRET_DEFAULT="not-computed-automatically";
   export FIREFOX_SYNC_SECRET_DESCRIPTION="The secret string for the firefox sync server";
   if    [ "${FIREFOX_SYNC_SECRET+1}" != "1" ] \
      || [ "x${FIREFOX_SYNC_SECRET}" == "x" ]; then
@@ -358,7 +363,8 @@ function defineEnv() {
     export MONGODB_VERSION="${MONGODB_VERSION_DEFAULT}";
   fi
 
-  export RUNDECK_VERSION_DEFAULT="$(wget -o /dev/null -O- http://dl.bintray.com/rundeck/rundeck-deb/ | grep deb | tail -n 1 | sed 's <.\?pre>  g' | cut -d '>' -f 2 | cut -d '<' -f 1 | sed 's ^rundeck-  g' | sed 's \.deb$  g')";
+  export RUNDECK_VERSION_DEFAULT_COMMAND="wget -o /dev/null -O- http://dl.bintray.com/rundeck/rundeck-deb/ | grep deb | tail -n 1 | sed 's <.\?pre>  g' | cut -d '>' -f 2 | cut -d '<' -f 1 | sed 's ^rundeck-  g' | sed 's \.deb$  g'";
+  export RUNDECK_VERSION_DEFAULT="2.5.2-1-GA";
   export RUNDECK_VERSION_DESCRIPTION="The Rundeck version";
   if    [ "${RUNDECK_VERSION+1}" != "1" ] \
      || [ "x${RUNDECK_VERSION}" == "x" ]; then

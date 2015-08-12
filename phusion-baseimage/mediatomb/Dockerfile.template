@@ -17,4 +17,4 @@ EXPOSE 49152
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 
 # Run with
-# docker run -d -p [port]:49152 ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# docker run -d -p [port]:49152 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}

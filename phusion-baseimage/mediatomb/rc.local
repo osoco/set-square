@@ -1,9 +1,10 @@
 #!/bin/bash
 
-ps -ef | grep mediatomb
+ps -ef | grep mediatomb | grep -v grep > /dev/null
 
 while [ $? -ne 0 ]; do
+    echo "(Re)starting mediatomb ..."
     service mediatomb restart
     sleep 5s
-    ps -ef | grep mediatomb
+    ps -ef | grep mediatomb | grep -v grep > /dev/null
 done

@@ -144,7 +144,7 @@ function build_repo_if_defined_locally() {
   local _stack="${2}";
   if [[ -n ${_repo} ]] && \
      [[ -d ${_repo} ]] && \
-     ! repo_exists "${_repo}" "${_stack}"; then
+     ! repo_exists "${_repo#${NAMESPACE}/}" "${_stack}"; then
     build_repo "${_repo}" "${_stack}"
   fi
 }
@@ -156,16 +156,23 @@ function build_repo_if_defined_locally() {
 function build_repo() {
   local _repo="${1}";
   local _stack="${2}";
+  local _stackSuffix;
+  local _cmdResult;
   local _rootImage="${ROOT_IMAGE}";
   if is_32bit; then
     _rootImage="${ROOT_IMAGE_32BIT}";
   fi
+  if [[ -n ${STACK} ]]; then
+    _stackSuffix="-${STACK}"
+  else
+    _stackSuffix=""
+  fi
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" ";
+      done;) TAG=\"${TAG}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{BASE_IMAGE} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
@@ -176,21 +183,24 @@ function build_repo() {
     done
   fi
 
-  logInfo -n "Building ${NAMESPACE}/${_repo}${_stack}:${TAG}"
+  logInfo "Building ${NAMESPACE}/${_repo}${_stack}:${TAG}"
 #  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${TAG}" --rm=true "${_repo}"
   docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${TAG}" --rm=true "${_repo}"
-  if [ $? -eq 0 ]; then
-    logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
+  _cmdResult=$?
+  logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
+  if [ ${_cmdResult} -eq 0 ]; then
     logInfoResult SUCCESS "built"
   else
     logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
-  logInfo -n "Tagging ${NAMESPACE}/${_repo}${_stack}:latest"
+  logInfo "Tagging ${NAMESPACE}/${_repo}${_stack}:latest"
   docker tag -f "${NAMESPACE}/${_repo}${_stack}:${TAG}" "${NAMESPACE}/${_repo}${_stack}:latest"
-  if [ $? -eq 0 ]; then
-    logInfoResult SUCCESS "done"
+  _cmdResult=$?
+  logInfo -n "${NAMESPACE}/${_repo}${_stack}:${TAG}";
+  if [ ${_cmdResult} -eq 0 ]; then
+    logInfoResult SUCCESS "tagged"
   else
     logInfoResult FAILURE "failed"
     exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
