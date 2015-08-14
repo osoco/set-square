@@ -2,21 +2,23 @@
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY rc.local /etc/rc.local
+COPY mediatomb.sh /etc/service/mediatomb/run
 
 RUN apt-get -y update && \
     apt-get install -y mediatomb && \
     cd /etc/mediatomb && \
     mv config.xml config.xml.official && \
-    chmod +x /etc/rc.local
+    chmod +x /etc/service/mediatomb/run
 
 COPY config.xml /etc/mediatomb/config.xml
 
 RUN chown -R mediatomb:mediatomb /etc/mediatomb
+
+VOLUME /media
 
 EXPOSE 49152
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 
 # Run with
-# docker run -d -p [port]:49152 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
+# docker run -d -p [port]:49152 -v [host-folder]:/media ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-# DDL for openbadges
+# DDL for ${OSOCOGAME_DB}

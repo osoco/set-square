@@ -1,0 +1,14 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY rc.local /etc/rc.local
+
+RUN \
+  apt-get install -y apache2 && \
+  chmod +x /etc/rc.local
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+
+# Run with
+# docker run -d -p [port]:80 ${NAMESPACE}/${REPO}-${STACK}

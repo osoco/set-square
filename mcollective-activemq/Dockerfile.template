@@ -30,10 +30,10 @@ RUN patch activemq.xml activemq_xml.patch && \
     chown -R activemq:activemq /var/lib/activemq && \
     chmod +x /etc/rc.local
 
-EXPOSE ${ACTIVEMQ_PORT}
+EXPOSE ${MCOLLECTIVE_ACTIVEMQ_PORT}
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 
 # Run with
-# docker run -d -p [port]:${ACTIVEMQ_PORT} ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# docker run -d -p [port]:${MCOLLECTIVE_ACTIVEMQ_PORT} ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
 

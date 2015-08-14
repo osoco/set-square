@@ -31,7 +31,7 @@ RUN groupadd jenkins && \
     chown -R tomcat:tomcat /opt/tomcat/.ssh && \
     DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get install -y git graphviz && \
-    cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${MAVEN_VERSION} apache-maven && \
+    cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${JENKINS_MAVEN_VERSION}/binaries/apache-maven-${JENKINS_MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${JENKINS_MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${JENKINS_MAVEN_VERSION} apache-maven && \
     gpasswd -a tomcat jenkins && \
     chmod +x /etc/rc.local
 
@@ -56,5 +56,5 @@ EXPOSE 8080
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 
 # Run with
-# docker run -d -p [port]:8080 -v [host-path]:/home/jenkins ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# docker run -d -p [port]:8080 -v [host-path]:/home/jenkins ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
 

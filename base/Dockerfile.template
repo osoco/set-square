@@ -5,9 +5,12 @@ MAINTAINER ${MAINTAINER}
 
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN mkdir /Dockerfiles && apt-get -y update && apt-get install -y iptables facter
+COPY 00_create_rsnapshot_conf.sh /etc/my_init.d/00_create_rsnapshot_conf.sh
+COPY loggly.conf /etc/loggly.conf.syslog-ng
 
-RUN cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
+RUN mkdir /Dockerfiles && apt-get -y update && apt-get install -y iptables facter rsnapshot && \
+    cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && \
+    chmod +x /etc/my_init.d/00_create_rsnapshot_conf.sh
 
 CMD ["/sbin/my_init"]
 

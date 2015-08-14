@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-v[v]] [-q|--quiet] [-t|--tag tagName] [-T|--tutum] [repo]
+$SCRIPT_NAME [-t|--tag tagName] [-T|--tutum] [repo]
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -15,6 +15,12 @@ Where:
   * repo: the repository image to build.
   * tag: the tag to use once the image is built successfully.
   * tutum: whether to push the image to tutum.co.
+Common flags:
+    * -h | --help: Display this message.
+    * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
+    * -v: Increase the verbosity.
+    * -vv: Increase the verbosity further.
+    * -q | --quiet: Be silent.
 EOF
 }
 
@@ -65,20 +71,19 @@ function defineErrors() {
 
   export ERROR_MESSAGES;
 }
- 
-# Checking input
-function checkInput() {
+
+# Parses the input
+function parseInput() {
 
   local _flags=$(extractFlags $@);
   local _flagCount;
   local _currentCount;
-  logDebug -n "Checking input";
 
   # Flags
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q)
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
          shift;
          ;;
       -t | --tag)
@@ -91,26 +96,49 @@ function checkInput() {
 	 TUTUM=1;
          shift;
 	 ;;
+    esac
+  done
+ 
+  if [[ ! -n ${TAG} ]]; then
+    TAG="${DATE}";
+  fi
+
+  # Parameters
+  if [[ ! -n ${REPOS} ]]; then
+    REPOS="$@";
+    shift;
+  fi
+
+  if [[ ! -n ${REPOS} ]]; then
+    REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
+  fi
+
+  if [[ -n ${REPOS} ]]; then
+      loadRepoEnvironmentVariables "${REPOS}";
+      evalEnvVars;
+  fi
+}
+
+# Checking input
+function checkInput() {
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  local _currentCount;
+  logDebug -n "Checking input";
+
+  # Flags
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -T | --tutum)
+	 ;;
       *) exitWithErrorCode INVALID_OPTION ${_flag};
          ;;
     esac
   done
  
-  if [ "x${TAG}" == "x" ]; then
-    TAG="${DATE}";
-  fi
-
-  # Parameters
-  if [ "x${REPOS}" == "x" ]; then
-    REPOS="$@";
-    shift;
-  fi
-
-  if [ "x${REPOS}" == "x" ]; then
-    REPO="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
-  fi
-
-  if [ "x${REPOS}" == "x" ]; then
+  if [[ ! -n ${REPOS} ]]; then
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
@@ -158,9 +186,11 @@ function build_repo() {
   local _stack="${2}";
   local _stackSuffix;
   local _cmdResult;
-  local _rootImage="${ROOT_IMAGE}";
+  local _rootImage=;
   if is_32bit; then
-    _rootImage="${ROOT_IMAGE_32BIT}";
+    _rootImage="${ROOT_IMAGE_32BIT}:${ROOT_IMAGE_VERSION}";
+  else
+    _rootImage="${ROOT_IMAGE_64BIT}:${ROOT_IMAGE_VERSION}";
   fi
   if [[ -n ${STACK} ]]; then
     _stackSuffix="-${STACK}"
@@ -271,9 +301,17 @@ function resolve_base_image() {
   export BASE_IMAGE
 }
 
-#echo $(dirname ${SCRIPT_NAME})
-#echo $(basename ${SCRIPT_NAME})
-[ -e "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh" ] && source "$(dirname ${SCRIPT_NAME})/$(basename ${SCRIPT_NAME} .sh).inc.sh"
+function loadRepoEnvironmentVariables() {
+  local _repos="${1}";
+
+  for _repo in ${_repos}; do
+    for f in "${_repo}/build-settings.sh" "${_repo}/build-settings.sh-private"; do
+      if [ -e "${f}" ]; then
+        source "${f}";
+      fi
+    done
+  done
+}
 
 function main() {
   local _repo;
@@ -283,7 +321,7 @@ function main() {
     _stack="_${_stack}";
   fi
   resolve_base_image
-  for _repo in ${REPOS}; do
+  for _repo in "${REPOS}"; do
     if ! repo_exists "${_repo}" "${_stack}"; then
       find_parents "${_repo}"
       _parents="${RESULT}"
