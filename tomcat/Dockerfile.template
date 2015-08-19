@@ -1,34 +1,32 @@
 # ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
-FROM ${NAMESPACE}/java${JAVA_VERSION}:${TAG}
-MAINTAINER ${MAINTAINER}
-ENV HOME /root
-USER root
-WORKDIR /opt
+FROM ${NAMESPACE}/base:${TAG}
 
-ADD rc.local /etc/rc.local
+MAINTAINER ${MAINTAINER}
+
+RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
+COPY service /etc/service/${REPO}/run
+RUN chmod +x /etc/service/${REPO}/run
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY help /usr/local/bin/help
 
 # Create user tomcat
 RUN groupadd tomcat && \
-    /usr/sbin/useradd -m -d /opt/tomcat -g tomcat -G tomcat,sudo -s /bin/bash -c "Apache Tomcat user (/etc/init.d/tomcat)" tomcat && \
-    sed -i '/%sudo   ALL=(ALL:ALL) ALL/a tomcat localhost=NOPASSWD: /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers && \
-    wget -O /opt/apache-tomcat-${TOMCAT_VERSION}.tar.gz http://apache.mirrors.pair.com/tomcat/tomcat-8/v${TOMCAT_VERSION}/bin/apache-tomcat-${TOMCAT_VERSION}.tar.gz && \
-    tar xvfz /opt/apache-tomcat-${TOMCAT_VERSION}.tar.gz && \
-    rm -rf /opt/tomcat && \
-    ln -s /opt/apache-tomcat-${TOMCAT_VERSION} /opt/tomcat && \
+    /usr/sbin/useradd -m -d /opt/tomcat -g tomcat -G tomcat -s /bin/bash -c "Apache Tomcat user" tomcat && \
+    wget -O /opt/${TOMCAT_FILE} ${TOMCAT_DOWNLOAD_URL} && \
+    tar xvfz /opt/${TOMCAT_FILE} && \
+    ln -s /opt/${TOMCAT_FOLDER} /opt/tomcat && \
     mkdir /var/lock/tomcat /var/run/tomcat /opt/tomcat/contexts && \
     cd /var/log && ln -s /opt/tomcat/logs tomcat && \
     chmod 755 /var/run/tomcat && \
-    mkdir /etc/service/tomcat && \
-    touch /etc/service/tomcat/run /etc/init.d/tomcat && \
-    chmod a+x /etc/service/tomcat/run && \
-    chmod a+x /etc/init.d/tomcat && \
-    update-rc.d tomcat defaults && \
-    chmod 755 /etc/init.d/tomcat && \
     chown -R tomcat:tomcat /var/lock/tomcat /var/run/tomcat /var/log/tomcat /opt/tomcat /opt/apache-tomcat* && \
-    chmod +x /etc/rc.local
+    rm -f /opt/${TOMCAT_FILE} && \
+    chmod +x /etc/service/${REPO}/run && \
+    chmod +x /usr/local/bin/help
 
-COPY config /etc/default/tomcat
-COPY service.sh /etc/service/tomcat/run
-COPY service.sh /etc/init.d/tomcat
+EXPOSE 8080
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+# Run with
+# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+cat <<EOF
+${NAMESPACE}/${REPO}:${TAG}
+(c) 2015-today Automated Computing Machinery S.L.
+    Distributed under the terms of the GNU General Public License v3
+
+This image is meant to provide a common Tomcat environment
+for Java web applications, and to deal with new Tomcat releases.
+
+If you're interested, you can run me with
+docker run -it -p [port]:8080 ${NAMESPACE}/${REPO}:${TAG} /bin/bash
+
+This image was generated with rydnr's script:
+https://github.com/rydnr/dockerfile
+EOF
