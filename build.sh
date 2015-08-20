@@ -438,7 +438,7 @@ function loadRepoEnvironmentVariables() {
 ## Example:
 ##   if force_mode_enabled; then [..]; fi
 function force_mode_enabled() {
-  _flagEnabled FORCE_MODE
+  _flagEnabled FORCE_MODE;
 }
 
 ## Checks whether the -t flag is enabled

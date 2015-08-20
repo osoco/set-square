@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME package [package]*
+$SCRIPT_NAME [-np|--no-pin] package [package]*
 $SCRIPT_NAME [-h|--help]
 (c) 2015-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -16,6 +16,7 @@ to remove unnecessary dependencies.
 
 Where:
   * package: the package(s) to install.
+  * -np | --no-pin: Do not pin the package.
 Common flags:
     * -h | --help: Display this message.
     * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
@@ -69,7 +70,7 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -np | --no-pin)
          shift;
          ;;
       *) logDebugResult FAILURE "failed";
@@ -99,8 +100,12 @@ function parseInput() {
     _flagCount=$((_flagCount+1));
     case ${_flag} in
       -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
-         shift;
-         ;;
+        shift;
+        ;;
+      -np | --no-pin)
+        export NO_PIN=0;
+        shift
+        ;;
     esac
   done
 
@@ -113,7 +118,7 @@ function parseInput() {
 ## Example:
 ##   update_system
 function update_system() {
-  logInfo -n "Updating system";
+  logInfo -n "Updating system (this can take some time)";
   ${APTGET_UPDATE} > /dev/null
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done";
@@ -135,6 +140,13 @@ function check_packages_file_writeable() {
   fi
 }
 
+## Checks whether the -np flag is enabled
+## Example:
+##   if no_pin_enabled; then [..]; fi
+function no_pin_enabled() {
+  _flagEnabled NO_PIN;
+}
+
 ## Installs a package.
 ## -> 1: the package to install
 ## Example:
@@ -147,7 +159,7 @@ function install_package() {
     logInfoResult SUCCESS "skipped";
   else
     echo "${_package}" >> ${INSTALLED_PACKAGES_FILE}
-    ${APTGET_INSTALL} ${_package} 2>&1 > /dev/null
+    ${APTGET_INSTALL} ${_package} > /dev/null 2>&1
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "done";
     else
@@ -165,7 +177,7 @@ function install_package() {
 function pin_package() {
   local _package="${1}";
   logInfo -n "Pinning ${_package}";
-  ${HOLD_PACKAGE} ${_package} > /dev/null
+  ${HOLD_PACKAGE} ${_package} > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done";
   else
@@ -184,6 +196,8 @@ function main() {
   
   for _package in ${PACKAGES}; do
     install_package "${_package}";
-    pin_package "${_package}";
+    if ! no_pin_enabled; then
+      pin_package "${_package}";
+    fi
   done
 }

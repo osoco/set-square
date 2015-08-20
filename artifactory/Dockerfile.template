@@ -2,10 +2,10 @@
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY entrypoint.sh /etc/entrypoint.sh
+COPY help /usr/local/bin/help
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
 
-RUN ${APTGET_INSTALL} wget && \
-    groupadd artifactory && \
+RUN groupadd artifactory && \
     useradd -s /bin/bash -g artifactory -G artifactory,tomcat -m -c "Artifactory user" artifactory && \
     wget -O /opt/tomcat/webapps/${ARTIFACTORY_FILE} ${ARTIFACTORY_DOWNLOAD_URL} && \
     mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome && \
@@ -16,8 +16,7 @@ RUN ${APTGET_INSTALL} wget && \
     chown -R artifactory:tomcat /home/artifactory /opt/tomcat/.artifactory && \
     chmod -R g+w /home/artifactory /opt/tomcat/.artifactory && \
     mv /etc/service/tomcat /etc/service/artifactory && \
-    chmod +x /etc/entrypoint.sh && \
-    ${APTGET_CLEANUP}
+    chmod +x /usr/local/bin/help
     
 COPY context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
 COPY artifactory-.bashrc /home/artifactory/.bashrc
@@ -28,8 +27,7 @@ VOLUME /home/artifactory
 EXPOSE 8080
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
-
-ENTRYPOINT ["/etc/entrypoint.sh"]
+COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Run with
 # docker run -d -p [port]:8080 -v [host-path]:/home/artifactory ${NAMESPACE}/${REPO}${STACK_SUFFIX}

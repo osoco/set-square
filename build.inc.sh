@@ -14,7 +14,7 @@ defineEnvVar TUTUM_NAMESPACE "The tutum.co namespace" "example";
 defineEnvVar JAVA_VERSION "The Java version" "8";
 defineEnvVar APTGET_INSTALL \
              "Install a program via apt-get" \
-             '/usr/local/bin/aptget-install.sh -vv ';
+             '/usr/local/bin/aptget-install.sh -v ';
 defineEnvVar APTGET_CLEANUP \
              "The cleanup commands after an apt-get so that the resulting image size is optimal" \
-             '/usr/local/bin/aptget-cleanup.sh -vv ';
+             '/usr/local/bin/aptget-cleanup.sh -v ';

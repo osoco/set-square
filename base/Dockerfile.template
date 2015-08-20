@@ -5,14 +5,16 @@ MAINTAINER ${MAINTAINER}
 
 ENV DEBIAN_FRONTEND noninteractive
 
-COPY 00_create_rsnapshot_conf.sh /etc/my_init.d/00_create_rsnapshot_conf.sh
 COPY dry-wit aptget-install.sh aptget-install.inc.sh aptget-cleanup.sh aptget-cleanup.inc.sh help \
      /usr/local/bin/
+COPY 00_create_rsnapshot_conf.sh 00_create_rsnapshot_conf.inc.sh /etc/my_init.d/
 COPY display-dockerfile.sh /usr/local/bin/Dockerfile
 
 RUN mkdir -p /etc/service/.template/log && \
     touch /var/local/docker-installed-packages.txt && \
-    chmod +x /usr/local/bin/dry-wit /usr/local/bin/aptget-install.sh /usr/local/bin/aptget-cleanup.sh
+    chmod +x /usr/local/bin/dry-wit /usr/local/bin/aptget-install.sh /usr/local/bin/aptget-cleanup.sh && \
+    chmod +x /etc/my_init.d/00_create_rsnapshot_conf.sh && \
+    chmod -x /etc/my_init.d/00_create_rsnapshot_conf.inc.sh
 
 COPY logstash /etc/service/.template/log/run
 
@@ -20,20 +22,17 @@ RUN mkdir /Dockerfiles && \
     yes | add-apt-repository ppa:webupd${JAVA_VERSION}team/java && \
     echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections  && \
     echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections  && \    
-    ${APTGET_INSTALL} iptables facter rsnapshot python-software-properties wget \
+    ${APTGET_INSTALL} wget && \
+    wget -qO - https://packages.elasticsearch.org/GPG-KEY-elasticsearch | sudo apt-key add - && \
+    echo "deb http://packages.elasticsearch.org/logstash/1.5/debian stable main" | sudo tee -a /etc/apt/sources.list && \
+    ${APTGET_INSTALL} iptables facter rsnapshot logstash python-software-properties \
                        oracle-java${JAVA_VERSION}-installer libXtst6 libxi6 && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && \
-    rm -f /etc/my_init.d/00_regen_ssh_host_key.sh && \
     wget -nv --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie;gpw_e24=http://edelivery.oracle.com" ${JCE_DOWNLOAD_URL} -O /tmp/UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && \
     cd /tmp && jar xvf UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && \
     cp /tmp/UnlimitedJCEPolicyJDK${JAVA_VERSION}/* /usr/lib/jvm/java-${JAVA_VERSION}-oracle/jre/lib/security/ && \
     rm -rf /tmp/UnlimitedJCEPolicyJDK${JAVA_VERSION}*  && \
     cd /usr/lib/jvm && ln -s java-${JAVA_VERSION}-oracle java && \
-    wget -O /opt/${LOGSTASH_FILE} ${LOGSTASH_DOWNLOAD_URL} && \
-    dpkg -i /opt/${LOGSTASH_FILE} && \
-    apt-mark hold logstash && \
-    rm -f /opt/${LOGSTASH_FILE} && \
-    chmod +x /etc/my_init.d/00_create_rsnapshot_conf.sh && \
     chmod +x /etc/service/.template/log/run && \
     chmod +x -- /usr/local/bin/help /usr/local/bin/Dockerfile && \    
     ln -s -- /usr/local/bin/help /usr/local/bin/-h && \
@@ -43,6 +42,7 @@ RUN mkdir /Dockerfiles && \
 
 CMD ["/sbin/my_init"]
 
+COPY logstash-default.conf /etc/logstash/conf.d/default.conf
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile
 

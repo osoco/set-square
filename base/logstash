@@ -1,0 +1,8 @@
+#!/bin/bash
+
+service=$(pwd | awk -F'/' '{print $4;}');
+conf="/etc/logstash/conf.d/${service}.conf";
+if [[ ! -e ${conf} ]]; then
+  conf="/etc/logstash/conf.d/default.conf";
+fi
+exec /opt/logstash/bin/logstash agent -f ${conf}

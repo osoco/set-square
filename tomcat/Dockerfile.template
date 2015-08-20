@@ -9,19 +9,29 @@ RUN chmod +x /etc/service/${REPO}/run
 COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
 COPY help /usr/local/bin/help
 
-# Create user tomcat
-RUN groupadd tomcat && \
-    /usr/sbin/useradd -m -d /opt/tomcat -g tomcat -G tomcat -s /bin/bash -c "Apache Tomcat user" tomcat && \
+# Create user ${TOMCAT_USER} and group ${TOMCAT_GROUP}
+RUN groupadd ${TOMCAT_GROUP} && \
+    /usr/sbin/useradd -d ${TOMCAT_HOME} -g ${TOMCAT_GROUP} -G ${TOMCAT_GROUP} -s /bin/bash -c "Apache Tomcat user" ${TOMCAT_USER} && \
     wget -O /opt/${TOMCAT_FILE} ${TOMCAT_DOWNLOAD_URL} && \
-    tar xvfz /opt/${TOMCAT_FILE} && \
-    ln -s /opt/${TOMCAT_FOLDER} /opt/tomcat && \
-    mkdir /var/lock/tomcat /var/run/tomcat /opt/tomcat/contexts && \
-    cd /var/log && ln -s /opt/tomcat/logs tomcat && \
+    cd /opt && tar xvfz /opt/${TOMCAT_FILE} && \
+    ln -s /opt/${TOMCAT_FOLDER} ${TOMCAT_HOME} && \
+    mkdir /var/lock/tomcat /var/run/tomcat ${TOMCAT_HOME}/contexts && \
+    cd /var/log && ln -s ${TOMCAT_HOME}/logs tomcat && \
     chmod 755 /var/run/tomcat && \
-    chown -R tomcat:tomcat /var/lock/tomcat /var/run/tomcat /var/log/tomcat /opt/tomcat /opt/apache-tomcat* && \
+    chown -R ${TOMCAT_USER}:${TOMCAT_GROUP} /var/lock/tomcat /var/run/tomcat /var/log/tomcat ${TOMCAT_HOME} /opt/${TOMCAT_FOLDER} && \
     rm -f /opt/${TOMCAT_FILE} && \
     chmod +x /etc/service/${REPO}/run && \
+    ${APTGET_INSTALL} -np make gcc openssl libssl-dev && \
+    cd /usr/local/src && wget -O ${APR_FILE} ${APR_DOWNLOAD_URL} && \
+    tar xvfz ${APR_FILE} && cd ${APR_FOLDER} && \
+    ./configure && make && make install && \
+    cd /usr/local/src && wget -O ${TOMCAT_NATIVE_FILE} ${TOMCAT_NATIVE_DOWNLOAD_URL} && \
+    tar xvfz ${TOMCAT_NATIVE_FILE} && cd ${TOMCAT_NATIVE_FOLDER}/jni/native && \
+    ./configure --with-apr=/usr/local/apr --with-java-home=/usr/lib/jvm/java && make && make install && \
+    ${APTGET_CLEANUP} && \
     chmod +x /usr/local/bin/help
+
+COPY setenv.sh ${TOMCAT_HOME}/bin/setenv.sh
 
 EXPOSE 8080
 
