@@ -3,3 +3,6 @@ rsnapshot.conf
 Dockerfile
 .build-settings.sh
 loggly.conf
+31_create_monit_http_conf.inc.sh
+monit-http.conf
+monit-mail.conf
