@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-s|--squash-image] [repo]
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-s|--squash-image] [repo]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -277,9 +277,9 @@ function build_repo() {
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" ";
+      done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} "; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do

@@ -9,3 +9,21 @@ defineEnvVar GETBOO_DEFAULT_LANGUAGE "The default language for getboo" "en_US";
 defineEnvVar GETBOO_DOMAIN "The getboo domain" "http://getboo.example.com";
 defineEnvVar GETBOO_HTTPS_DOMAIN "The https domain" 'https://getboo.example.com';
 defineEnvVar GETBOO_ADMIN_EMAIL "The admin email for getboo" 'admin-getboo@${GETBOO_DOMAIN}';
+defineEnvVar GETBOO_FOLDER \
+             "The GetBoo folder" \
+             'getboo.${GETBOO_VERSION}';
+defineEnvVar GETBOO_FILE \
+             "The GetBoo artifact" \
+             '${GETBOO_FOLDER}.zip';
+defineEnvVar GETBOO_DOWNLOAD_URL \
+             "The url to download GetBoo" \
+             'http://downloads.sourceforge.net/project/getboo/getboo/${GETBOO_VERSION}/${GETBOO_FILE}';
+defineEnvVar GETBOO_HOME \
+             "The home folder for GetBoo" \
+             "/usr/local/src";
+defineEnvVar APACHE_USER \
+             "The Apache user" \
+             "www-data";
+defineEnvVar APACHE_GROUP \
+             "The Apache group" \
+             "www-data";

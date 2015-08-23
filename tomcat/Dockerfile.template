@@ -9,7 +9,6 @@ RUN chmod +x /etc/service/${REPO}/run
 COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
 COPY help /usr/local/bin/help
 
-# Create user ${TOMCAT_USER} and group ${TOMCAT_GROUP}
 RUN groupadd ${TOMCAT_GROUP} && \
     /usr/sbin/useradd -d ${TOMCAT_HOME} -g ${TOMCAT_GROUP} -G ${TOMCAT_GROUP} -s /bin/bash -c "Apache Tomcat user" ${TOMCAT_USER} && \
     wget -O /opt/${TOMCAT_FILE} ${TOMCAT_DOWNLOAD_URL} && \

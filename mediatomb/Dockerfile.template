@@ -2,13 +2,14 @@
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY mediatomb.sh /etc/service/mediatomb/run
+RUN mkdir -p /etc/service/${REPO}
+COPY service /etc/service/${REPO}/run
 
 RUN apt-get -y update && \
     apt-get install -y mediatomb && \
     cd /etc/mediatomb && \
     mv config.xml config.xml.official && \
-    chmod +x /etc/service/mediatomb/run
+    chmod +x /etc/service/${REPO}/run
 
 COPY config.xml /etc/mediatomb/config.xml
 

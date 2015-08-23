@@ -119,7 +119,7 @@ function parseInput() {
 ##   update_system
 function update_system() {
   logInfo -n "Updating system (this can take some time)";
-  ${APTGET_UPDATE} > /dev/null
+  ${APTGET_UPDATE} > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done";
   else

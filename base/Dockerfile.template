@@ -5,28 +5,54 @@ MAINTAINER ${MAINTAINER}
 
 ENV DEBIAN_FRONTEND noninteractive
 
-COPY dry-wit aptget-install.sh aptget-install.inc.sh aptget-cleanup.sh aptget-cleanup.inc.sh help \
+COPY dry-wit aptget-install.sh aptget-install.inc.sh aptget-cleanup.sh aptget-cleanup.inc.sh \
      /usr/local/bin/
-COPY 00_create_rsnapshot_conf.sh 00_create_rsnapshot_conf.inc.sh /etc/my_init.d/
+COPY 20_create_rsnapshot_conf.sh 20_create_rsnapshot_conf.inc.sh \
+     30_create_monit_filesystem_check.sh 30_create_monit_filesystem_check.inc.sh \
+     31_create_monit_http_conf.sh 31_create_monit_http_conf.inc.sh \
+     32_create_monit_port_check.sh 32_create_monit_port_check.inc.sh \
+     /etc/my_init.d/
 COPY display-dockerfile.sh /usr/local/bin/Dockerfile
+COPY display-file.sh /usr/local/bin/show
+COPY display-help.sh /usr/local/bin/help
+COPY README /README
+COPY rsnapshot.daily /etc/cron.daily/rsnapshot.daily
+COPY rsnapshot.weekly /etc/cron.weekly/rsnapshot.weekly
+COPY rsnapshot.monthly /etc/cron.monthly/rsnapshot.monthly
 
 RUN mkdir -p /etc/service/.template/log && \
+    mkdir /etc/service/monit && \
     touch /var/local/docker-installed-packages.txt && \
     chmod +x /usr/local/bin/dry-wit /usr/local/bin/aptget-install.sh /usr/local/bin/aptget-cleanup.sh && \
-    chmod +x /etc/my_init.d/00_create_rsnapshot_conf.sh && \
-    chmod -x /etc/my_init.d/00_create_rsnapshot_conf.inc.sh
+    chmod +x /etc/my_init.d/20_create_rsnapshot_conf.sh && \
+    chmod -x /etc/my_init.d/20_create_rsnapshot_conf.inc.sh && \
+    chmod +x /etc/my_init.d/30_create_monit_filesystem_check.sh && \
+    chmod -x /etc/my_init.d/30_create_monit_filesystem_check.inc.sh && \
+    chmod +x /etc/my_init.d/31_create_monit_http_conf.sh && \
+    chmod -x /etc/my_init.d/31_create_monit_http_conf.inc.sh && \
+    chmod +x /etc/my_init.d/32_create_monit_port_check.sh && \
+    chmod -x /etc/my_init.d/32_create_monit_port_check.inc.sh && \
+    chmod +x /usr/local/bin/show && \
+    chmod +x /etc/cron.daily/rsnapshot.daily && \
+    chmod +x /etc/cron.weekly/rsnapshot.weekly && \
+    chmod +x /etc/cron.monthly/rsnapshot.monthly    
 
 COPY logstash /etc/service/.template/log/run
+COPY logstash-cron.conf /etc/logstash/conf.d/cron.conf
+COPY logstash-cron.sh /etc/service/cron/log/run
+COPY monit.sh /etc/service/monit/run
 
 RUN mkdir /Dockerfiles && \
+    /etc/my_init.d/00_regen_ssh_host_keys.sh -f && \
     yes | add-apt-repository ppa:webupd${JAVA_VERSION}team/java && \
     echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections  && \
     echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections  && \    
     ${APTGET_INSTALL} wget && \
     wget -qO - https://packages.elasticsearch.org/GPG-KEY-elasticsearch | sudo apt-key add - && \
     echo "deb http://packages.elasticsearch.org/logstash/1.5/debian stable main" | sudo tee -a /etc/apt/sources.list && \
-    ${APTGET_INSTALL} iptables facter rsnapshot logstash python-software-properties \
-                       oracle-java${JAVA_VERSION}-installer libXtst6 libxi6 && \
+    ${APTGET_INSTALL} iptables facter rsnapshot logstash monit \
+                      python-software-properties \
+                      oracle-java${JAVA_VERSION}-installer libXtst6 libxi6 && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && \
     wget -nv --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie;gpw_e24=http://edelivery.oracle.com" ${JCE_DOWNLOAD_URL} -O /tmp/UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && \
     cd /tmp && jar xvf UnlimitedJCEPolicyJDK${JAVA_VERSION}.zip && \
@@ -34,28 +60,43 @@ RUN mkdir /Dockerfiles && \
     rm -rf /tmp/UnlimitedJCEPolicyJDK${JAVA_VERSION}*  && \
     cd /usr/lib/jvm && ln -s java-${JAVA_VERSION}-oracle java && \
     chmod +x /etc/service/.template/log/run && \
-    chmod +x -- /usr/local/bin/help /usr/local/bin/Dockerfile && \    
+    chmod +x /etc/service/cron/run  && \
+    chmod +x /etc/service/cron/log/run  && \
+    chmod +x /etc/service/monit/run  && \
+    chmod +x -- /usr/local/bin/help /usr/local/bin/Dockerfile /usr/local/bin/show && \    
     ln -s -- /usr/local/bin/help /usr/local/bin/-h && \
     ln -s -- /usr/local/bin/help /usr/local/bin/--help && \
     ln -s -- /usr/local/bin/Dockerfile /usr/local/bin/dockerfile && \
+    sed -i 's/^#logfile/logfile/g' /etc/rsnapshot.conf && \
+    sed -i 's/^#cmd_ssh/cmd_ssh/g' /etc/rsnapshot.conf && \
+    sed -i 's|^#ssh_args.*|ssh_args\t-i /etc/ssh/ssh_host_dsa_key|g' /etc/rsnapshot.conf && \
+    sed -i 's|^\(\s*\)set logfile\(.*\)|#\1set logfile\2|g' /etc/monit/monitrc && \
     ${APTGET_CLEANUP}
 
 CMD ["/sbin/my_init"]
 
 COPY logstash-default.conf /etc/logstash/conf.d/default.conf
+COPY monit-syslog.conf /etc/monit/conf.d/syslog.conf
+COPY monit-mail.conf /etc/monit/conf.d/mail.conf
+COPY monit-http.conf /etc/monit/conf.d/http.conf
+
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Children should provide:
 # - service: to run the process (letting runit handling forking it),
 # - logstash.conf: the specific logstash configuration for the process.
+# - monit.conf: how to monitor the process.
+# - backup.sh: a custom backup script, if necessary.
 #
 # And then add steps in their Dockerfile such as the following:
 # RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
 # COPY service /etc/service/${REPO}/run
 # RUN chmod +x /etc/service/${REPO}/run
-# COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
-#
+# COPY logstash.conf /etc/logstash/conf.d/${DOLLAR}{REPO}.conf
+# COPY monit.conf /etc/monit/monitrc.d/${DOLLAR}{REPO}.conf
+# COPY backup.sh /usr/local/bin/backup-${DOLLAR}{NAMESPACE}-${DOLLAR}{REPO}_${DOLLAR}{TAG}.sh
+
 # If the process is itself a daemon (such as Apache), then provide a LSB-like script
 # and call it from within /etc/rc.local:
 # COPY service /etc/rc.local
@@ -64,11 +105,11 @@ COPY Dockerfile /Dockerfiles/Dockerfile
 # Keep in mind that in these cases logstash integration is responsibility of the
 # rc.local script in this case.
 #
-# Before finishing the Dockerfile, please RUN \${APTGET_CLEANUP} if the
-# image installs packages via $\{APTGET_INSTALL}.
+# Before finishing the Dockerfile, please RUN ${DOLLAR}{APTGET_CLEANUP} if the
+# image installs packages via ${DOLLAR}{APTGET_INSTALL}.
 #
 # Additionaly, every Dockerfile should add its own Dockerfile to the /Dockerfiles
 # folder:
-# COPY Dockerfile /Dockerfiles/$\{NAMESPACE}-$\{REPO}.$\{TAG}
+# COPY Dockerfile /Dockerfiles/${DOLLAR}{NAMESPACE}-${DOLLAR}{REPO}.${DOLLAR}{TAG}
 #
 # And last, adding comments on how to run the image is very helpful.

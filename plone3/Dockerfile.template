@@ -1,12 +1,22 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-RUN apt-get install -y wget gcc build-essential libc6-dev g++-multilib libc6-dev-i386 alien rpm libstdc++5 python-libxml2 && \
-    wget -O /opt/plone3.tar.gz https://launchpad.net/plone/3.${PLONE3_MAJOR_VERSION}/${PLONE3_VERSION}/+download/${PLONE3_UNIFIED_INSTALLER}.tgz && \
-    tar xvfz /opt/plone3.tar.gz -C /opt
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY help /usr/local/bin/help
 
-RUN cd /opt/${PLONE3_UNIFIED_INSTALLER} && \
-    ./install.sh standalone
+RUN ${APTGET_INSTALL} -np gcc build-essential libc6-dev g++-multilib libc6-dev-i386 alien rpm libstdc++5 python-libxml2 && \
+    wget -O /opt/${PLONE3_FILE} ${PLONE3_DOWNLOAD_URL} && \
+    tar xvfz /opt/${PLONE3_FILE} -C /opt && \
+    cd ${PLONE3_HOME} && \
+    ./install.sh standalone && \
+    ${APTGET_CLEANUP} && \
+    chmod +x /usr/local/bin/help
 
-COPY Dockerfile /Dockerfiles/${NAMESPACE}-plone3.${TAG}
+EXPOSE 8080
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+# Run with
+# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}

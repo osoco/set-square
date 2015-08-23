@@ -132,13 +132,20 @@ function extract_volumes() {
 ## Main logic
 ## dry-wit hook
 function main() {
-    sed -i -e 's/^backup/#backup/g' ${RSNAPSHOT_CONF}
-    for p in $(ls ${DOCKERFILES_LOCATION} | grep -v -e '^Dockerfile'); do
-        extract_volumes "${DOCKERFILES_LOCATION}/${p}";
-        for v in ${RESULT}; do
-            logInfo -n "Annotating ${v} for backup (defined as volume in ${DOCKERFILES_LOCATION}/${p})";
-            echo "backup ${v}/"$'\t'"localhost/" >> ${RSNAPSHOT_CONF};
-            logInfoResult SUCCESS "done";
-        done
+  sed -i -e 's/^backup/#backup/g' ${RSNAPSHOT_CONF}
+  for p in $(ls ${DOCKERFILES_LOCATION} | grep -v -e '^Dockerfile'); do
+    extract_volumes "${DOCKERFILES_LOCATION}/${p}";
+    for v in ${RESULT}; do
+      logInfo -n "Annotating ${v} for backup (defined as volume in ${DOCKERFILES_LOCATION}/${p})";
+      echo "backup ${v}/"$'\t'"${BACKUP_REMOTE_USER}@${BACKUP_HOST}:${v}/" >> ${RSNAPSHOT_CONF};
+      logInfoResult SUCCESS "done";
+      for f in ${CUSTOM_BACKUP_SCRIPTS_FOLDER}/${CUSTOM_BACKUP_SCRIPT_PREFIX}-*; do
+        if [ -x "$f" ]; then
+          logInfo -n "Annotating custom backup script for ${v} ${f}";
+          echo "backup_script"$'\t'"${f} ${v}" >> ${RSNAPSHOT_CONF}
+          logInfoResult SUCCESS "done";
+        fi
+      done
     done
+  done
 }  

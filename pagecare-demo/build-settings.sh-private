@@ -1,3 +1,0 @@
-overrideEnvVar APIARYIO_TOKEN "my-token";
-overrideEnvVar APIARYIO_API_NAME "api-name";
-overrideEnvVar APIARYIO_PRIVATE_URL "http://api.apiary.io/example";

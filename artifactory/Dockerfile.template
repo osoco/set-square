@@ -1,4 +1,4 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
 

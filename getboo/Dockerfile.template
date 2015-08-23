@@ -1,26 +1,31 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-RUN apt-get -y install mariadb-client apache2 libapache2-mod-php5 php-pear php5-mysql wget unzip && \
-    cd /usr/local/src && wget http://downloads.sourceforge.net/project/getboo/getboo/${GETBOO_VERSION}/getboo.${GETBOO_VERSION}.zip && \
-    unzip getboo.${GETBOO_VERSION}.zip && ln -s getboo.${GETBOO_VERSION} getboo && \
-    chown www-data.www-data -R /usr/local/src/getboo* && rm -rf /usr/local/src/getboo/install && \
-     mv /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf.orig
-COPY config.inc.php /usr/local/src/getboo/config.inc.php.tpl
-COPY ports.conf /etc/apache2/ports.conf
-COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
-COPY setup.sql /usr/local/src/setup.sql.tpl
-COPY ddl.sql /usr/local/src/ddl.sql
-COPY dml.sql /usr/local/src/dml.sql
+COPY help /usr/local/bin/help
+
 COPY rc.local /etc/rc.local
 
-RUN chmod +x /etc/rc.local
+RUN ${APTGET_INSTALL} mariadb-client apache2 libapache2-mod-php5 php-pear php5-mysql wget unzip && \
+    cd ${GETBOO_HOME} && \
+    wget -O ${GETBOO_FILE} ${GETBOO_DOWNLOAD_URL} && \
+    unzip ${GETBOO_FILE} && ln -s ${GETBOO_FOLDER} getboo && \
+    chown ${APACHE_USER}.${APACHE_GROUP} -R ${GETBOO_HOME}/getboo* && \
+    rm -rf ${GETBOO_HOME}/getboo/install && \
+    mv /etc/apache2/sites-available/000-default.conf /etc/apache2/sites-available/000-default.conf.orig && \
+    chmod +x /etc/rc.local && \
+    ${APTGET_CLEANUP}
+    
+COPY config.inc.php /usr/local/src/getboo/config.inc.php.tpl
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY setup.sql  /usr/local/src/setup.sql.tpl
+COPY ddl.sql dml.sql ${GETBOO_HOME}/
 
 EXPOSE 8080
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Run with
-# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}-${STACK}:${TAG}
+# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
 

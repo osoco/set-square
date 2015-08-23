@@ -1,0 +1,4 @@
+set httpd port ${MONIT_HTTP_PORT} and
+   use address 0.0.0.0
+   allow localhost
+   allow ${MONIT_HTTP_USER}:"${MONIT_HTTP_PASSWORD}"

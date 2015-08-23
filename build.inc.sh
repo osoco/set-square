@@ -18,3 +18,21 @@ defineEnvVar APTGET_INSTALL \
 defineEnvVar APTGET_CLEANUP \
              "The cleanup commands after an apt-get so that the resulting image size is optimal" \
              '/usr/local/bin/aptget-cleanup.sh -v ';
+defineEnvVar SMTP_HOST \
+             "The SMTP host to send emails, including monit's" \
+             "mail.example.com";
+defineEnvVar BACKUP_HOST \
+             "The backup host to send the backup files" \
+             "backup.example.com";
+defineEnvVar MONIT_HTTP_PORT \
+             "The port used by Monit's webapp" \
+             "2812";
+defineEnvVar MONIT_HTTP_USER \
+             "The user to login in monit's webapp" \
+             "monit";
+defineEnvVar MONIT_HTTP_PASSWORD \
+             "The password to login in monit's webapp" \
+             "head -c 20 /dev/urandom | sha1sum | cut -d' ' -f1";
+defineEnvVar MONIT_HTTP_TIMEOUT \
+             "The timeout before alerting that monit's own http interface is down" \
+             "15 seconds";

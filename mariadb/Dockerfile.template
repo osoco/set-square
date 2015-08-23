@@ -1,23 +1,35 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY rc.local /etc/rc.local
+RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
+COPY service /etc/service/${REPO}/run
+RUN chmod +x /etc/service/${REPO}/run
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY help /usr/local/bin/help
 
 #RUN apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
 #RUN add-apt-repository \'deb http://mirror.stshosting.co.uk/mariadb/repo/10.0/ubuntu trusty main'
 #RUN apt-get install software-properties-common
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install mariadb-server && \
+RUN ${APTGET_INSTALL} mariadb-server && \
     sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf && \
+    sed -i -e"s/^log_error/#log_error/" /etc/mysql/my.cnf && \
+    ${APTGET_CLEANUP} && \
+    mkdir -p /volumes/${STACK}/${REPO}/ && \
+    mv /var/lib/mysql /volumes/${STACK}/${REPO}/ && \
+    ln -s /volumes/${STACK}/${REPO}/ /var/lib/mysql && \
+    chown -R mysql:mysql /var/lib/mysql && \
+    chmod +x /usr/local/bin/help && \
     chmod +x /etc/rc.local
 
 COPY setup.sql /var/lib/mysql/setup.sql.tpl
 
-VOLUME /var/lib/mysql
+VOLUME /volumes/${STACK}/${REPO}/mysql
 
 EXPOSE 3306
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Preferably run with
 # docker run -d --name db ${NAMESPACE}/${REPO}-${STACK}:${TAG}

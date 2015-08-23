@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "### RSNAPSHOT DAILY ###"
+rsnapshot daily
+echo

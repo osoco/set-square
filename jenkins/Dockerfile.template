@@ -1,50 +1,40 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
 FROM ${NAMESPACE}/tomcat:${TAG}
 MAINTAINER ${MAINTAINER}
 
-ENV HOME /root
+COPY help /usr/local/bin/help
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
 
-ADD rc.local /etc/rc.local
-
-RUN groupadd jenkins && \
-    useradd -s /bin/bash -g jenkins -G jenkins,tomcat,sudo -m -c "Jenkins user running /etc/init.d/jenkins" jenkins && \
-    echo 'jenkins:${JENKINS_PASSWORD}' | chpasswd && \
-    sed -i '/%sudo   ALL=(ALL:ALL) ALL/a jenkins localhost=NOPASSWD: /etc/init.d/jenkins stop,/etc/init.d/jenkins start,/etc/init.d/jenkins restart,/sbin/services jenkins stop,/sbin/services jenkins start,/sbin/services jenkins restart, /etc/init.d/tomcat stop,/etc/init.d/tomcat start,/etc/init.d/tomcat restart,/sbin/services tomcat stop,/sbin/services tomcat start,/sbin/services tomcat restart' /etc/sudoers && \
-    mkdir -p /usr/local/jenkins/.m2 && \
-    wget http://mirrors.jenkins-ci.org/war/latest/jenkins.war -O /opt/tomcat/webapps/jenkins.war && \
-    mv /opt/tomcat/webapps/ROOT /opt/tomcat/webapps/welcome && \
-    cd /opt/tomcat && ln -s /home/jenkins/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf /opt/tomcat/webapps/jenkins.war && \
-    sed -i '/<\/tomcat-users>/i \  <role rolename="admin"\/>' /opt/tomcat/conf/tomcat-users.xml && \
-    sed -i '/<\/tomcat-users>/i \  <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"\/>' /opt/tomcat/conf/tomcat-users.xml && \
-    [ -e /opt/tomcat/conf/server.xml ] && sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml && \
-    rm -rf /opt/tomcat/webapps/* && \
-    mkdir /etc/service/jenkins && \
-    cd /etc/service/jenkins && ln -s ../tomcat/run . && \
-    cd /etc/service/jenkins && ln -s tomcat jenkins && \
-    cd /etc/init.d && ln -s tomcat jenkins && \
-    cd /etc/default && ln -s tomcat jenkins && \
-    update-rc.d jenkins defaults && \
-    chmod -R g+w /home/jenkins /opt/tomcat/.jenkins && \
-    mkdir /opt/tomcat/.ssh && \
-    chown -R jenkins:tomcat /home/jenkins /opt/tomcat/.jenkins /opt/tomcat/.m2 && \
-    chmod 700 /opt/tomcat/.ssh && \
-    chown -R tomcat:tomcat /opt/tomcat/.ssh && \
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get install -y git graphviz && \
-    cd /opt && wget --no-check-certificate https://www.eu.apache.org/dist/maven/maven-3/${JENKINS_MAVEN_VERSION}/binaries/apache-maven-${JENKINS_MAVEN_VERSION}-bin.tar.gz && tar xvfz apache-maven-${JENKINS_MAVEN_VERSION}-bin.tar.gz && ln -s apache-maven-${JENKINS_MAVEN_VERSION} apache-maven && \
-    gpasswd -a tomcat jenkins && \
-    chmod +x /etc/rc.local
-
-#RUN sed -i 's_<Connector port="8080" protocol="HTTP/1.1"_<Connector port="80" protocol="HTTP/1.1"_g' /opt/tomcat/conf/server.xml
-#RUN cd /opt/tomcat/contexts && ln -s /opt/tomcat/conf/Catalina/localhost/ROOT.xml jenkins.xml
-#RUN [ -e /opt/tomcat/conf/server.xml.tpl ] && sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' /opt/tomcat/conf/server.xml.tpl
+RUN groupadd ${JENKINS_GROUP} && \
+    useradd -s /bin/bash -g ${JENKINS_GROUP} -G ${JENKINS_GROUP},${TOMCAT_GROUP} -m -c "Jenkins user" ${JENKINS_USER} && \
+    echo '${JENKINS_USER}:${JENKINS_PASSWORD}' | chpasswd && \
+    mkdir -p ${JENKINS_HOME}/.m2 && \
+    wget -O ${TOMCAT_HOME}/webapps/jenkins.war ${JENKINS_DOWNLOAD_URL} && \
+    mv ${TOMCAT_HOME}/webapps/ROOT ${TOMCAT_HOME}/webapps/welcome && \
+    cd ${TOMCAT_HOME} && ln -s ${JENKINS_HOME}/.m2 .m2 && mkdir .jenkins && cd .jenkins && /usr/lib/jvm/java/bin/jar -xvf ${TOMCAT_HOME}/webapps/jenkins.war && \
+    sed -i '/<\/tomcat-users>/i \  <role rolename="admin"\/>' ${TOMCAT_HOME}/conf/tomcat-users.xml && \
+    sed -i '/<\/tomcat-users>/i \  <user username="jenkins-admin" password="${JENKINS_PASSWORD}" roles="admin"\/>' ${TOMCAT_HOME}/conf/tomcat-users.xml && \
+    [ -e ${TOMCAT_HOME}/conf/server.xml ] && sed -i '/<Connector port="8080" protocol="HTTP\/1.1"/a \       URIEncoding="UTF-8"' ${TOMCAT_HOME}/conf/server.xml && \
+    rm -rf ${TOMCAT_HOME}/webapps/* && \
+    mv /etc/service/tomcat /etc/service/jenkins && \
+    chmod -R g+w ${JENKINS_HOME} ${TOMCAT_HOME}/.jenkins && \
+    mkdir ${TOMCAT_HOME}/.ssh && \
+    chown -R ${JENKINS_USER}:${TOMCAT_GROUP} ${JENKINS_HOME} ${TOMCAT_HOME}/.jenkins ${TOMCAT_HOME}/.m2 && \
+    chmod 700 ${TOMCAT_HOME}/.ssh && \
+    chown -R ${TOMCAT_USER}:${TOMCAT_GROUP} ${TOMCAT_HOME}/.ssh && \
+    ${APTGET_INSTALL} git graphviz && \
+    cd /opt && wget --no-check-certificate -O ${JENKINS_MAVEN_FILE} ${JENKINS_MAVEN_DOWNLOAD_URL} && \
+    tar xvfz ${JENKINS_MAVEN_FILE} && ln -s ${JENKINS_MAVEN_FOLDER} apache-maven && \
+    gpasswd -a ${TOMCAT_USER} ${JENKINS_GROUP} && \
+    ${APTGET_CLEANUP} && \
+    chmod +x /usr/local/bin/help
 
 # TODO: add cron job for mvn versions:update-properties
 # TODO: gem install bouncy-castle-java
 # /home/jenkins/identity.key.enc not found
 
-COPY context.xml /opt/tomcat/conf/Catalina/localhost/ROOT.xml
-COPY settings.xml /usr/local/jenkins/.m2/settings.xml
+COPY context.xml ${TOMCAT_HOME}/conf/Catalina/localhost/ROOT.xml
+COPY settings.xml ${JENKINS_HOME}/.m2/settings.xml
 COPY config /etc/default/tomcat
 COPY ssh-config /opt/tomcat/.ssh/config
 COPY known_hosts /opt/tomcat/.ssh/known_hosts

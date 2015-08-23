@@ -2,13 +2,17 @@
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY rc.local /etc/rc.local
+COPY service /etc/rc.local
+COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY help /usr/local/bin/help
 
-RUN \
-  apt-get install -y apache2 && \
-  chmod +x /etc/rc.local
+RUN ${APTGET_INSTALL} apache2 && \
+    ${APTGET_CLEANUP} && \
+    chmod +x /etc/rc.local && \
+    chmod +x /usr/local/bin/help
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Run with
-# docker run -d -p [port]:80 ${NAMESPACE}/${REPO}-${STACK}
+# docker run -d -p [port]:80 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
