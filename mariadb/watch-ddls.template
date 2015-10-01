@@ -1,0 +1,190 @@
+#!/bin/bash dry-wit
+# Copyright 2014-today Automated Computing Machinery S.L.
+# Distributed under the terms of the GNU General Public License v3
+
+function usage() {
+cat <<EOF
+$SCRIPT_NAME [-v[v]|-q|--quiet] [ddl-folder]
+$SCRIPT_NAME [-h|--help]
+(c) 2014-today Automated Computing Machinery S.L.
+    Distributed under the terms of the GNU General Public License v3
+ 
+Checks whether there're new MariaDB DDL files to run.
+
+Where:
+  * ddl-folder: the folder where the DDL files are located.
+Common flags:
+    * -h | --help: Display this message.
+    * -v: Increase the verbosity.
+    * -vv: Increase the verbosity further.
+    * -q | --quiet: Be silent.
+EOF
+}
+
+DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
+
+# Requirements
+function checkRequirements() {
+  checkReq awk AWK_NOT_INSTALLED;
+}
+ 
+# Error messages
+function defineErrors() {
+  export INVALID_OPTION="Unrecognized option";
+  export AWK_NOT_INSTALLED="awk is not installed";
+  export NO_DDL_FOLDER_SPECIFIED="The DDL folder is mandatory";
+
+  ERROR_MESSAGES=(\
+    INVALID_OPTION \
+    AWK_NOT_INSTALLED \
+    NO_DDL_FOLDER_SPECIFIED \
+  );
+
+  export ERROR_MESSAGES;
+}
+
+## Parses the input
+## dry-wit hook
+function parseInput() {
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  local _currentCount;
+
+  # Flags
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+         shift;
+         ;;
+    esac
+  done
+ 
+  if [[ ! -n ${DDL} ]]; then
+    TAG="${DATE}";
+  fi
+
+# Parameters
+  if [[ -z ${FOLDER} ]]; then
+    FOLDER="$1";
+    shift;
+  fi
+
+  if [[ -z ${FOLDER} ]]; then
+    FOLDER="${DDL_FOLDER}";
+  fi
+}
+
+## Checking input
+## dry-wit hook
+function checkInput() {
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  local _currentCount;
+  logDebug -n "Checking input";
+
+  # Flags
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help | -v | -vv | -q | --quiet)
+	 ;;
+      *) logDebugResult FAILURE "fail";
+         exitWithErrorCode INVALID_OPTION ${_flag};
+         ;;
+    esac
+  done
+ 
+  if [[ -z ${FOLDER} ]]; then
+    logDebugResult FAILURE "fail";
+    exitWithErrorCode NO_DDL_FOLDER_SPECIFIED;
+  else
+    logDebugResult SUCCESS "valid";
+  fi 
+}
+
+## Checks whether given DDL file is marked as processed.
+## -> 1: The DDL folder.
+## -> 2: The DDL file.
+## <- 0 if it's marked as processed already, 1 otherwise.
+## Example:
+##   if is_ddl_file_marked_as_processed /tmp my.ddl; then echo "/tmp/my.ddl Already processed"; fi
+function is_ddl_file_marked_as_processed() {
+  local _folder="${1}";
+  local _file="${2}";
+  local _rescode=0;
+  if [ -e "${_folder}"/."${_file}".done ]; then
+    _rescode=0;
+  else
+    _rescode=1;
+  fi
+  return $?;
+}
+
+## Marks given DDL file as processed.
+## -> 1: The DDL folder.
+## -> 2: The DDL file.
+## <- 0 if it's marked successfully, 1 otherwise.
+## Example:
+##   if ! mark_ddl_file_as_processed /tmp my.ddl; then echo "Cannot mark DDL file as processed"; fi
+function mark_ddl_file_as_processed() {
+  local _folder="${1}";
+  local _file="${2}";
+  touch "${_folder}"/."${_file}".done 2> /dev/null
+  return $?;
+}
+
+## Finds the DDL files in given folder.
+## -> 1: The folder
+## <- RESULT: A space-separated list of file names (relative to the folder).
+## Example:
+##   for f in find_ddl_files /tmp; do echo "Found DDL: $f"; done
+function find_ddl_files() {
+  local _folder="${1}";
+  local _result=();
+
+  for _aux in $(ls -a "${_folder}" | grep -v '^\..*$'); do
+    if is_ddl_file_marked_as_processed "${_folder}" "${_aux}"; then
+      _result[${#_result[@]}]="${_aux}";
+    fi
+  done
+  export RESULT=${_result[@]};
+}
+
+## Processes given DDL file.
+## -> 1: The DDL file to process.
+## <- 0 if the file is processed, 1 otherwise.
+## Example:
+##   if process_ddl_file /tmp/my.dll; then echo "Done"; else echo "Failed"; fi
+function process_ddl_file() {
+  local _file="${1}";
+  local _logFile;
+  logInfo -n "Processing ${_file}";
+  createTempFile;
+  _logFile="${RESULT}";
+  /usr/bin/mysql -u root --password="${MARIADB_ROOT_PASSWORD}" < ${_file} 2>&1 > ${_logFile}
+  if [ $? -eq 0 ]; then
+    if ! mark_file_as_processed "${_file}"; then
+      logInfoResult SUCCESS "warning";
+      logInfo "Cannot mark ${_file} as processed";
+    else
+      logInfoResult SUCCESS "done";
+    fi
+  else
+    logInfoResult FAILURE "failed";
+    cat ${_logFile};
+  fi
+}
+
+## Main logic
+## dry-wit hook
+function main() {
+  local _ddlFiles;
+  find_ddl_files "${FOLDER}";
+  _ddlFiles="${RESULT}";
+  for _file in ${_ddlFiles}; do
+    process_file "${_file}";
+  done
+}

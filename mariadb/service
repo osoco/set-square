@@ -1,0 +1,8 @@
+#!/bin/bash
+
+/usr/local/bin/bootstrap-db
+
+chown -R mysql:mysql /var/lib/mysql /var/lib/mysql/*
+
+exec 2>&1
+exec /usr/bin/mysqld_safe --console --user=mysql

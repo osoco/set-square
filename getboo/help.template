@@ -1,0 +1,15 @@
+#!/bin/bash
+
+cat <<EOF
+${NAMESPACE}/${REPO}:${TAG}
+(c) 2015-today Automated Computing Machinery S.L.
+    Distributed under the terms of the GNU General Public License v3
+
+This image runs GetBoo ${GETBOO_VERSION}.
+
+You can run this image with
+docker run -d -p [port]:8080 --link db:db ${NAMESPACE}/${REPO}${STACK_SUFFIX}
+
+This image was generated with rydnr's script:
+https://github.com/rydnr/dockerfile
+EOF

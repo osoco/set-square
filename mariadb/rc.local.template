@@ -1,5 +1,6 @@
 #!/bin/bash
 
+chown -R mysql:mysql /var/lib/mysql
 sed "s ___LAN___ $(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}' | awk -F'.' '{printf("%d.%d.%d.%%\n", $1, $2, $3);}') g" /var/lib/mysql/setup.sql.tpl > /var/lib/mysql/setup.sql
 /etc/init.d/mysql start
 /usr/bin/mysql -u root < /var/lib/mysql/setup.sql || \

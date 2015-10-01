@@ -106,6 +106,23 @@ function process_volume() {
     export RESULT="${_result}";
 }
 
+## Checks whether a volume is suitable of backup.
+## -> 1: The volume
+## <- RESULT: 0 if so, 1 otherwise.
+## Example:
+##   is_backup_volume "/var/log/" -> false
+##   is_backup_volume "/backup/data" -> true
+function is_backup_volume() {
+    local _volume="${1}";
+    local _result=;
+    if [ "x${_volume##/backup}" == "x${_volume}" ]; then
+        _result=1;
+    else
+        result=0;
+    fi
+    return ${_result};
+}
+
 ## Extracts the volumes from a given Dockerfile.
 ## -> 1: the Dockerfile.
 ## <- RESULT: the space-separated volumes.
@@ -121,10 +138,12 @@ function extract_volumes() {
     IFS=$'\n';
     for _aux in $(grep VOLUME "${_dockerfile}" | cut -d' ' -f 2- | sed -e 's/^ \+//g'); do
         IFS="${_oldIFS}";
-        process_volume "${_aux}";
-        for v in ${RESULT}; do
-            _result[${#_result[@]}]="${v}";
-        done
+        if is_backup_volume "${_aux}"; then
+            process_volume "${_aux}";
+            for v in ${RESULT}; do
+                _result[${#_result[@]}]="${v}";
+            done
+        fi
     done
     export RESULT=${_result[@]}
 }                

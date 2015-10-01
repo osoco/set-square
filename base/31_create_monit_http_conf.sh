@@ -125,10 +125,10 @@ set httpd port ${MONIT_HTTP_PORT} and
    allow ${_subnet}
    allow ${MONIT_HTTP_USER}:"${MONIT_HTTP_PASSWORD}"
 
-check host localhost with address 0.0.0.0
-   if failed port ${MONIT_HTTP_PORT} protocol http with timeout ${MONIT_HTTP_TIMEOUT} then alert
-   if failed url http://${MONIT_HTTP_USER}:${MONIT_HTTP_PASSWORD}@0.0.0.0:${MONIT_HTTP_PORT}/
-       then alert
+# check host local_monit with address 0.0.0.0
+#    if failed port ${MONIT_HTTP_PORT} protocol http with timeout ${MONIT_HTTP_TIMEOUT} then alert
+#    if failed url http://${MONIT_HTTP_USER}:${MONIT_HTTP_PASSWORD}@0.0.0.0:${MONIT_HTTP_PORT}/
+#       then alert
 EOF
   logInfoResult SUCCESS "done";
 }  

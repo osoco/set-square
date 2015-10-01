@@ -1,12 +1,12 @@
 # ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
-FROM ${NAMESPACE}/base:${TAG}
+FROM ${BASE_IMAGE}:${TAG}
 
 MAINTAINER ${MAINTAINER}
 
-RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
-COPY service /etc/service/${REPO}/run
-RUN chmod +x /etc/service/${REPO}/run
-COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+COPY service /etc/service/${IMAGE}/run
+RUN chmod +x /etc/service/${IMAGE}/run
+COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
 COPY help /usr/local/bin/help
 
 RUN groupadd ${TOMCAT_GROUP} && \
@@ -19,7 +19,7 @@ RUN groupadd ${TOMCAT_GROUP} && \
     chmod 755 /var/run/tomcat && \
     chown -R ${TOMCAT_USER}:${TOMCAT_GROUP} /var/lock/tomcat /var/run/tomcat /var/log/tomcat ${TOMCAT_HOME} /opt/${TOMCAT_FOLDER} && \
     rm -f /opt/${TOMCAT_FILE} && \
-    chmod +x /etc/service/${REPO}/run && \
+    chmod +x /etc/service/${IMAGE}/run && \
     ${APTGET_INSTALL} -np make gcc openssl libssl-dev && \
     cd /usr/local/src && wget -O ${APR_FILE} ${APR_DOWNLOAD_URL} && \
     tar xvfz ${APR_FILE} && cd ${APR_FOLDER} && \
@@ -34,8 +34,8 @@ COPY setenv.sh ${TOMCAT_HOME}/bin/setenv.sh
 
 EXPOSE 8080
 
-COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Run with
-# docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
+# docker run -d -p [port]:8080 ${NAMESPACE}/${IMAGE}${STACK_SUFFIX}:${TAG}

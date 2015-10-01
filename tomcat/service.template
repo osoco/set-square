@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -a
+JAVA_HOME="/usr/lib/jvm/java"
+source "/etc/default/tomcat"
+CATALINA_HOME="${TOMCAT_HOME}"
+CATALINA_BASE="${TOMCAT_HOME}"
+CATALINA_USER="${TOMCAT_USER}"
+CATALINA_GROUP="${TOMCAT_GROUP}"
+JAVA_OPTS="-XX:MaxPermSize=128m -Djava.awt.headless=true -Xmx128M -XX:+HeapDumpOnOutOfMemoryError"
+CATALINA_PID="/var/run/tomcat.pid"
+CATALINA_TMPDIR="/tmp/tomcat-tmp"
+LANG="en_US.UTF-8"
+JSSE_HOME="/usr/lib/jvm/java/jre/"
+
+mkdir "${CATALINA_TMPDIR}" 2> /dev/null
+chown -R ${CATALINA_USER}:${CATALINA_GROUP} "${CATALINA_TMPDIR}" 2> /dev/null
+
+cd "${CATALINA_HOME}"
+
+exec 2>&1
+exec setuser ${CATALINA_USER} ${CATALINA_BASE}/bin/catalina.sh run
+
+# vim: syntax=sh ts=4 sw=4 sts=4 sr noet

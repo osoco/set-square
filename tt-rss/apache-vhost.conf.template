@@ -1,0 +1,16 @@
+<VirtualHost *:80>
+        ServerName ${TTRSS_VIRTUAL_HOST}
+
+        ServerAdmin webmaster@${TTRSS_VIRTUAL_HOST}
+        DocumentRoot /opt/tt-rss
+
+        ErrorLog ${APACHE_LOG_DIR}/${TTRSS_VIRTUAL_HOST}.error.log
+        CustomLog ${APACHE_LOG_DIR}/${TTRSS_VIRTUAL_HOST}.access.log combined
+
+        <Directory /opt/tt-rss>
+                   AllowOverride All
+                   Require all granted
+        </Directory>
+</VirtualHost>
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet

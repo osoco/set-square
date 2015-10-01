@@ -78,7 +78,6 @@ CMD ["/sbin/my_init"]
 COPY logstash-default.conf /etc/logstash/conf.d/default.conf
 COPY monit-syslog.conf /etc/monit/conf.d/syslog.conf
 COPY monit-mail.conf /etc/monit/conf.d/mail.conf
-COPY monit-http.conf /etc/monit/conf.d/http.conf
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile

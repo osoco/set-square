@@ -1,0 +1,3 @@
+*.template
+build-settings.sh
+.build-settings.sh

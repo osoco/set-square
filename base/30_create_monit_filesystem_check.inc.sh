@@ -15,7 +15,7 @@ defineEnvVar DISK_SPACE_CYCLES \
              "15";
 defineEnvVar INODE_USAGE_THRESHOLD \
              "The threshold used to decide whether to send inode usage alerts" \
-             "30000";
+             "90%";
 defineEnvVar INODE_USAGE_POSITIVES \
              "The number of positives within the specified cycles to decide whether to send inode usage alerts" \
              "5";

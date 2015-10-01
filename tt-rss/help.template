@@ -1,0 +1,22 @@
+#!/bin/bash
+
+cat <<EOF
+${NAMESPACE}/${REPO}:${TAG}
+(c) 2015-today Automated Computing Machinery S.L.
+    Distributed under the terms of the GNU General Public License v3
+
+This image runs Tiny Tiny RSS.
+
+You can run me with
+docker run -it -p [port]:80 --link [db-container]:db ${NAMESPACE}/${REPO}:${TAG}
+
+This image was generated with rydnr's script:
+https://github.com/rydnr/dockerfile
+
+The Dockerfiles can be inspected with 
+docker run ${NAMESPACE}/${REPO}:${TAG} Dockerfile
+EOF
+
+for d in $(ls /Dockerfiles/* | grep -v -e '^Dockerfile$'); do
+  echo "docker run ${NAMESPACE}/${REPO}:${TAG} Dockerfile $p";
+done

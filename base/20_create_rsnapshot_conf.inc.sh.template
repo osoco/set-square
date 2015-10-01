@@ -16,3 +16,6 @@ defineEnvVar CUSTOM_BACKUP_SCRIPT_FOLDER \
 defineEnvVar CUSTOM_BACKUP_SCRIPT_PREFIX \
              "The prefix for all backup scripts" \
              "backup-";
+defineEnvVar ENABLE_BACKUP_ENVIRONMENT_VARIABLE \
+             "The environment variable to enable built-in backup mechanism" \
+             "DOBACKUP";

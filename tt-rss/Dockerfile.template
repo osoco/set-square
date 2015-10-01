@@ -1,0 +1,27 @@
+# ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${NAMESPACE}/apache:${TAG}
+MAINTAINER ${MAINTAINER}
+
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+COPY service /etc/service/${IMAGE}/run
+COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
+COPY help /usr/local/bin/help
+COPY apache-vhost.conf /etc/apache2/sites-available/001-${TTRSS_VIRTUAL_HOST}.conf
+
+RUN ${APTGET_INSTALL} -np git && \
+    ${APTGET_INSTALL} libapache2-mod-php5 && \
+    cd /opt && \
+    git clone https://tt-rss.org/git/tt-rss.git tt-rss && \
+    a2ensite 001-${TTRSS_VIRTUAL_HOST} && \
+    chown -R www-data:www-data /opt/tt-rss && \
+    ${APTGET_CLEANUP} && \
+    chmod +x /etc/service/${IMAGE}/run && \
+    chmod +x /usr/local/bin/help
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+EXPOSE 80
+
+# Run with
+# docker run -d -p [port]:80 --link [db-container]:db --volumes-from [db-container] ${NAMESPACE}/${IMAGE}:${TAG}

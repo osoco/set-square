@@ -2,13 +2,14 @@
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY service /etc/rc.local
-COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+COPY service /etc/service/${IMAGE}/run
+COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
 COPY help /usr/local/bin/help
 
 RUN ${APTGET_INSTALL} apache2 && \
     ${APTGET_CLEANUP} && \
-    chmod +x /etc/rc.local && \
+    chmod +x /etc/service/${IMAGE}/run && \
     chmod +x /usr/local/bin/help
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

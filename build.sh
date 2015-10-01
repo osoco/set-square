@@ -4,19 +4,21 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-s|--squash-image] [repo]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-r|--reduce-image] [repo]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-r|--reduce-image] -s [stack-name] [stack-image]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
  
-Builds Docker images from templates, similar to wking's. If no repo is specified, all repositories will be built.
+Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.
 
 Where:
-  * repo: the repository image to build.
+  * repo: the repository to build (a folder with a Dockerfile template).
   * tag: the tag to use once the image is built successfully.
   * force: whether to build the image even if it's already built.
   * tutum: whether to push the image to tutum.co.
-  * squash-image: whether to squash the resulting image.
+  * reduce-image: whether to reduce the size of the resulting image.
+  * stack-name: for stack images, the stack name (mandatory if the repository name ends with -stack).
 Common flags:
     * -h | --help: Display this message.
     * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
@@ -51,11 +53,12 @@ function defineErrors() {
   export AWK_NOT_INSTALLED="awk is not installed";
   export DOCKER_SQUASH_NOT_INSTALLED="docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
   export NO_REPOSITORIES_FOUND="no repositories found";
+  export REPO_IS_NOT_STACKED="Repository is not stacked (it should end with -stack)";
   export INVALID_URL="Invalid command";
-  export ERROR_BUILDING_REPO="Error building image";
-  export ERROR_TAGGING_REPO="Error tagging image";
+  export ERROR_BUILDING_REPO="Error building repository";
+  export ERROR_TAGGING_IMAGE="Error tagging image";
   export ERROR_PUSHING_IMAGE_TO_TUTUM="Error pushing image to tutum.co";
-  export ERROR_SQUASHING_IMAGE="Error squashing the image";
+  export ERROR_REDUCING_IMAGE="Error reducing the image size";
 
   ERROR_MESSAGES=(\
     INVALID_OPTION \
@@ -68,11 +71,12 @@ function defineErrors() {
     AWK_NOT_INSTALLED \
     DOCKER_SQUASH_NOT_INSTALLED \
     NO_REPOSITORIES_FOUND \
+    REPO_IS_NOT_STACKED \
     INVALID_URL \
     ERROR_BUILDING_REPO \
-    ERROR_TAGGING_REPO \
+    ERROR_TAGGING_IMAGE \
     ERROR_PUSHING_IMAGE_TO_TUTUM \
-    ERROR_SQUASHING_IMAGE \
+    ERROR_REDUCING_IMAGE \
   );
 
   export ERROR_MESSAGES;
@@ -107,9 +111,15 @@ function parseInput() {
           shift;
           export FORCE_MODE=0;
           ;;
-      -s | --squash-image)
+      -r | --reduce-image)
           shift;
-          export SQUASH_IMAGE=0;
+          export REDUCE_IMAGE=0;
+          ;;
+      -s | --stack)
+          shift;
+          export STACK="${1}";
+          shift;
+          ;;
     esac
   done
  
@@ -146,7 +156,7 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -T | --tutum | -f | --force | -s | --squash-image)
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -T | --tutum | -f | --force | -r | --reduce-image | -s | --stack)
 	 ;;
       *) logDebugResult FAILURE "fail";
          exitWithErrorCode INVALID_OPTION ${_flag};
@@ -158,8 +168,30 @@ function checkInput() {
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
+    if stack_image_enabled; then
+      for _repo in ${REPOS}; do
+        if ! is_stacked_repo "${_repo}"; then
+          logDebugResult FAILURE "fail";
+          exitWithErrorCode REPO_IS_NOT_STACKED;
+        fi
+      done
+    fi
     logDebugResult SUCCESS "valid";
   fi 
+}
+
+## Checks whether the repository is part of a stack.
+## Example:
+##   if is_stacked_repo ${REPO}; then [..]; fi
+function is_stacked_repo() {
+  local _repo="${1}";
+  local _result;
+  if [ "x${_repo%%-stack}" == "x${_repo}" ]; then
+      _result=1;
+  else
+      _result=0;
+  fi
+  return ${_result};
 }
 
 ## Does "${NAMESPACE}/${REPO}:${TAG}" exist?
@@ -177,7 +209,7 @@ function repo_exists() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
 
-  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}${_stackSuffix}")
+  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}")
   local _matches=$(echo "${_images}" | grep "${_tag}")
   local _rescode;
   if [ -z "${_matches}" ]; then
@@ -231,8 +263,8 @@ function build_repo_if_defined_locally() {
 ## -> 3: the namespace
 ## -> 4: the repo name
 ## Example:
-##   squash_image "namespace" "myimage" "201508-raw" "201508"
-function squash_image() {
+##   reduce_image_size "namespace" "myimage" "201508-raw" "201508"
+function reduce_image_size() {
   local _namespace="${1}";
   local _repo="${2}";
   local _currentTag="${3}";
@@ -244,7 +276,7 @@ function squash_image() {
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_SQUASHING_IMAGE "${_namespace}/${_repo}:${_currentTag}";
+    exitWithErrorCode ERROR_REDUCEING_IMAGE "${_namespace}/${_repo}:${_currentTag}";
   fi
 }
 
@@ -257,7 +289,7 @@ function squash_image() {
 function build_repo() {
   local _repo="${1}";
   local _canonicalTag="${2}";
-  if squash_image_enabled; then
+  if reduce_image_enabled; then
     _rawTag="${2}-raw";
     _tag="${_rawTag}";
   else
@@ -277,9 +309,9 @@ function build_repo() {
   local _env="$( \
       for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
         echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
+      done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
@@ -290,28 +322,28 @@ function build_repo() {
     done
   fi
 
-  logInfo "Building ${NAMESPACE}/${_repo}${_stack}:${_tag}"
-#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${_tag}" --rm=true "${_repo}"
-  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}${_stack}:${_tag}" --rm=true "${_repo}"
+  logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
+#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
+  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
   _cmdResult=$?
-  logInfo -n "${NAMESPACE}/${_repo}${_stack}:${_tag}";
+  logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
     logInfoResult SUCCESS "built"
   else
-    logInfo -n "${NAMESPACE}/${_repo}${_stack}:${_tag}";
+    logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
-  if squash_image_enabled; then
-    squash_image "${NAMESPACE}" "${_repo}${_stack}" "${_tag}" "${_canonicalTag}";
+  if reduce_image_enabled; then
+    reduce_image_size "${NAMESPACE}" "${_repo%%-stack}${_stack}" "${_tag}" "${_canonicalTag}";
   fi
-  logInfo -n "Tagging ${NAMESPACE}/${_repo}${_stack}:${_canonicalTag}"
-  docker tag -f "${NAMESPACE}/${_repo}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo}${_stack}:latest"
+  logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}"
+  docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
   if [ $? -eq 0 ]; then
-    logInfoResult SUCCESS "${NAMESPACE}/${_repo}${_stack}:latest";
+    logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
+    exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo%%-stack}${_stack}";
   fi
 }
 
@@ -330,22 +362,22 @@ function tutum_push() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
   logInfo -n "Tagging image for uploading to tutum.co";
-  docker tag "${NAMESPACE}/${_repo}${_stackSuffix}:${_tag}" "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stackSuffix}:${_tag}";
+  docker tag "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_TAGGING_REPO "${_repo}";
+    exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
   fi
   logInfo "Pushing image to tutum";
-  docker push "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stackSuffix}:${_tag}"
+  docker push "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   _pushResult=$?;
   logInfo -n "Pushing image to tutum";
   if [ ${_pushResult} -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_PUSHING_IMAGE "tutum.co/${TUTUM_NAMESPACE}/${_repo}${_stackSuffix}:${_tag}"
+    exitWithErrorCode ERROR_PUSHING_IMAGE "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   fi
 }
 
@@ -448,11 +480,18 @@ function tutum_push_enabled() {
   _flagEnabled TUTUM;
 }
 
+## Checks whether the -r flag is enabled
+## Example:
+##   if reduce_image_enabled; then [..]; fi
+function reduce_image_enabled() {
+  _flagEnabled REDUCE_IMAGE;
+}
+
 ## Checks whether the -s flag is enabled
 ## Example:
-##   if squash_image_enabled; then [..]; fi
-function squash_image_enabled() {
-  _flagEnabled SQUASH_IMAGE;
+##   if stack_image_enabled; then [..]; fi
+function stack_image_enabled() {
+  _flagEnabled STACK;
 }
 
 ## Cleans up the docker containers

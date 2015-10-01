@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ "x${@}" != "x" ]; then
+  cat <<EOF
+Please use
+docker run -d -p [port]:8080 ${NAMESPACE}/${REPO}${STACK_SUFFIX}:${TAG}
+
+EOF
+else
+    /sbin/my_init
+fi
