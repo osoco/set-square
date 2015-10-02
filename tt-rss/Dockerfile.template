@@ -2,14 +2,16 @@
 FROM ${NAMESPACE}/apache:${TAG}
 MAINTAINER ${MAINTAINER}
 
-RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE} && \
+    mkdir -p /var/lib/mysql-sql/${IMAGE}
 COPY service /etc/service/${IMAGE}/run
 COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
 COPY help /usr/local/bin/help
 COPY apache-vhost.conf /etc/apache2/sites-available/001-${TTRSS_VIRTUAL_HOST}.conf
+COPY setup.sql /usr/local/src
 
 RUN ${APTGET_INSTALL} -np git && \
-    ${APTGET_INSTALL} libapache2-mod-php5 && \
+    ${APTGET_INSTALL} libapache2-mod-php5 php5-mysql && \
     cd /opt && \
     git clone https://tt-rss.org/git/tt-rss.git tt-rss && \
     a2ensite 001-${TTRSS_VIRTUAL_HOST} && \
@@ -17,6 +19,8 @@ RUN ${APTGET_INSTALL} -np git && \
     ${APTGET_CLEANUP} && \
     chmod +x /etc/service/${IMAGE}/run && \
     chmod +x /usr/local/bin/help
+
+VOLUME /var/lib/mysql-sql/${IMAGE}
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile

@@ -154,19 +154,25 @@ function find_sql_files() {
 }
 
 ## Processes given SQL file.
-## -> 1: The SQL file to process.
-## <- 0 if the file is processed, 1 otherwise.
+## -> 1: The base folder.
+## -> 2: The SQL file to process.
+## -> 3: The database user.
+## -> 4: The database password.
+## <- 0 if the file is processed; 1 otherwise.
 ## Example:
-##   if process_sql_file /tmp/my.dll; then echo "Done"; else echo "Failed"; fi
+##   if process_sql_file /tmp my.dll dbuser secret; then echo "Done"; else echo "Failed"; fi
 function process_sql_file() {
-  local _file="${1}";
+  local _folder="${1}";
+  local _file="${2}";
+  local _user="${3}";
+  local _password="${4}";
   local _logFile;
   logInfo -n "Processing ${_file}";
   createTempFile;
   _logFile="${RESULT}";
-  /usr/bin/mysql -u ${MARIADB_ADMIN_USER} --password="${MARIADB_ADMIN_PASSWORD}" < ${_file} 2>&1 > ${_logFile}
+  /usr/bin/mysql -u ${_user} --password="${_password}" < "${_folder}/${_file}" 2>&1 > ${_logFile}
   if [ $? -eq 0 ]; then
-    if ! mark_file_as_processed "${_file}"; then
+    if ! mark_sql_file_as_processed "${_folder}/${_file}"; then
       logInfoResult SUCCESS "warning";
       logInfo "Cannot mark ${_file} as processed";
     else
@@ -174,17 +180,94 @@ function process_sql_file() {
     fi
   else
     logInfoResult FAILURE "failed";
-    cat ${_logFile};
+    logDebugFile ${_logFile};
   fi
 }
 
-## Main logic
+## Retrieves the users having SQL files.
+## -> 1: The base folder.
+## <- RESULT: The space-separated list of users.
+## Example:
+##   find_dbusers_with_sql_files /tmp
+##   for u in ${RESULT}; do; echo "Found ${u}"; done
+function find_dbusers_with_sql_files() {
+  local _folder="${1}";
+  local _result=();
+
+  for _user in $(find "${_folder}" -maxdepth 1 -type d); do
+    _result[${#_result[@]}]="${_user#${_folder}}";
+  done
+  export RESULT=${_result[@]};
+}
+
+## Retrieves the relative folder for user-specific SQL files.
+## -> 1: The base folder.
+## -> 2: The db user.
+## <- RESULT: the relative folder.
+## Example:
+##   retrieve_relative_sql_folder_for_user /tmp mydbuser
+##   echo "The relative folder for mydbuser is ${RESULT}"
+function retrieve_relative_sql_folder_for_user() {
+  local _folder="${1}";
+  local _user="${2}";
+  # This summarizes the convention, which could change
+  # in the future.
+  export RESULT="${_folder}/${_user}";
+}
+
+## Retrieves the password for given database user, provided externally
+## using a convention.
+## -> 1: The base folder.
+## -> 2: The database user.
+## <- 0 if the password is available; 1 otherwise.
+## <- RESULT: The database password for given user, if it's available.
+## Example
+##   if retrieve_password_for_user /tmp/dbuser dbuser; then
+##     echo "The password for dbuser is ${RESULT}";
+##   else
+##     echo "Database password for dbuser is unavailable";
+##   fi
+function retrieve_password_for_user() {
+  local _folder="${1}";
+  local _user="${2}";
+  local _file="${_folder}/${_user}";
+  local _result;
+  local _rescode=1;
+  if [ -r "${file}" ]; then
+    _result="$(cat "${_file}")";
+    _rescode=0;
+    export RESULT="{_result}";
+  fi
+  return ${_rescode};
+}
+
+# Main logic
 ## dry-wit hook
 function main() {
   local _sqlFiles;
+  local _users;
+  local _userFolder;
+  local _password;
+
+  # SQL files for the admin user.
   find_sql_files "${FOLDER}";
   _sqlFiles="${RESULT}";
   for _file in ${_sqlFiles}; do
-    process_file "${_file}";
+    process_sql_file "${FOLDER}" "$(basename ${_file})" "${MARIADB_ADMIN_USER}" "${MARIADB_ADMIN_PASSWORD}";
+  done
+
+  # SQL files specific for certain db users.
+  find_dbusers_with_sql_files "${FOLDER}";
+  _users="${RESULT}";
+  for _user in ${_users}; do
+    retrieve_relative_sql_folder_for_user "${FOLDER}" "${_user}";
+    _userFolder="${RESULT}";
+    retrieve_password_for_user "${FOLDER}/${_userFolder}" "${_user}";
+    _password="${RESULT}";
+    find_sql_files "${FOLDER}/${_userFolder}";
+    _sqlFiles="${RESULT}";
+    for _file in ${_sqlFiles}; do
+      process_sql_file "${FOLDER}/${_userFolder}" "${_file}" "${_user}" "${_password}";
+    done
   done
 }

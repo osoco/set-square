@@ -4,7 +4,7 @@ if [[ ! -e /var/lib/mysql/.bootstrapped ]]; then
   _setupFile=/usr/local/src/setup.sql
   sed "s ___LAN___ $(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}' | awk -F'.' '{printf("%d.%d.%d.%%\n", $1, $2, $3);}') g" ${_setupFile}.tpl > ${_setupFile}
   mysql_install_db
-  /etc/init.d/mysqld start
+  /etc/init.d/mysql start
   sleep 5
   /usr/bin/mysql -u root < ${_setupFile} || \
   /usr/bin/mysql -u root --password="${MARIADB_ROOT_PASSWORD}" < ${_setupFile}
