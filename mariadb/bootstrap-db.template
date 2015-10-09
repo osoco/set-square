@@ -1,15 +1,16 @@
 #!/bin/bash
 
+_SLEEP=10;
 if [[ ! -e /var/lib/mysql/.bootstrapped ]]; then
   _setupFile=/usr/local/src/setup.sql
   sed "s ___LAN___ $(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}' | awk -F'.' '{printf("%d.%d.%d.%%\n", $1, $2, $3);}') g" ${_setupFile}.tpl > ${_setupFile}
   mysql_install_db
   /etc/init.d/mysql start
-  sleep 5
+  sleep ${_SLEEP}
   /usr/bin/mysql -u root < ${_setupFile} || \
   /usr/bin/mysql -u root --password="${MARIADB_ROOT_PASSWORD}" < ${_setupFile}
   mysqladmin -uroot --password="${MARIADB_ROOT_PASSWORD}" -h127.0.0.1 --protocol=tcp shutdown
-  sleep 5
+  sleep ${_SLEEP}
   chown -R mysql:mysql /var/lib/mysql /var/lib/mysql/*
   
   touch /var/lib/mysql/.bootstrapped

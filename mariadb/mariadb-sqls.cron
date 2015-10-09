@@ -1,5 +1,6 @@
 # /etc/cron.d/mariadb-sqls: crontab fragment for mariadb SQL files
 #  This looks for new SQL files in /var/lib/mysql-sql and process them.
+#MAILTO=
 
 # Look for new SQL files every 5 minutes
-*/5 *     * * *     mysql   [ -x /usr/local/bin/process-sqls ] && [ -d /var/lib/mysql-sql ] && $(/usr/local/bin/process-sqls /var/lib/mysql-sql)
+*/1 *     * * *     mysql   [ -x /usr/local/bin/process-sqls.sh ] && [ -d /var/lib/mysql-sql ] && /usr/local/bin/process-sqls.sh -vv /var/lib/mysql-sql

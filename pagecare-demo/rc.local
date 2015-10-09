@@ -60,6 +60,4 @@ a2enmod proxy
 a2enmod proxy_http
 a2enmod rewrite
 
-service apache2 start &
-
-exit 0
+exec env -i LANG=C PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin apache2ctl start

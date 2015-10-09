@@ -13,7 +13,6 @@ Creates Monit configuration to check the exposed ports are running correctly.
 
 Common flags:
     * -h | --help: Display this message.
-    * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
     * -v: Increase the verbosity.
     * -vv: Increase the verbosity further.
     * -q | --quiet: Be silent.
@@ -24,6 +23,8 @@ EOF
 ## dry-wit hook
 function defineReq() {
   checkReq cut CUT_NOT_INSTALLED;
+  checkReq sed SED_NOT_INSTALLED;
+  checkReq grep GREP_NOT_INSTALLED;
 }
 
 ## Defines the errors
@@ -31,10 +32,14 @@ function defineReq() {
 function defineErrors() {
   export INVALID_OPTION="Unrecognized option";
   export CUT_NOT_INSTALLED="cut is not installed";
+  export SED_NOT_INSTALLED="sed is not installed";
+  export GREP_NOT_INSTALLED="grep is not installed";
   
   ERROR_MESSAGES=(\
     INVALID_OPTION \
     CUT_NOT_INSTALLED \
+    SED_NOT_INSTALLED \
+    GREP_NOT_INSTALLED \
   );
 
   export ERROR_MESSAGES;
@@ -53,7 +58,7 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+        -h | --help | -v | -vv | -q | --quiet)
          shift;
          ;;
       *) logDebugResult FAILURE "failed";
@@ -77,7 +82,7 @@ function parseInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+      -h | --help | -v | -vv | -q | --quiet)
          shift;
          ;;
     esac

@@ -8,3 +8,6 @@ defineEnvVar JCE_VERSION \
 defineEnvVar JCE_DOWNLOAD_URL \
              "The url to download the JCE" \
              'http://download.oracle.com/otn-pub/java/jce/${JCE_VERSION}/jce_policy-${JCE_VERSION}.zip';
+defineEnvVar LOGSTASH_HEAP_SIZE \
+             "The heap size of logstash agent. Default is 500" \
+             "256"

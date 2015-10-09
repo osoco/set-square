@@ -32,11 +32,15 @@ function checkRequirements() {
 function defineErrors() {
   export INVALID_OPTION="Unrecognized option";
   export AWK_NOT_INSTALLED="awk is not installed";
+  export FIND_NOT_INSTALLED="find is not installed";
+  export EGREP_NOT_INSTALLED="egrep is not installed";
   export NO_SQL_FOLDER_SPECIFIED="The SQL folder is mandatory";
 
   ERROR_MESSAGES=(\
     INVALID_OPTION \
     AWK_NOT_INSTALLED \
+    FIND_NOT_INSTALLED \
+    EGREP_NOT_INSTALLED \
     NO_SQL_FOLDER_SPECIFIED \
   );
 
@@ -120,7 +124,7 @@ function is_sql_file_marked_as_processed() {
   else
     _rescode=1;
   fi
-  return $?;
+  return ${_rescode};
 }
 
 ## Marks given SQL file as processed.
@@ -145,8 +149,8 @@ function find_sql_files() {
   local _folder="${1}";
   local _result=();
 
-  for _aux in $(ls -a "${_folder}" | grep -v '^\..*$'); do
-    if is_sql_file_marked_as_processed "${_folder}" "${_aux}"; then
+  for _aux in $(find "${_folder}" -maxdepth 1 -type f \( ! -iname '.*' \)); do
+    if ! is_sql_file_marked_as_processed "${_folder}" "${_aux}"; then
       _result[${#_result[@]}]="${_aux}";
     fi
   done
@@ -172,9 +176,9 @@ function process_sql_file() {
   _logFile="${RESULT}";
   /usr/bin/mysql -u ${_user} --password="${_password}" < "${_folder}/${_file}" 2>&1 > ${_logFile}
   if [ $? -eq 0 ]; then
-    if ! mark_sql_file_as_processed "${_folder}/${_file}"; then
+    if ! mark_sql_file_as_processed "${_folder}" "${_file}"; then
       logInfoResult SUCCESS "warning";
-      logInfo "Cannot mark ${_file} as processed";
+      logInfo "Cannot mark ${_folder}/${_file} as processed";
     else
       logInfoResult SUCCESS "done";
     fi
@@ -192,22 +196,25 @@ function process_sql_file() {
 ##   for u in ${RESULT}; do; echo "Found ${u}"; done
 function find_dbusers_with_sql_files() {
   local _folder="${1}";
+  local _user;
   local _result=();
 
-  for _user in $(find "${_folder}" -maxdepth 1 -type d); do
-    _result[${#_result[@]}]="${_user#${_folder}}";
+  for _dir in $(find "${_folder}" -maxdepth 1 -type d | egrep -v "^${_folder}$"); do
+    _user="${_dir#${_folder}}";
+    _user="${_user#/}";
+    _result[${#_result[@]}]="${_user}";
   done
   export RESULT=${_result[@]};
 }
 
-## Retrieves the relative folder for user-specific SQL files.
+## Retrieves the folder for user-specific SQL files.
 ## -> 1: The base folder.
 ## -> 2: The db user.
-## <- RESULT: the relative folder.
+## <- RESULT: the folder.
 ## Example:
-##   retrieve_relative_sql_folder_for_user /tmp mydbuser
-##   echo "The relative folder for mydbuser is ${RESULT}"
-function retrieve_relative_sql_folder_for_user() {
+##   retrieve_sql_folder_for_user /tmp mydbuser
+##   echo "The folder for mydbuser is ${RESULT}"
+function retrieve_sql_folder_for_user() {
   local _folder="${1}";
   local _user="${2}";
   # This summarizes the convention, which could change
@@ -230,13 +237,13 @@ function retrieve_relative_sql_folder_for_user() {
 function retrieve_password_for_user() {
   local _folder="${1}";
   local _user="${2}";
-  local _file="${_folder}/${_user}";
+  local _file="${_folder}/.${_user}";
   local _result;
   local _rescode=1;
-  if [ -r "${file}" ]; then
+  if [ -r "${_file}" ]; then
     _result="$(cat "${_file}")";
     _rescode=0;
-    export RESULT="{_result}";
+    export RESULT="${_result}";
   fi
   return ${_rescode};
 }
@@ -260,14 +267,18 @@ function main() {
   find_dbusers_with_sql_files "${FOLDER}";
   _users="${RESULT}";
   for _user in ${_users}; do
-    retrieve_relative_sql_folder_for_user "${FOLDER}" "${_user}";
+    retrieve_sql_folder_for_user "${FOLDER}" "${_user}";
     _userFolder="${RESULT}";
-    retrieve_password_for_user "${FOLDER}/${_userFolder}" "${_user}";
-    _password="${RESULT}";
-    find_sql_files "${FOLDER}/${_userFolder}";
+    if retrieve_password_for_user "${_userFolder}" "${_user}"; then
+      _password="${RESULT}";
+    else
+      logInfo -n "Trying to authenticate ${_user} with no password";
+      logInfoResult WARNING "warn";
+    fi
+    find_sql_files "${_userFolder}";
     _sqlFiles="${RESULT}";
     for _file in ${_sqlFiles}; do
-      process_sql_file "${FOLDER}/${_userFolder}" "${_file}" "${_user}" "${_password}";
+      process_sql_file "${_userFolder}" "$(basename ${_file})" "${_user}" "${_password}";
     done
   done
 }

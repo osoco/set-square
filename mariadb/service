@@ -1,8 +1,8 @@
 #!/bin/bash
 
-/usr/local/bin/bootstrap-db
+/usr/local/bin/bootstrap-db.sh
 
 chown -R mysql:mysql /var/lib/mysql /var/lib/mysql/*
 
 exec 2>&1
-exec /usr/bin/mysqld_safe --console --user=mysql
+exec /usr/bin/mysqld_safe --console --user=mysql  | /opt/logstash/bin/logstash agent -f /etc/logstash/conf.d/mariadb.conf &

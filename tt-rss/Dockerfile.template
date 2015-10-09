@@ -2,13 +2,13 @@
 FROM ${NAMESPACE}/apache:${TAG}
 MAINTAINER ${MAINTAINER}
 
-RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE} && \
-    mkdir -p /var/lib/mysql-sql/${IMAGE}
-COPY service /etc/service/${IMAGE}/run
-COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
+RUN  mkdir -p /usr/local/share/sql/${TTRSS_DB_USER}
 COPY help /usr/local/bin/help
 COPY apache-vhost.conf /etc/apache2/sites-available/001-${TTRSS_VIRTUAL_HOST}.conf
-COPY setup.sql /usr/local/src
+COPY create-db.sh /etc/my_init.d/50-create-db.sh
+COPY create-db.inc.sh /etc/my_init.d/50-create-db.inc.sh
+COPY create-ttrss-database.sql /usr/local/share/sql/create-ttrss-database.sql
+COPY create-ttrss-user.sql /usr/local/share/sql/create-ttrss-user.sql.tpl
 
 RUN ${APTGET_INSTALL} -np git && \
     ${APTGET_INSTALL} libapache2-mod-php5 php5-mysql && \
@@ -17,10 +17,14 @@ RUN ${APTGET_INSTALL} -np git && \
     a2ensite 001-${TTRSS_VIRTUAL_HOST} && \
     chown -R www-data:www-data /opt/tt-rss && \
     ${APTGET_CLEANUP} && \
-    chmod +x /etc/service/${IMAGE}/run && \
-    chmod +x /usr/local/bin/help
+    echo "USE ${TTRSS_DB_NAME};" > /usr/local/share/sql/${TTRSS_DB_USER}/ttrss_schema.sql && \
+    cat /opt/tt-rss/schema/ttrss_schema_mysql.sql >> /usr/local/share/sql/${TTRSS_DB_USER}/ttrss_schema.sql && \
+    echo "${TTRSS_DB_PASSWORD}" >> /usr/local/share/sql/${TTRSS_DB_USER}/.${TTRSS_DB_USER} && \
+    chmod +x /usr/local/bin/help && \
+    chmod +x /etc/my_init.d/50-create-db.sh
 
-VOLUME /var/lib/mysql-sql/${IMAGE}
+COPY config.php /opt/tt-rss/config.php
+VOLUME /var/lib/mysql-sql
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile

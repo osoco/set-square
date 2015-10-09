@@ -1,0 +1,3 @@
+defineEnvVar SOURCE_SQL_FOLDER "The folder containing the SQL files to copy" "/usr/local/share/sql";
+defineEnvVar TARGET_SQL_FOLDER "The output folder for the SQL files" '/var/lib/mysql-sql/';
+defineEnvVar NETWORK_INTERFACE "The network interface whose IP will be used to grant access to the database" "$(ip addr 2> /dev/null | grep 'UP' | grep -v 'LOOPBACK' | cut -d' ' -f 2 | cut -d'@' -f 1)";

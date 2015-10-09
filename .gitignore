@@ -25,3 +25,8 @@ getboo/setup.sql
 getboo/config.inc.php
 tt-rss/setup.sql
 tt-rss/apache-vhost.conf
+tt-rss/create-db.inc.sh
+tt-rss/config.php
+tt-rss/create-ttrss-database.sql
+tt-rss/create-ttrss-user.sql
+mariadb/process-sqls.sh

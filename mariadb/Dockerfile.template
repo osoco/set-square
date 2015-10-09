@@ -6,8 +6,8 @@ RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${
 COPY service /etc/service/${REPO}/run
 COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
 COPY help /usr/local/bin/help
-COPY bootstrap-db /usr/local/bin/bootstrap-db
-COPY process-sqls /usr/local/bin/process-sqls
+COPY bootstrap-db /usr/local/bin/bootstrap-db.sh
+COPY process-sqls.sh /usr/local/bin/process-sqls.sh
 COPY mariadb-sqls.cron /etc/cron.d/mariadb-sqls
 
 #RUN apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
@@ -21,8 +21,8 @@ RUN ${APTGET_INSTALL} mariadb-server && \
     chown -R mysql:mysql /var/lib/mysql /var/lib/mysql-sql && \
     chmod +x /etc/service/${REPO}/run && \
     chmod +x /usr/local/bin/help && \
-    chmod +x /usr/local/bin/bootstrap-db && \
-    chmod +x /usr/local/bin/process-sqls
+    chmod +x /usr/local/bin/bootstrap-db.sh && \
+    chmod +x /usr/local/bin/process-sqls.sh
 
 COPY setup.sql /usr/local/src/setup.sql.tpl
 
