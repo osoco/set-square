@@ -1,0 +1,4 @@
+This image runs Tiny Tiny RSS.
+
+You can run me with
+docker run -it -p [port]:80 --link [db-container]:db --volumes-from [db-container] ${NAMESPACE}/${IMAGE}:${TAG}

@@ -3,4 +3,4 @@ from phusion-baseimage changes, and to provide a common
 style when writing Dockerfiles.
 
 If you're interested, you can run me with
-docker run -it ${NAMESPACE}/${REPO}:${TAG} /bin/bash
+docker run -it --link loghost:logger ${NAMESPACE}/${REPO}:${TAG} /bin/bash

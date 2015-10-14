@@ -4,8 +4,8 @@ MAINTAINER ${MAINTAINER}
 
 RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
 COPY service /etc/service/${REPO}/run
-COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
-COPY help /usr/local/bin/help
+#COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY README /README
 COPY bootstrap-db /usr/local/bin/bootstrap-db.sh
 COPY process-sqls.sh /usr/local/bin/process-sqls.sh
 COPY mariadb-sqls.cron /etc/cron.d/mariadb-sqls
@@ -17,10 +17,12 @@ RUN ${APTGET_INSTALL} mariadb-server && \
     sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf && \
     sed -i -e"s/^log_error/#log_error/" /etc/mysql/my.cnf && \
     ${APTGET_CLEANUP} && \
+    update-rc.d mysql disable && \
+    gpasswd -a mysql crontab && \
+    rm -f /etc/init.d/mysql && \
     mkdir /var/lib/mysql-sql && \
     chown -R mysql:mysql /var/lib/mysql /var/lib/mysql-sql && \
     chmod +x /etc/service/${REPO}/run && \
-    chmod +x /usr/local/bin/help && \
     chmod +x /usr/local/bin/bootstrap-db.sh && \
     chmod +x /usr/local/bin/process-sqls.sh
 

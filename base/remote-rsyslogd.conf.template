@@ -1,0 +1,1 @@
+*.*     @${LOGSERVER_HOST}:${LOGSERVER_PORT}

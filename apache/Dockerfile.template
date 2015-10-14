@@ -4,7 +4,7 @@ MAINTAINER ${MAINTAINER}
 
 RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
 COPY service /etc/service/${IMAGE}/run
-COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
+#COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
 COPY help /usr/local/bin/help
 
 RUN ${APTGET_INSTALL} apache2 && \

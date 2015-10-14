@@ -21,8 +21,6 @@ Common flags:
 EOF
 }
 
-DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
-
 # Requirements
 function checkRequirements() {
   checkReq awk AWK_NOT_INSTALLED;

@@ -2,5 +2,6 @@
 #  This looks for new SQL files in /var/lib/mysql-sql and process them.
 #MAILTO=
 
-# Look for new SQL files every 5 minutes
-*/1 *     * * *     mysql   [ -x /usr/local/bin/process-sqls.sh ] && [ -d /var/lib/mysql-sql ] && /usr/local/bin/process-sqls.sh -vv /var/lib/mysql-sql
+# Look for new SQL files every minute
+* * * * *     root   /usr/local/bin/process-sqls.sh -vv /var/lib/mysql-sql >> /var/log/process-sqls.sh.log
+

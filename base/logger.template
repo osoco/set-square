@@ -1,0 +1,2 @@
+#!/bin/sh
+exec chpst -ulog /usr/bin/logger -t ${IMAGE}
