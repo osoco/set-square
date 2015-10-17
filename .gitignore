@@ -30,3 +30,8 @@ tt-rss/config.php
 tt-rss/create-ttrss-database.sql
 tt-rss/create-ttrss-user.sql
 mariadb/process-sqls.sh
+base/logger
+tt-rss/README
+mariadb/README
+base/remote-rsyslogd.conf
+java/README

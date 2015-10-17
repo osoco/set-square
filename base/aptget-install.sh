@@ -158,9 +158,9 @@ function install_package() {
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "skipped";
   else
-    echo "${_package}" >> ${INSTALLED_PACKAGES_FILE}
     ${APTGET_INSTALL} ${_package} > /dev/null 2>&1
     if [ $? -eq 0 ]; then
+      echo "${_package}" >> ${INSTALLED_PACKAGES_FILE}
       logInfoResult SUCCESS "done";
     else
       logInfoResult FAILURE "failed";
