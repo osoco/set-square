@@ -16,6 +16,7 @@ RUN ${APTGET_INSTALL} -np git && \
     git clone https://tt-rss.org/git/tt-rss.git tt-rss && \
     a2ensite 001-${TTRSS_VIRTUAL_HOST} && \
     a2dissite 000-default.conf && \
+    php5enmod mcrypt && \
     chown -R www-data:www-data /opt/tt-rss && \
     ${APTGET_CLEANUP} && \
     echo "USE ${TTRSS_DB_NAME};" > /usr/local/share/sql/${TTRSS_DB_USER}/ttrss_schema.sql && \
