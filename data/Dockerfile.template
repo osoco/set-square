@@ -1,0 +1,39 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
+FROM ${ROOT_IMAGE}
+
+MAINTAINER ${MAINTAINER}
+
+ENV DEBIAN_FRONTEND noninteractive
+
+COPY dry-wit /usr/local/bin/
+COPY display-dockerfile.sh /usr/local/bin/Dockerfile
+COPY display-file.sh /usr/local/bin/show
+COPY display-help.sh /usr/local/bin/help
+COPY README /README
+
+RUN chmod +x /usr/local/bin/dry-wit && \
+    chmod +x /usr/local/bin/show && \
+    mkdir /Dockerfiles && \
+    cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && \
+    chmod +x -- /usr/local/bin/help /usr/local/bin/Dockerfile /usr/local/bin/show && \    
+    ln -s -- /usr/local/bin/help /usr/local/bin/-h && \
+    ln -s -- /usr/local/bin/help /usr/local/bin/--help && \
+    ln -s -- /usr/local/bin/Dockerfile /usr/local/bin/dockerfile
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+VOLUME ${DATA_VOLUMES}
+
+# Children should provide:
+# - README: to describe the image.
+#
+# And then add steps in their Dockerfile such as the following:
+# COPY README /README
+# RUN mkdir /etc/service/${REPO} && cp -r /etc/service/.template/* /etc/service/${REPO}
+#
+# Additionaly, every Dockerfile should add its own Dockerfile to the /Dockerfiles
+# folder:
+# COPY Dockerfile /Dockerfiles/${DOLLAR}{NAMESPACE}-${DOLLAR}{REPO}.${DOLLAR}{TAG}
+#
+# And last, adding comments on how to run the image is very helpful.

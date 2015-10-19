@@ -4,8 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-r|--reduce-image] [repo]+
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-T|--tutum] [-r|--reduce-image] -s [stack-name] [stack-image]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-p|--registry] [-r|--reduce-image] [repo]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -16,7 +15,7 @@ Where:
   * repo: the repository to build (a folder with a Dockerfile template).
   * tag: the tag to use once the image is built successfully.
   * force: whether to build the image even if it's already built.
-  * tutum: whether to push the image to tutum.co.
+  * registry: optionally, the registry to push the image to.
   * reduce-image: whether to reduce the size of the resulting image.
   * stack-name: for stack images, the stack name (mandatory if the repository name ends with -stack).
 Common flags:
@@ -57,7 +56,7 @@ function defineErrors() {
   export INVALID_URL="Invalid command";
   export ERROR_BUILDING_REPO="Error building repository";
   export ERROR_TAGGING_IMAGE="Error tagging image";
-  export ERROR_PUSHING_IMAGE_TO_TUTUM="Error pushing image to tutum.co";
+  export ERROR_PUSHING_IMAGE="Error pushing image to ${REGISTRY}";
   export ERROR_REDUCING_IMAGE="Error reducing the image size";
 
   ERROR_MESSAGES=(\
@@ -75,7 +74,7 @@ function defineErrors() {
     INVALID_URL \
     ERROR_BUILDING_REPO \
     ERROR_TAGGING_IMAGE \
-    ERROR_PUSHING_IMAGE_TO_TUTUM \
+    ERROR_PUSHING_IMAGE \
     ERROR_REDUCING_IMAGE \
   );
 
@@ -102,10 +101,9 @@ function parseInput() {
 	 export TAG="${1}";
          shift;
 	 ;;
-      -T | --tutum)
+      -p | --registry)
          shift;
-	 export TUTUM=0;
-         shift;
+	 export REGISTRY_PUSH=0;
 	 ;;
       -f | --force)
           shift;
@@ -156,7 +154,7 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -T | --tutum | -f | --force | -r | --reduce-image | -s | --stack)
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -p | --registry | -f | --force | -r | --reduce-image | -s | --stack)
 	 ;;
       *) logDebugResult FAILURE "fail";
          exitWithErrorCode INVALID_OPTION ${_flag};
@@ -347,13 +345,13 @@ function build_repo() {
   fi
 }
 
-## Pushes the image to Tutum.io
+## Pushes the image to a Docker registry.
 ## -> 1: the repository.
 ## -> 2: the tag.
 ## -> 3: the stack (optional).
 ## Example:
-##   tutum_push "myImage" "latest"
-function tutum_push() {
+##   registry_push "myImage" "latest"
+function registry_push() {
   local _repo="${1}";
   local _tag="${2}";
   local _stack="${3}";
@@ -361,23 +359,23 @@ function tutum_push() {
   local _pushResult;
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
-  logInfo -n "Tagging image for uploading to tutum.co";
-  docker tag "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
+  logInfo -n "Tagging image for uploading to ${REGISTRY}";
+  docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
     exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
   fi
-  logInfo "Pushing image to tutum";
-  docker push "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
+  logInfo "Pushing image to ${REGISTRY}";
+  docker push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   _pushResult=$?;
-  logInfo -n "Pushing image to tutum";
+  logInfo -n "Pushing image to ${REGISTRY}";
   if [ ${_pushResult} -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_PUSHING_IMAGE "tutum.co/${TUTUM_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
+    exitWithErrorCode ERROR_PUSHING_IMAGE "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   fi
 }
 
@@ -473,11 +471,11 @@ function force_mode_enabled() {
   _flagEnabled FORCE_MODE;
 }
 
-## Checks whether the -t flag is enabled
+## Checks whether the -p flag is enabled
 ## Example:
-##   if tutum_push_enabled; then [..]; fi
-function tutum_push_enabled() {
-  _flagEnabled TUTUM;
+##   if registry_push_enabled; then [..]; fi
+function registry_push_enabled() {
+  _flagEnabled REGISTRY_PUSH;
 }
 
 ## Checks whether the -r flag is enabled
@@ -556,8 +554,8 @@ function main() {
 
       build_repo "${_repo}" "${TAG}" "${_stack}"
 
-      if tutum_push_enabled; then
-        tutum_push "${_repo}" "${_stack}"
+      if registry_push_enabled; then
+        registry_push "${_repo}" "${TAG}" "${_stack}"
       fi
     fi
   done

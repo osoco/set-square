@@ -1,0 +1,1671 @@
+#!/bin/bash
+# (c) 2008-2010 Automated Computing Machinery, S.L.
+#
+#    This file is part of dry-wit.
+#
+#    dry-wit is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    dry-wit is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with dry-wit.  If not, see <http://www.gnu.org/licenses/>.
+
+#set -o errexit  # terminate on any unhandled error
+#set -o nounset  # terminate on any unset variable
+
+# IFS stuff
+_OLD_IFS="${IFS}";
+export IFS=$'\n\t\040';
+
+export SCRIPT_INTERRUPTED="User interruption";
+export MISSING_MANDATORY_VARIABLES=\
+"Script not complete, since it doesn't define all mandatory variables";
+export MISSING_MANDATORY_FUNCTIONS=\
+"Script not complete, since it doesn't define all mandatory functions";
+export UNKNOWN_ERROR=\
+"The script has finished due to an unexpected error";
+
+export BUILTIN_ERRORS=(\
+    SCRIPT_INTERRUPTED \
+    MISSING_MANDATORY_VARIABLES \
+    MISSING_MANDATORY_FUNCTIONS \
+    UNKNOWN_ERROR \
+  );
+
+export _CLEANUP_FILES=(\
+  );
+
+export BUILTIN_SUCCESS_KEYWORDS=(\
+  "Success" \
+  "Done" \
+  "Ok" \
+  );
+
+export BUILTIN_FAILURE_KEYWORDS=(\
+  "Error" \
+  "Failure" \
+  "Ko" \
+  );
+
+#export SUCCESS_KEYWORDS;
+#export FAILURE_KEYWORDS;
+
+export SUCCESS_COLOR=GREEN;
+export FAILURE_COLOR=RED;
+export WARNING_COLOR=ORANGE;
+export UNDEFINED_COLOR=YELLOW;
+export SUCCESS=0;
+export FAILURE=1;
+export UNDEFINED=255;
+
+function _evalVar() {
+  local _varName="${1}";
+  local _result="$(set noglob; export DOLLAR='$'; export DQUOTE="\""; echo "echo ${DQUOTE}${DOLLAR}{$(echo "${_varName}")}${DQUOTE}" | sh)";
+  export RESULT="${_result}";
+}
+
+function defineEnvVar() {
+  local _varName="${1}";
+  local _varDescription="${2}";
+  local _varDefault="${3}";
+  local _varCommand="${4}";
+
+  local _varValue="$(echo 'echo $'$(echo ${_varName}) | sh)";
+
+  if [[ -n ${_varDescription} ]]; then
+    _evalVar "${_varName}_DESCRIPTION";
+    local _description="${RESULT}";
+
+    if [[ ! -n ${_description} ]]; then
+      export ${_varName}_DESCRIPTION="${_varDescription}";
+    fi
+  fi
+  
+  if [[ -n ${_varDefault} ]]; then
+    _evalVar "${_varName}_DEFAULT";
+    local _defaultValue="${RESULT}";
+    _defaultValue="${_varDefault}";
+  fi
+
+  if [[ -n ${_defaultValue} ]]; then    
+    export ${_varName}_DEFAULT="${_defaultValue}";
+    _evalVar "${_varName}_DEFAULT";
+  fi
+
+
+  _addEnvVar "${_varName}";
+  
+  if [[ -n ${_varCommand} ]]; then
+    _evalVar "${_varName}_DEFAULT_COMMAND";
+    local _command="${RESULT}";
+    if [[ ! -n ${_command} ]]; then
+      export ${_varName}_DEFAULT_COMMAND="${_varCommand}";
+    fi
+    _evalVar "${_varName}_DEFAULT_COMMAND";
+    local _command="${RESULT}";
+  fi
+}
+
+function overrideEnvVar() {
+  local _varName="${1}";
+  local _varDefault="${2}";
+
+  defineEnvVar "${_varName}" "" "${_varDefault}" "";
+  _evalEnvVar ${_varName};
+}
+
+function _addEnvVar() {
+  local _varName="${1}";
+  if ! _isEnvVarDefined "${_varName}"; then
+    ENV_VARIABLES=(\
+        ${ENV_VARIABLES[@]} \
+        ${_varName} \
+    );
+    export ${_varName};
+    export ENV_VARIABLES;
+  fi
+}
+
+function _isEnvVarDefined() {
+    local _varName="${1}";
+    local e;
+    for e in "${ENV_VARIABLES[@]}"; do [[ "${e}" == "${_varName}" ]] && return 0; done
+    return 1;
+}
+
+function _evalEnvVar() {
+  local _varName="${1}";
+  _evalVar "${_varName}_DEFAULT";
+  local _defaultValue="${RESULT}";
+  _evalVar "${_varName}";
+  local _varValue="${RESULT}";
+
+  if [[ ! -n ${_varValue} ]]; then
+    if [[ -n ${DRY_WIT_EVAL_DEFAULTS_FLAG} ]]; then
+      _evalVar "${_varName}_DEFAULT_COMMAND";
+      local _defaultCommand="${RESULT}";
+      if [[ -n ${_defaultCommand} ]]; then
+        logTrace -n "Resolving ${_varName}_DEFAULT via ${_varName}_DEFAULT_COMMAND"
+        local _aux="$(set noglob; echo "${_defaultCommand}" | sh)";
+        if [[ -n ${_aux} ]]; then
+          _defaultValue="${_aux}";
+          logTraceResult SUCCESS "${_aux}"
+        else
+          logTraceResult FAILURE "failed"
+        fi
+      fi
+    fi
+    _varValue="${_defaultValue}";
+  fi
+
+  if [[ -n ${_varValue} ]] && [[ -z ${DRY_WIT_EVAL_DEFAULTS_FLAG} ]]; then
+    while [[ "${_varValue}" =~ .*'$'.* ]]; do
+      _varValue="$(set noglob; echo "echo ${_varValue}" | sh)";
+    done
+  fi
+  
+  if [[ -n ${_varValue} ]]; then
+    export ${_varName}="${_varValue}";
+  fi
+}
+
+function evalEnvVars() {
+  for var in ${ENV_VARIABLES[@]}; do
+    _evalEnvVar ${var};
+  done
+}
+
+# Checks whether a given flag is enabled
+# -> 1: the name of the flag variable
+# <- 0 if the flag is enabled, 1 otherwise.
+# Example:
+# function parseInput() {
+# [..]
+#   -my | --myFlag) export MY_FLAG=0;
+#                   ;;
+# [..]
+# if _flagEnabled MY_FLAG; then
+#    ..
+function _flagEnabled() {
+  local _flagVar="${1}";
+  local _flagVal;
+  local _result;
+  _evalVar "${_flagVar}";
+  _flagVal="${RESULT}";
+  if [ "x${_flagVal}" == "x0" ]; then
+      _result=0;
+  else
+      _result=1;
+  fi
+  return ${_result};
+}
+
+# AUXILIARY GENERAL-PURPOSE FUNCTIONS
+
+function cleanup() {
+  setLogCategory "post-process";
+
+  if [ "${#_CLEANUP_FILES}" != "0" ] \
+     && isDebugEnabled; then
+    logTrace "Cleaning up temporary files";
+  fi
+  for i in ${_CLEANUP_FILES[*]}; do
+#    logTrace "Deleting $i";
+    rm -rf $i > /dev/null;
+  done
+  # restoring old IFS
+  export IFS="${_OLD_IFS}";
+}
+
+function checkReq() {
+  which $1 2>/dev/null > /dev/null;
+  [ $? != 0 ] && exitWithErrorCode $2;
+}
+
+function createTempFile() {
+  local _prefix="$(echo \"${SCRIPT_NAME}\" | awk -F"/" '{print $NF;}')";
+  local _dirname="$(dirname \"${SCRIPT_NAME}\")";
+#  local _prefix="$(echo "${SCRIPT_NAME}" | awk -F"/" '{print $NF;}')";
+#  local _dirname="$(dirname "${SCRIPT_NAME}")";
+  if [ "${_dirname#\.\.}" == "${_dirname}" ]; then
+    _dirname="$PWD/${_dirname#\.}";
+  else
+    _dirname="$PWD/../${_dirname#\.\.}";
+  fi
+  local result="$(mktemp -p "${_dirname}"  -t ".${_prefix}.XXXXXXXXXX")";
+  local _aux=$?;
+  rm -f $result > /dev/null
+  if [ $_aux -ne 0 ]; then
+     result="$(mktemp -t ".${_prefix}.XXXXXXXXXX")";
+     _aux=$?;
+  fi
+  if [ $_aux -ne 0 ]; then
+     exitWithErrorCode $1;
+  fi
+  addFileToCleanup "${result}";
+
+  export RESULT="${result}";
+}
+
+## Checks if given file is writeable
+## -> 1: the file to check.
+## <- 0: the file is writeable; 1 otherwise.
+function fileIsWriteable() {
+  local _file="${1}";
+  if [[ -n ${_file} ]] && [[ -w ${_file} ]]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+## Checks if an element is already contained in an array.
+## -> [1]: The element to check
+## -> [2]: The array (passed as "${array[@]}"
+## <- 0: If the element is present in the array.
+## <- 1: Otherwise
+## Example:
+##   a=("one" "two" "three" "other number")
+##   if containsElement "other number" "${array[@]}"; then
+##     ...
+##   fi
+function arrayContainsElement() {
+    local _item="${1}";
+    local _array="${2}";
+    local _aux;
+    for _aux in "${_array}"; do
+        if [[ "${_aux}" == "${_item}" ]]; then
+            return 0;
+        fi
+    done
+    return 1;
+}
+        
+function addFileToCleanup() {
+  local _file="${1}";
+#  logTrace "Appending ${result} to _CLEANUP_FILES";
+  _CLEANUP_FILES=(\
+    $(for i in ${_CLEANUP_FILES[*]}; do echo $i; done) \
+      "${_file}" \
+  );
+}
+
+function createTempFolder() {
+  local _prefix="$(echo ${SCRIPT_NAME} | awk -F"/" '{print $NF;}')";
+  local _dirname="$(dirname ${SCRIPT_NAME})";
+  if [ "${_dirname#\.\.}" == "${_dirname}" ]; then
+    _dirname="$PWD/${_dirname#\.}";
+  else
+    _dirname="$PWD/../${_dirname#\.\.}";
+  fi
+  local result=$(mktemp -p "${_dirname}" -d -t ".${_prefix}.XXXXXX");
+  local _aux=$?;
+  if [ $_aux -ne 0 ]; then
+    result=$(mktemp -d -t ".${_prefix}.XXXXXX");
+    _aux=$?;
+  fi
+  if [ $_aux -ne 0 ]; then
+     exitWithErrorCode $1;
+  fi
+  addFileToCleanup "${result}";
+
+  export RESULT="${result}";
+}
+
+function extractFlags() {
+  local result="";
+  echo " $@" \
+| awk -F" -" '{for (i=2; i<=NF; i++){printf("-%s \n", $i);}}' \
+| awk -F" " '{print $1;}'
+}
+
+function extractFlagValue() {
+  local flag=$1;
+  shift;
+  echo " $@" \
+| awk -F" -" '{printf("-"); for (i=2; i<=NF; i++){if(i%2 == 1) {printf("-");}; printf("%s \n", $i);}}' \
+| grep -e "^$flag " \
+| awk -v f="${flag}" '{printf("echo \"%s\" | sed -e \"s_^%s __g\"\n", $2, f);}' \
+| sh;
+}
+
+function logFlag() {
+  local _flag="$1";
+  local _value="$2";
+  local _placeholders=$3;
+  local _remaining="$4";
+
+  if [ "x${_value}" != "x" ]; then
+    _value=" ${_value}";
+  fi
+  if [ "x${_remaining}" != "x" ]; then
+    _remaining=" Remaining ${_remaining}";
+  fi
+  logTrace "Parsed ${_flag} ${_value}. Shifting ${_placeholders} placeholder(s).${_remaining}";
+}
+
+function findInPath() {
+  local _result="";
+  local _paths="$(echo \"$PATH:.\" | awk -F":" '{for(i=1;i<=NF;i++) print $i;}')";
+#  local _paths="$(echo "$PATH:." | awk -F":" '{for(i=1;i<=NF;i++) print $i;}')";
+  for _path in $_paths; do
+    if [ -f "${_path}/$1" ]; then
+      _result="${_path}/$1";
+      break;
+    fi
+  done
+  echo ${_result};
+}
+
+function isSuccessKeyword() {
+  local _keyword="${1}";
+  local _result=1;
+
+  if    [ "x${SUCCESS_KEYWORDS}" != "x" ] \
+     && [  ${SUCCESS_KEYWORDS[*]} != "" ]; then
+    for i in ${SUCCESS_KEYWORDS[*]}; do
+      if    [ "x${i}" == "x${_keyword}" ] \
+         || [   "x$(echo \"${_keyword}\" | tr [:upper:] [:lower:] 2> /dev/null)" \
+             == "x$(echo \"${i}\"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+#         || [   "x$(echo "${_keyword}" | tr [:upper:] [:lower:] 2> /dev/null)" \
+#             == "x$(echo "${i}"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+        _result=0;
+        break;
+      fi;
+    done
+  fi
+
+  if [ ${_result} == 1 ]; then
+    for i in ${BUILTIN_SUCCESS_KEYWORDS[*]}; do
+      if [ "x${i}" == "x${1}" ] \
+          || [   "x$(echo \"${_keyword}\" | tr [:upper:] [:lower:] 2> /dev/null)" \
+              == "x$(echo \"${i}\"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+#          || [   "x$(echo "${_keyword}" | tr [:upper:] [:lower:] 2> /dev/null)" \
+#              == "x$(echo "${i}"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+        _result=0;
+        break;
+      fi;
+    done
+  fi
+
+  return ${_result};
+}
+
+function isFailureKeyword() {
+  local _keyword="${1}";
+  local _result=1;
+
+  for i in ${FAILURE_KEYWORDS[*]}; do
+    if    [ "x${i}" == "x${1}" ] \
+       || [   "x$(echo \"${_keyword}\" | tr [:upper:] [:lower:] 2> /dev/null)" \
+           == "x$(echo \"${i}\"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+#      || [   "x$(echo "${_keyword}" | tr [:upper:] [:lower:] 2> /dev/null)" \
+#           == "x$(echo "${i}"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+      _result=0;
+      break;
+    fi;
+  done
+
+  if [ ${_result} != 0 ]; then
+    for i in ${BUILTIN_FAILURE_KEYWORDS[*]}; do
+      if [ "x${i}" == "x${1}" ] \
+        || [   "x$(echo \"${_keyword}\" | tr [:upper:] [:lower:] 2> /dev/null)" \
+            == "x$(echo \"${i}\"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+#        || [   "x$(echo "${_keyword}" | tr [:upper:] [:lower:] 2> /dev/null)" \
+#            == "x$(echo "${i}"        | tr [:upper:] [:lower:] 2> /dev/null)" ]; then
+        _result=0;
+        break;
+      fi;
+    done
+  fi
+
+  return ${_result};
+}
+
+function printErrorMessage() {
+  local _result=0;
+  local _message;
+  local _error;
+  local _interruption=0;
+
+  for i in ${BUILTIN_ERRORS[*]}; do
+    _result=$((_result+1));
+    if [ "x${i}" == "x${1}" ]; then
+      _message="$i";
+      break;
+    fi;
+  done
+
+  if [ "x${_message}" == "x" ]; then
+    # IFS issue
+#    _result=0;
+    for i in ${ERROR_MESSAGES[*]}; do
+      _result=$((_result+1));
+      if [ "x${i}" == "x${1}" ]; then
+        _message="$i";
+        break;
+      fi;
+    done
+  fi
+  if [ "x${_message}" == "x" ]; then
+    _error="Error $1, but no error message defined. Fix this script";
+    _result=-1;
+    shift;
+  else
+    shift;
+    _error="$(echo ${_message} \
+  | awk -v dollar="$" '{printf("echo %s{%s}\n", dollar, $0);}' | sh)";
+#  | awk -v dollar="$" '{printf("echo \"%s{%s}\"\n", dollar, $0);}' | sh)";
+  fi
+
+  if [ ${#@} -gt 0 ]; then
+    _error="${_error} ($@)";
+  fi
+
+  if [ ${_result} == 1 ]; then
+    _error="${_error}. Finishing..";
+  fi
+  if isDebugEnabled; then
+    _printUsage $SCRIPT_NAME;
+  fi
+  _printError "${_error}";
+
+  return $_result;
+}
+
+function exitWithErrorCode() {
+  printErrorMessage $@;
+  local _result=$?;
+  cleanup;
+  exit ${_result};
+}
+
+# Internal functions
+
+function _printError() {
+  echo "Error: $@.";
+}
+
+function _printEnvironment() {
+  if [ "x${ENV_VARIABLES[*]}" != "x" ] \
+     && isTraceEnabled; then
+    cat <<EOF
+Environment variables:
+EOF
+    for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
+      echo "  ${ENV_VARIABLES[$i]} $(echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo %s(%s{%s}): %s{%s_DESCRIPTION}%s.\n", quote, dollar, $0, dollar, $0, quote);}' | sh)";
+#      echo "  ${ENV_VARIABLES[$i]} $(echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo %s(%s%s%s{%s}): %s%s%s{%s_DESCRIPTION}%s%s.%s\n", quote, quote, quote, dollar, $0, quote, quote, dollar, $0, quote, quote, quote);}' | sh)";
+    done
+  fi
+}
+
+function _printExitValues() {
+  local i;
+  local j;
+  if isTraceEnabled; then
+    cat <<EOF
+Exit values:
+  0: No error.
+EOF
+    if [ "x${BUILTIN_ERRORS[*]}" != "x" ]; then
+      for ((i = 0; i < ${#BUILTIN_ERRORS[*]}; i++)); do
+        echo "  $((i+1)): $(echo ${BUILTIN_ERRORS[$i]} | awk -v dollar="$" '{printf("echo %s{%s}\n", dollar, $0);}' | sh).";
+      done
+    fi
+    if [ "x${ERROR_MESSAGES[*]}" != "x" ]; then
+      for ((j = 0; j < ${#ERROR_MESSAGES[*]}; j++)); do
+        echo "  $((j+i+1)): $(echo ${ERROR_MESSAGES[$j]} | awk -v dollar="$" '{printf("echo %s{%s}\n", dollar, $0);}' | sh).";
+      done
+    fi
+  fi
+}
+
+function _printHelp() {
+
+  if _functionPresent defineEnv "${SCRIPT_NAME}"; then
+    defineEnv;
+  fi
+  usage $SCRIPT_NAME;
+  _printEnvironment;
+  _printExitValues;
+}
+
+function _printUsage() {
+  _printHelp >&2
+}
+
+function _trapSignals() {
+  trap 'exitWithErrorCode SCRIPT_INTERRUPTED' INT QUIT TSTP
+}
+
+# Converts given date (in days) to a formatted date.
+function jd2date() {
+
+  local _standardJd;
+  local _temp1;
+  local _temp2;
+  local _jd;
+  local _year;
+  local _month;
+  local _day;
+
+  local _jd=$1;
+
+  _standardJd=$((_jd+2400001));
+  _temp1=$((_standardJd+68569));
+  _temp2=$((_temp1*4/146097));
+  _temp1=$((_temp1-(146097*_temp2+3)/4));
+  _year=$((4000*(_temp1+1)/1461001));
+  _temp1=$((_temp1-1461*_year/4+31));
+  _month=$((80*_temp1/2447));
+  _day=$((_temp1-2447*_month/80));
+  _temp1=$((_month/11));
+  _month=$((_month+2-12*_temp1));
+  _year=$((100*(_temp2-49)+_year+_temp1));
+  
+  export RESULT="$_year $_month $_day";
+}
+
+# Converts given formatted date to a day-based one.
+function date2jd() {
+  local _result=0;
+
+  local _year=$1;
+  local _month=$2;
+  local _day=$3;
+
+  
+  local _standardJd=$(( _day - 32075
+       + 1461 * (_year + 4800 - (14 - _month)/12)/4 
+       + 367 * (_month - 2 + (14 - _month)/12*12)/12 
+       - 3 * ((_year + 4900 - (14 - _month)/12)/100)/4));
+
+  _result=$((_standardJd-2400001));
+
+  export RESULT=${_result};
+}
+
+# Converts given date (in seconds) to a formatted date.
+function jds2date() {
+
+  local _year;
+  local _month;
+  local _day;
+  local _hour;
+  local _minute;
+  local _second;
+
+  local _jd=$1;
+  jd2date $((_jd/86400));
+  local _date_in_days="${RESULT}";
+  _year="$(echo ${_date_in_days} | cut -d ' ' -f 1)";
+  _month="$(echo ${_date_in_days} | cut -d ' ' -f 2)";
+  _day="$(echo ${_date_in_days} | cut -d ' ' -f 3)";
+
+  local _temp=$((_jd%86400));
+  _hour=$((_temp/3600))
+  _temp=$((_temp-_hour*3600));
+  _minute=$((_temp/60));
+  _second=$((_temp-_minute*60));
+  
+  export RESULT="${_date_in_days} ${_hour} ${_minute} ${_second}";
+
+}
+
+# Converts given formatted date to a second-based one.
+function date2jds() {
+  local _result=0;
+
+  local _year=$1;
+  local _month=$2;
+  local _day=$3;
+  local _hour=$4;
+  local _minute=$5;
+  local _second=$6;
+  
+  date2jd ${_year} ${_month} ${_day};
+  _result=${RESULT};
+  _result=$((_result*24+_hour));
+  _result=$((_result*60+_minute));
+  _result=$((_result*60+_second));
+
+  export RESULT=${_result};
+}
+
+function retrieveTERM() {
+    local _result="${TERM}";
+
+    if [ "x${_result}" == "x" ]; then
+      _result="dumb";
+    fi
+
+    case ${_result} in
+      
+      dumb) _result="$(uname | tr '[:upper:]' '[:lower:]')";
+            ;;
+      *) ;;
+    esac
+
+    export RESULT="${_result}";
+}
+
+# Retrieves the width of the term.
+# Exports the value, since values greater
+# than 255 are not allowed as return codes.
+function getTermWidth() {
+
+  retrieveTERM;
+  local _term="${RESULT}";
+
+  if [ "x${_term}" == "x" ]; then
+    _term="$(uname | tr '[:upper:]' '[:lower:]')";
+  fi
+
+  $(tput -T ${_term} cols &> /dev/null) 2>&1 > /dev/null
+  local -i _rescode=$?;
+
+  if [ ${_rescode} -eq 0 ]; then
+    local _result=$(tput -T ${_term} cols &> /dev/null);
+    export RESULT=${_result};
+  fi
+
+  return ${_rescode};
+}
+
+# Logging functions
+
+function setLogCategoryNamespace() {
+  export LOG_CATEGORY_NAMESPACE="$1";
+}
+
+function getLogCategoryNamespace() {
+  export RESULT="${LOG_CATEGORY_NAMESPACE}";
+}
+
+function setLogCategory() {
+  export LOG_CATEGORY="$1";
+}
+
+function getLogCategory() {
+  export RESULT="${LOG_CATEGORY}";
+}
+
+function allowsColors() {
+  local _result;
+
+  retrieveTERM;
+  local _term="${RESULT}";
+
+  case ${_term} in
+    xterm*|rxvt*)
+      env | grep -e '^_=' | grep env 2>&1 > /dev/null;
+      if [ $? == 0 ]; then
+        _result=0;
+        export GREEN="$(tput -T ${_term} setaf 2 2>&1 > /dev/null; tput -T ${_term} bold 2>&1 > /dev/null)";
+        export RED="$(tput -T ${_term} setaf 1 2>&1 > /dev/null ; tput -T ${_term} bold 2>&1 > /dev/null)";
+        export BLUE="$(tput -T ${_term} setaf 4 2>&1 > /dev/null ; tput -T ${_term} bold 2>&1 > /dev/null)";
+        export WHITE="$(tput -T ${_term} setaf 7 2>&1 > /dev/null ; tput -T ${_term} bold 2>&1 > /dev/null)";
+        export YELLOW="$(tput -T ${_term} bold 2>&1 > /dev/null ; tput -T ${_term} setaf 3 2>&1 > /dev/null)";
+        export CYAN="$(tput -T ${_term} setaf 6 2>&1 > /dev/null)";
+        export ORANGE="$(tput -T ${_term} bold 2>&1 > /dev/null ; tput -T ${_term} setaf 1 2>&1 > /dev/null)";
+        export NO_COLOR="$(tput -T ${_term} sgr0 2>&1 > /dev/null)";
+      else
+        result=1;
+      fi
+      ;;
+    *)
+      _result=1;
+      ;;
+  esac;
+
+  tput -T ${_term} cols 2>&1 > /dev/null;
+  if [ $? -ne 0 ]; then
+    _result=1;
+  fi
+
+  return ${_result};
+}
+
+function evalConstant() {
+  local _constant="${1}";
+
+  local _result=$(echo | awk -v c="${_constant}" -v p1="{" -v p2="}" '{printf("echo %s%s%s%s\n", "$", p1, c, p2);}' | sh 2> /dev/null);
+
+  if [ "x${_result}" == "x" ]; then
+    _aux="${2}";
+  fi
+
+#  if [ "${DEBUG}" == "1" ]; then
+#    echo "";
+#    echo "${_constant} converts to ${_result}";
+#  fi 
+
+  export RESULT="${_result}";
+}
+
+function getColor() {
+  local _colorConstant="${1}";
+  local _result;
+
+  if allowsColors; then
+    evalConstant "${_colorConstant}" "${UNDEFINED_COLOR}";
+    _result="${RESULT}";
+  fi
+
+  export RESULT="${_result}";
+}
+
+function findOutKeyword() {
+  local _value="${1}";
+  local _result;
+
+  case "${_value}" in
+    "SUCCESS") _result=${SUCCESS};
+               ;;
+    "FAILURE") _result=${FAILURE};
+               ;;
+    *) if isSuccessKeyword "${_value}"; then
+         _result=${SUCCESS};
+       elif isFailureKeyword "${_value}"; then
+         _result=${FAILURE};
+       else
+         _result=${UNDEFINED};
+       fi
+       ;;
+  esac
+
+  return ${_result};
+}
+
+function definedTag() {
+  local _result;
+
+  case "${1}" in
+    "SUCCESS" | "FAILURE") _result=0;
+                           ;;
+    *) _result=1;
+       ;;
+  esac
+
+  return ${_result};
+}
+
+function resolveVerbosity() {
+  local _result="";
+
+  if isTraceEnabled; then
+    _result="-vv";
+  elif isDebugEnabled; then
+    _result="-v";
+  elif isInfoEnabled; then
+    _result="";
+  fi;
+
+  export RESULT="${_result}";
+}
+
+function isTraceEnabled() {
+  local _rescode=1;
+
+  if isDebugEnabled; then
+    if [ "x${LOG_VV}" != "x" ]; then
+      _rescode=0;
+    fi
+  fi
+
+  return ${_rescode};
+}
+
+function setTraceEnabled() {
+  LOG_VV=1;
+  setDebugEnabled;
+}
+
+function logTrace() {
+  if isTraceEnabled; then
+    _logStuff $@;
+  fi
+}
+
+function logTraceResult() {
+  if isTraceEnabled; then
+    _logStuffResult $@;
+  fi
+}
+
+function logTraceFile() {
+  if isTraceEnabled; then
+    cat "${1}" 2> /dev/null | while read line; do _logStuff "${line}"; done
+  fi
+}
+
+function isDebugEnabled() {
+  local _rescode=1;
+
+  if isInfoEnabled; then
+    if [ "x${LOG_V}" != "x" ]; then
+      _rescode=0;
+    fi
+  fi
+
+  return ${_rescode};
+}
+
+function setDebugEnabled() {
+  LOG_V=1;
+  setInfoEnabled;
+}
+
+function logDebugFile() {
+  if isDebugEnabled; then
+    cat "${1}" | while read line; do _logStuff "${line}"; done
+  fi
+}
+
+function logDebug() {
+  if isDebugEnabled; then
+    _logStuff $@;
+  fi
+}
+
+function logDebugResult() {
+  if isDebugEnabled; then
+    _logStuffResult $@;
+  fi
+}
+
+function isLowerThanInfoEnabled() {
+  if isDebugEnabled || isTraceEnabled; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+function isInfoEnabled() {
+  if [ "x${LOG_QUIET}" != "x" ]; then
+    return 1;
+  else
+    return 0;
+  fi
+}
+
+function setInfoEnabled() {
+  LOG_QUIET=;
+}
+
+function logInfoFile() {
+  if isInfoEnabled; then
+    cat "${1}" | while read line; do _logStuff "${line}"; done
+  fi
+}
+
+function logInfo() {
+  if isInfoEnabled; then
+    _logStuff $@;
+  fi
+}
+
+function logInfoResult() {
+  if isInfoEnabled; then
+    _logStuffResult $@;
+  fi
+}
+
+function setQuietMode() {
+  LOG_QUIET=1;
+}
+
+function log() {
+  _logStuff $@;
+}
+
+function logResult() {
+  _logStuffResult $@;
+}
+
+function logFile() {
+  cat "${1}" | while read line; do _logStuff "${line}"; done
+}
+
+function logWarn() {
+  _internalLogStuff 0 -1 0 "$@";
+}
+
+function _logStuff() {
+  _internalLogStuff 0 -1 1 $@;
+}
+
+function _logStuffResult() {
+  findOutKeyword "${1}";
+  local _keyword=$?;
+  if definedTag ${1}; then
+    shift;
+  fi
+  _internalLogStuff 1 ${_keyword} 1 $@;
+}
+
+function _internalLogStuff() {
+  local _flag=0;
+  local _message="";
+  local _printingResults=$1;
+  shift;
+  local _keyword=$1;
+  shift;
+  local _warning=$1;
+  shift;
+  allowsColors;
+  local _allowsColors=$?;
+  local _color;
+  local _offset=-3;
+
+  local _categoryNamespace="${LOG_CATEGORY_NAMESPACE}";
+  local _category="${LOG_CATEGORY}";
+  local _timestamp="$(date '+%Y/%m/%d %H:%M:%S')";
+
+  if    [ "x${_categoryNamespace}" == "x" ] \
+     && [ "${SCRIPT_NAME}" != "" ]; then
+    _categoryNamespace="$(basename ${SCRIPT_NAME} .sh)";
+  fi
+
+  if [ "x${_categoryNamespace}" != "x" ]; then
+    _category="${_categoryNamespace}:${_category}";
+  fi
+
+  if [ "x${_LOG_LINE_OPEN}" == "x" ]; then
+    if    [ "x${_category}" == "x" ] \
+       &&   ${_warning}; then
+      _category="WARN";
+    fi
+
+    if [ ${_allowsColors} == 0 ]; then
+      if [ ${_warning} == 0 ]; then
+        evalConstant "${WARNING_COLOR}" "${UNDEFINED_COLOR}";
+        local _color=${RESULT};
+        _message="${BLUE}[${GREEN}${_timestamp} ${_color}${_category}${BLUE}]${NO_COLOR} ";
+      else
+        _message="${BLUE}[${GREEN}${_timestamp} ${CYAN}${_category}${BLUE}]${NO_COLOR} ";
+      fi
+    else
+      _message="[${_timestamp} ${_category}] ";
+    fi
+  fi
+
+  if [ "$1" == "-n" ]; then
+    _flag=1;
+    shift;
+  else
+    export _LOG_LINE_OPEN="";
+  fi
+  _message="${_message}$@";
+  if [ ${_printingResults} == 0 ]; then
+    if [ ${_flag} == 0 ]; then
+      if [ "${_LAST_LOG_FLAG}" != "" ]; then
+        _printingResults=1;
+      fi
+    fi
+  fi
+
+  if [ ${_printingResults} == 1 ]; then
+    getTermWidth;
+    if [ $? -eq 0 ]; then
+      local _termWidth=$RESULT;
+      if [ "x${_termWidth}" == "x" ] \
+	 || [ $((_termWidth)) -le 0 ]; then
+	 _termWidth=80;
+      fi
+      local -i _index=0;
+      if [ ${_allowsColors} == 0 ]; then
+        _offset=$((_offset+2));
+      fi
+      local _end=$((${_offset}+${_termWidth}-${_LOG_LINE_MESSAGE}%_termWidth-${#_message}));
+      while [ $((_end)) -lt 0 ]; do
+#        echo "${_offset}+${_termWidth}-${#_message}";
+        echo "";
+        _end=$((-${_end}+${_offset}+${_termWidth}-${#_message}));
+      done
+      while [ $((_end-_index+1)) != 0 ]; do
+        _index=$((_index+1));
+        echo -n " ";
+      done
+    fi    
+  fi
+  if [ ${_flag} == 1 ]; then
+    export _LOG_LINE_OPEN="1";
+  else
+    export _LOG_LINE_OPEN="";
+  fi
+
+  if [ ${_flag} == 0 ]; then
+    if [ ${_printingResults} == 1 ]; then
+      if [ ${_allowsColors} == 0 ]; then
+        getColor ${UNDEFINED_COLOR};
+        local _undefinedColor="${RESULT}";
+        getColor ${SUCCESS_COLOR};
+        local _successColor="${RESULT}";
+        getColor ${FAILURE_COLOR};
+        local _failureColor="${RESULT}";
+        case ${_keyword} in
+          0) 
+            _color="${_successColor}";
+            ;;
+          1) 
+            _color="${_failureColor}";
+            ;;
+          *)
+            if isSuccessKeyword "${_message}"; then
+              _color="${_successColor}";
+            elif isFailureKeyword "${_message}"; then
+              _color="${_failureColor}";
+            else
+              _color="${_undefinedColor}";
+            fi
+            ;;
+        esac
+        echo "${WHITE}[${_color}${_message}${WHITE}]${NO_COLOR}";
+      else
+        echo "[${_message}]";
+      fi
+    else
+      echo "${_message}";
+    fi
+    export _LAST_LOG_FLAG="";
+  else
+    echo -n "${_message}";
+    export _LAST_LOG_FLAG="1";
+  fi
+  if [ ${_allowsColors} != 0 ]; then
+    export _LOG_LINE_MESSAGE="${#_message}";
+  else
+    export _LOG_LINE_MESSAGE="$((${#_message}-27))";
+  fi
+}
+
+function urlEncode() {
+  local _text="$1";
+
+    echo "${_text}"  \
+  | sed 's % %25 g'  \
+  | sed 's \+ %2B g' \
+  | sed 's| |+|g'    \
+  | sed 's \[\[BR\]\] %0D%0A g' \
+  | sed 's ! %21 g'  \
+  | sed 's \* %2A g' \
+  | sed "s ' %27 g" \
+  | sed 's ( %28 g'  \
+  | sed 's ) %29 g'  \
+  | sed 's ; %3B g'  \
+  | sed 's : %3A g'  \
+  | sed 's @ %40 g'  \
+  | sed 's & %26 g'  \
+  | sed 's = %3D g'  \
+  | sed 's \$ %24 g' \
+  | sed 's , %2C g'  \
+  | sed 's / %2F g'  \
+  | sed 's \? %3F g' \
+  | sed 's \[ %5B g' \
+  | sed 's \] %5D g';
+
+#  !    *    '    (    )    ;    :    @    &    =    +    $    ,    / 
+#%21  %2A  %27  %28  %29  %3B  %3A  %40  %26  %3D  %2B  %24  %2C  %2F 
+#  ?    %    #    [    ]
+# %3F  %25  %23  %5B  %5D
+}
+
+function readConfFile() {
+  local _confFile="${1}";
+  local result=0;
+
+  [ ! -e "${_confFile}" ] && result=1;
+
+  local _actualConfFile="${_confFile}";
+
+  createTempFile;
+  result=$?;
+
+  if [ ${result} != 0 ]; then
+    return ${result};
+  fi
+
+  _actualConfFile="${RESULT}";
+
+    grep -v '^#' "${_confFile}" | sed 's ${\(.*\)} _dollar{\1}_ g' \
+  | sed 's ^\(.*\)=\(.*\) echo\ -n\ \1\ |\ tr\ \[:lower:\]\ \[:upper:]\;\ echo\ -n\ =\;\ echo\ \2 g' \
+  | sh \
+  | sed 's _dollar{\(.*\)}_ ${\1} g' \
+  | sed 's_^\(.*\)=\(.*\)$_\1=\2; logTrace \1=\${\1};_ g' \
+  | sed 's_^_export _g' > "${_actualConfFile}";
+
+  . "${_actualConfFile}";
+
+  return ${result};
+}
+
+function checkPasswordlessSudo() {
+  local _result=0;
+
+  which sudo 2>&1 > /dev/null;
+  _result=$?;
+
+  if [ ${_result} == 0 ]; then
+    local _tmp="${TEMP}";
+    if [ ! -r "${_tmp}" ]; then
+      _tmp="/tmp";
+    fi
+    if [ ! -r "${_tmp}" ]; then
+      _tmp="$PWD";
+    fi
+    if [ -r "${_tmp}" ]; then
+      echo "" | sudo -S sudo ls "${_tmp}" 2> /dev/null > /dev/null
+      _result=$?;
+    else
+      _result=1;
+    fi
+  fi
+
+  return ${_result};
+}
+
+function findRelativePathBetweenFolders() {
+  # Given two paths, A and B, find the shortest way
+  # to reach B from A.
+  # For example, if A is /tmp/test and B is /tmp/my/private/temp,
+  # the shortest path is ../my/private/temp.
+  # The algorith is as follows:
+  # 1) Find the greatest common parent to A and B -> parent
+  # 2) Remove 'parent' from A and B -> A* and B*
+  # 3) Find out the distance from A to A* -> d
+  # 4) Replace the greatest 'd' parent folders with '..' in A -> P*
+  # 5) Result=P*/B*
+  local _pathA="$1";
+  local _pathB="$2";
+  local _parent;
+  local _pathAb;
+  local _pathBb;
+  local _d;
+  local _p;
+  local _result;
+
+  # 1.
+  findGreatestCommonParentFolder "${_pathA}" "${_pathB}";
+  _parent="${RESULT}";
+
+#  echo "findGreatestCommonParentFolder ${_pathA} ${_pathB} -> ${_parent}";
+
+  _pathAb="${_pathA#${_parent}}";
+  _pathAb="${_pathAb#/}";
+  _pathBb="${_pathB#${_parent}}";
+  _pathBb="${_pathBb#/}";
+
+#  echo "_pathAb=${_pathAb}, _pathBb=${_pathBb}";
+
+  findFolderDistance "${_pathA}" "${_pathAb}";
+  _d="${RESULT}";
+#  echo "findFolderDistance ${_pathA} ${_pathAb} -> ${_d}";
+  index=0;
+
+  # 4.
+  replaceNLeftmostTokens "${_pathA}" ".." ${_d} "/";
+  _p="${RESULT}";
+  local _aux=$(echo ${_pathA} | awk -F"/" '{print NF;};');
+  replaceNRightmostTokens "${_p}" "" $((_aux-_d-1)) "/";
+  _p="${RESULT}";
+
+  # 5.
+  _result="${_p}/${_pathBb}";
+
+  export RESULT="${_result}";
+}
+
+function findGreatestCommonParentFolder() {
+  local _pathA="$1";
+  local _pathB="$2";
+  local _result="";
+
+  local _maxA=$(echo "${_pathA}" | awk -F"/" '{print NF;}');
+  local _maxB=$(echo "${_pathB}" | awk -F"/" '{print NF;}');
+  local _max=$((_maxA));
+  if [ $((_max)) -lt $((_maxB)) ]; then
+    _max=$((_maxB));
+  fi
+
+  local _index=1;
+  local _auxA;
+  local _auxB;
+
+  while [ $((_index)) -le $((_max)) ]; do
+    _auxA=$(echo "${_pathA}" | awk -F"/" -vindx=${_index} '{printf("%s", $indx);}');
+    _auxB=$(echo "${_pathB}" | awk -F"/" -vindx=${_index} '{printf("%s", $indx);}');
+    _index=$((_index+1));
+    if [ "${_auxA}" == "${_auxB}" ]; then
+      _result="${_result}/${_auxA}";
+    else
+      break;
+    fi
+  done
+
+  _result=$(echo "${_result}" | sed 's ^/  g');
+
+  export RESULT="${_result}";
+}
+
+function findFolderDistance() {
+  local _pathA="$1";
+  local _pathB="$2";
+  local _result=-1;
+
+  local _maxA=$(echo "${_pathA}" | awk -F"/" '{print NF;}');
+  local _maxB=$(echo "${_pathB}" | awk -F"/" '{print NF;}');
+  local _max=$((_maxA));
+  if [ $((_max)) -lt $((_maxB)) ]; then
+    _max=$((_maxB));
+  fi
+
+  local _index=$((_max));
+  local _indexA=$((_maxA));
+  local _indexB=$((_maxB));
+  local _auxA;
+  local _auxB;
+
+  while [ $((_index)) -gt 0 ]; do
+    _indexA=$((_maxA-_max+_index));
+    _indexB=$((_maxB-_max+_index));
+    if    [ $((_indexA)) -eq 0 ] \
+       || [ $((_indexB)) -eq 0 ]; then
+      _result=$((_max-_index));
+      break;
+    fi
+    _auxA=$(echo "${_pathA}" | awk -F"/" -vindx=${_indexA} '{printf("%s", $indx);}');
+    _auxB=$(echo "${_pathB}" | awk -F"/" -vindx=${_indexB} '{printf("%s", $indx);}');
+    _index=$((_index-1));
+    if [ "${_auxA}" != "${_auxB}" ]; then
+      _result=0;
+      break;
+    fi
+  done
+
+#  if [ $((_result)) -ge 0 ]; then
+#    _result=$((_max-_result));
+#  else
+#    _result=0;
+#  fi
+
+  export RESULT="${_result}";
+}
+
+function replaceNLeftmostTokens() {
+  local _text="$1";
+  local _newToken="$2";
+  local _number=$(($3));
+  local _separator="$4";
+  local _result=$(echo "${_text}" | awk -F"${_separator}" -vd=${_number} -vnewT="${_newToken}" -vseparator="${_separator}" '{for (i=0;i<d&&i<NF;i++) {printf("%s%s", newT, separator);}for (i=d+2;i<=NF;i++){printf("%s%s", $i, separator);}}END{printf("\n");}' | sed "s ${_separator}$  g");
+  export RESULT="${_result}";
+}
+
+function replaceNRightmostTokens() {
+  local _text="$1";
+  local _newToken="$2";
+  local _number=$(($3));
+  local _separator="$4";
+  local _result=$(echo "${_text}" | awk -F"${_separator}" -vd=${_number} -vnewT="${_newToken}" -vseparator="${_separator}" '{for (i=NF;i>NF-d&&i>0;i--) {if (newT!="") {printf("%s%s", newT, separator);}}for (i=NF-d;i>0;i--){printf("%s%s", $i, separator);}}END{printf("\n");}' | sed "s ${_separator}$  g");
+  export RESULT="${_result}";
+}
+
+###
+ # Uncompresses given file to a concrete folder.
+ # @param 1 the file.
+ # @param 2 the output folder.
+ # @return 0: No error.
+ # @return 1: Invalid file format.
+ # @return 2: Error uncompressing file.
+##
+function uncompress() {
+  local _file="${1}";
+  local _destination="${2}";
+  local _result=0;
+
+  createTempFile;
+  local _errorOutput="${RESULT}";
+
+  local _flags;
+
+  # First, check whether the bundle is compressed bzip2 format.
+  if file "${_file}" | cut -d ":" -f 2 | grep bzip2 2>&1 > /dev/null; then
+    _flags="xfj";
+  # Second try: check whether the bundle is compressed gzip format.
+  elif file "${_file}" | cut -d ":" -f 2 | grep gzip 2>&1 > /dev/null; then
+    _flags="xfz";
+  # Otherwise, it can also be a standard, uncompressed tar.
+  elif file "${_file}" | cut -d ":" -f 2 | grep tar 2>&1 > /dev/null; then
+    _flags="xf";
+  else
+    _result=1;
+  fi
+
+  if [ ${_result} == 0 ]; then
+    logInfo -n "Uncompressing ${_file}";
+    tar ${_flags} "${_file}" -C "${_destination}" 2>&1 > "${_errorOutput}";
+    if [ $? == 0 ]; then
+      logInfoResult "Done";
+    else
+      logInfoResult "Failed";
+      logDebugFile "${_errorOutput}";
+      _result=2;
+    fi
+  fi
+
+  return ${_result};
+}
+
+function removeExtension() {
+  local _file="$1";
+  local _result="$(basename ${_file}$)";
+  _result="${_result%.*}";
+
+  export RESULT="${_result}";
+}
+
+function remoteSshCommand() {
+  local _result;
+  local _resultCode=0;
+  local _user="$1";
+  local _server="$2";
+  local _command="$3";
+
+  _result=$(ssh ${_user}@${_server} "${_command}" 2> /dev/null);
+  _resultCode=$?;
+  if [ ${_resultCode} == 0 ]; then
+    export RESULT="${_result}";
+  fi
+
+  return ${_resultCode};
+}
+
+# Retrieves the disk space available in the filesystem containing
+# given folder. Prints the available space in bytes. Returns 0 if
+# the space could be calculated.
+# - folder: the folder.
+function retrieveFreeDiskSpaceUnderFolder() {
+  local _result;
+  local _resultCode=1;
+  local _folder="$1";
+  local _aux="${_folder}";
+
+  if [ -d "${_folder}" ]; then
+    while [ "x${_aux}" != "x" -a "x${_aux}" != "x/" ] && \
+          ! mountpoint -q "${_aux}"; do
+      _aux="${_aux%/*}";
+    done;
+
+    mountpoint -q "${_aux}";
+    _resultCode=$?;
+
+    if [ ${_resultCode} -eq 0 ]; then
+      _result="$(df | grep " ${_aux}$" | awk '{print $4;}')";
+      _resultCode=$?;
+    fi
+  fi
+
+  export RESULT="${_result}";
+
+  return ${_resultCode};
+}
+
+function remoteSshCommandPipe() {
+  local _result;
+  local _resultCode=0;
+  local _user="$1";
+  local _server="$2";
+  local _command="$3";
+  shift;
+  shift;
+  shift;
+  local _previousPipe="$@";
+
+  echo "_previousPipe=${_previousPipe}";
+  echo "_command=${_command}";
+  _result=$(${_previousPipe} | while IFS='' read -r line; do echo ${line} | ssh "${_user}@${_server}" "${_command}"; done);
+  _resultCode=$?;
+  if [ ${_resultCode} == 0 ]; then
+    export RESULT="${_result}";
+  fi
+
+  return ${_resultCode};
+}
+
+# Runs a command supporting logging of command-line and output.
+# The output is stored in a single variable. If it's expected to
+# be longer use 'runCommandLongOutput' instead.
+# Parameters:
+# - Command: The command to run.
+function runCommand() {
+  local _command="$(echo $@ | sed 's_\n_ _g')";
+  local _result;
+  local _resultCode;
+
+  getLogCategory;
+  local _previousLogCategory="${RESULT}";
+  setLogCategory "${_previousLogCategory}:($1)";
+
+  logDebug "${_command}";
+  _result=$($@ 2>&1);
+  _resultCode=$?;
+
+  export RESULT="${_result}";
+
+  setLogCategory "${_previousLogCategory}";
+  return ${_resultCode};
+}
+
+# Runs a command supporting logging of command-line and output,
+# even if it's long, since it uses a temporary file to store it.
+# Parameters:
+# - Command: The command to run.
+function runCommandLongOutput() {
+  local _command="$(echo $@ | sed 's_\n_ _g')";
+  local _result;
+  local _resultCode;
+
+  createTempFile;
+  _result="${RESULT}";
+
+  getLogCategory;
+  local _previousLogCategory="${RESULT}";
+  setLogCategory "${_previousLogCategory}:($1)";
+
+  logDebug "${_command}";
+
+  if isDebugEnabled; then
+    $@ 2>&1 | tee "${_result}";
+    _resultCode=${PIPESTATUS[0]};
+  else
+    $@ > "${_result}" 2>&1;
+    _resultCode=$?;
+  fi
+
+  export RESULT="${_result}";
+
+  setLogCategory "${_previousLogCategory}";
+
+  return ${_resultCode};
+}
+
+function logDebugFileContents() {
+  if isDebugEnabled; then
+    [ -f "$1" ] && sed 's ^\s+$  g' "$1" | awk '{printf("logDebug \"%s\"\n", $0);}' | sh
+  fi
+}
+
+## Retrieves the absolute path of given argument.
+## -> 1: The relative path.
+## <- RESULT: The absolute path.
+function _retrieveAbsolutePath() {
+  local _relativePath="${1}";
+  export RESULT="$(readlink -f "${_relativePath}")";
+}
+
+function _functionPresent() {
+  local _function=$1;
+  local _script=$2;
+  type ${_function} 2> /dev/null | grep -q 'shell function'
+  local _rescode=$?;
+  if [ ${_rescode} -ne 0 ]; then
+    grep " ${_function}()" "${_script}" 2>&1 > /dev/null
+    _rescode=$?;
+  fi
+  if [ ${_rescode} -ne 0 ]; then
+    local _inc="${DRY_WIT_SCRIPT_FOLDER}/$(basename ${_script} .sh).inc.sh"
+    if [ -e "${_inc}" ]; then
+      _functionPresent "${_function}" "${_inc}";
+      _rescode=$?;
+    fi
+  fi
+  return ${_rescode};
+}
+
+function _parseCommonInput() {
+
+  local _help=0;
+  setInfoEnabled;
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help)
+         _help=1;
+         ;;
+      -v)
+         setDebugEnabled;
+         ;;
+      -vv)
+         setTraceEnabled;
+         ;;
+      -q)
+         setQuietMode;
+         ;;
+      -X:e | --X:eval-defaults)
+          export DRY_WIT_EVAL_DEFAULTS_FLAG=1;
+         ;;
+    esac
+  done
+  shift ${_flagCount};
+
+  export DRY_WIT_HELP_FLAG=${_help};
+}
+
+function _checkCommonInput() {
+
+  if [ ${DRY_WIT_HELP_FLAG} == 1 ]; then
+    _printHelp;
+    exit 0;
+  fi
+}
+
+function _checkScript() {
+  local _script=$1;
+  local v;
+  local f;
+
+  setLogCategory "sanity-check";
+  logTrace -n "Checking mandatory constants";
+  for v in ERROR_MESSAGES; do
+    if [ "x${v}" == "x" ]; then
+      exitWithErrorCode MISSING_MANDATORY_VARIABLES $v;
+    fi
+  done
+  logTraceResult SUCCESS "Done";
+
+  logTrace -n "Checking mandatory functions";
+  for f in usage main; do
+    _functionPresent $f $_script;
+    if [ $? != 0 ]; then
+      exitWithErrorCode MISSING_MANDATORY_FUNCTIONS $f;
+    fi
+  done
+  logTraceResult SUCCESS "Done";
+}
+
+function _setup() {
+  _trapSignals;
+  [ -e "${DRY_WIT_SCRIPT_FOLDER}/$(basename ${DRY_WIT_SCRIPT_PATH} .sh).inc.sh" ] && \
+      source "${DRY_WIT_SCRIPT_FOLDER}/$(basename ${DRY_WIT_SCRIPT_PATH} .sh).inc.sh"
+  [ -e "${DRY_WIT_SCRIPT_FOLDER}/.$(basename ${DRY_WIT_SCRIPT_PATH} .sh).inc.sh" ] && \
+      source "${DRY_WIT_SCRIPT_FOLDER}/.$(basename ${DRY_WIT_SCRIPT_PATH} .sh).inc.sh"
+  evalEnvVars;
+}
+
+if [ "$1" != "" ]; then
+  export SCRIPT_NAME="$(basename $1)";
+else
+  export SCRIPT_NAME="$0";
+fi
+
+function _main() {
+  local _script="${1#./}";
+  shift;
+  local _absolutePath;
+  _retrieveAbsolutePath "${_script}";
+  export DRY_WIT_SCRIPT_PATH="${RESULT}";
+  export DRY_WIT_SCRIPT_FOLDER="$(dirname ${DRY_WIT_SCRIPT_PATH})";
+
+  _setup "${_script}";
+
+  if _functionPresent defineErrors "${_script}"; then
+    defineErrors;
+  else
+    export ERROR_MESSAGES=();
+  fi
+
+  if _functionPresent defineEnvDefaults "${_script}"; then
+    defineEnvDefaults;
+  fi
+  
+  if _functionPresent defineEnv "${_script}"; then
+    defineEnv;
+  fi
+
+  if _functionPresent defineKeywords "${_script}"; then
+    defineKeywords;
+  fi
+
+  _parseCommonInput $@;
+
+  if _functionPresent parseInput "${_script}"; then
+    evalEnvVars;
+    parseInput $@;
+  fi
+
+  _checkCommonInput $@;
+
+  _checkScript "${_script}";
+
+  if _functionPresent checkRequirements "${_script}"; then
+    logTrace -n "Checking declared requirements";
+    checkRequirements;
+    logTraceResult SUCCESS "Done";
+  fi
+
+  if _functionPresent checkInput "${_script}"; then
+    evalEnvVars;
+    checkInput $@;
+
+    if _functionPresent postCheckInput "${_script}"; then
+      postCheckInput $@;
+    fi
+  fi
+
+  setLogCategory "main";
+  main;
+}
+
+source $@;
+_main $@;
+cleanup;

@@ -1,0 +1,29 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
+FROM ${NAMESPACE}/apache:${TAG}
+MAINTAINER ${MAINTAINER}
+
+#COPY logstash.conf /etc/logstash/conf.d/${REPO}.conf
+COPY README /README
+
+RUN ${APTGET_INSTALL}  libapache2-mod-php5 php5-cli php5-mysql php5-gd php5-mcrypt php5-json php-pear snmp fping \
+    mysql-client python-mysqldb rrdtool subversion whois mtr-tiny ipmitool graphviz imagemagick \
+    libvirt-bin && \
+    mkdir -p /opt/observium && cd /opt && \
+    wget http://www.observium.org/observium-community-latest.tar.gz && \
+    tar zxvf observium-community-latest.tar.gz && \
+    ${APTGET_CLEANUP}
+
+COPY setup.sql /usr/local/src/setup.sql.tpl
+
+EXPOSE 3306
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+VOLUME /var/lib/mysql
+VOLUME /var/lib/mysql-sql
+
+# Preferably run with
+# docker run -d --name db ${NAMESPACE}/${REPO}:${TAG}
+# otherwise with
+# docker run -d -p [port]:3306 ${NAMESPACE}/${REPO}:${TAG}

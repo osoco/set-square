@@ -1,0 +1,6 @@
+This image is only meant to be used to isolate other images
+from phusion-baseimage changes, and to provide a common
+style when writing Dockerfiles.
+
+If you're interested, you can run me with
+docker run -it --link loghost:logger ${NAMESPACE}/${REPO}:${TAG} /bin/bash
