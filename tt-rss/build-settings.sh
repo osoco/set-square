@@ -12,11 +12,11 @@ defineEnvVar TTRSS_FORCE_ARTICLE_PURGE "When this option is not 0, users' abilit
 defineEnvVar TTRSS_PUBSUBHUBBUB_HUB "URL to a PubSubHubbub-compatible hub server. If defined, \"Published articles\" generated feed would automatically become PUSH-enabled" '';
 defineEnvVar TTRSS_PUBSUBHUBBUB_ENABLED "Enable client PubSubHubbub support in tt-rss. When disabled, tt-rss won't try to subscribe to PUSH feed updates" "false";
 defineEnvVar TTRSS_ENABLE_REGISTRATION "Allow users to register themselves" "false";
-defineEnvVar TTRSS_REG_NOTIFY_ADDRESS "Email address to send new user notifications to" "${TTRSS_DB_USER}@${TTRSS_VIRTUAL_HOST}";
+defineEnvVar TTRSS_REG_NOTIFY_ADDRESS "Email address to send new user notifications to" '${TTRSS_DB_USER}@${TTRSS_VIRTUAL_HOST}';
 defineEnvVar TTRSS_REG_MAX_USERS "Maximum amount of users which will be allowed to register on this system. 0 - no limit" 10;
 defineEnvVar TTRSS_SESSION_COOKIE_LIFETIME "Lifetime of session cookies. 0 means cookie will be deleted when browser closes" 86400;
 defineEnvVar TTRSS_SMTP_FROM_NAME "Name used when sending mails" "Tiny Tiny RSS";
-defineEnvVar TTRSS_SMTP_FROM_ADDRESS "The email used to send emails" "noreply@${TTRSS_VIRTUAL_HOST}";
+defineEnvVar TTRSS_SMTP_FROM_ADDRESS "The email used to send emails" 'noreply@${TTRSS_VIRTUAL_HOST}';
 defineEnvVar TTRSS_DIGEST_SUBJECT "Subject line for email digests" "[tt-rss] New headlines for last 24 hours";
 defineEnvVar TTRSS_SMTP_SERVER "Hostname:port combination to send outgoing mail. Blank = use system MTA" '';
 defineEnvVar TTRSS_SMTP_LOGIN "The login required to send emails through the SMTP server, if any" '';

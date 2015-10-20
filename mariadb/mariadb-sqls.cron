@@ -3,5 +3,5 @@
 #MAILTO=
 
 # Look for new SQL files every minute
-* * * * *     root   /usr/local/bin/process-sqls.sh -vv /var/lib/mysql-sql >> /var/log/process-sqls.sh.log
+* * * * *     root   /usr/local/bin/mariadb-cron.sh
 

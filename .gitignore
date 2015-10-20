@@ -36,3 +36,4 @@ mariadb/README
 base/remote-rsyslogd.conf
 java/README
 base/README
+base/10_append_backup_to_etc_hosts.inc.sh
