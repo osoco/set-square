@@ -1,0 +1,4 @@
+This image runs Liquibase.
+
+You can run this image with
+docker run -d --link [db-container]:db ${NAMESPACE}/${REPO}

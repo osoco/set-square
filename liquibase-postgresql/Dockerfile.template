@@ -1,0 +1,15 @@
+# ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile (generated at ${TIME})
+FROM ${NAMESPACE}/liquibase:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY service /etc/rc.local
+COPY README /README
+
+RUN cd /opt/liquibase/lib && \
+    wget ${POSTGRESQL_JDBC_DRIVER_URL}
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+# Preferably run with
+# docker run --link [db-container]:db ${NAMESPACE}/${IMAGE}:${TAG}

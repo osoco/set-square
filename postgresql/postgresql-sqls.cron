@@ -1,0 +1,7 @@
+# /etc/cron.d/mariadb-sqls: crontab fragment for PostgreSQL SQL files
+#  This looks for new SQL files in /var/lib/postgresql-sql and process them.
+#MAILTO=
+
+# Look for new SQL files every minute
+* * * * *     root   /usr/local/bin/postgresql-cron.sh
+

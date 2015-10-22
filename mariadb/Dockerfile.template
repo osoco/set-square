@@ -8,8 +8,8 @@ COPY service /etc/service/${REPO}/run
 COPY README /README
 COPY bootstrap-db /usr/local/bin/bootstrap-db.sh
 COPY process-sqls.sh /usr/local/bin/process-sqls.sh
-COPY mariadb-cron.sh /usr/local/bin/mariadb-cron.sh
-COPY mariadb-sqls.cron /etc/cron.d/mariadb-sqls
+COPY ${IMAGE}-cron.sh /usr/local/bin/${IMAGE}-cron.sh
+COPY ${IMAGE}-sqls.cron /etc/cron.d/${IMAGE}-sqls
 
 #RUN apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
 #RUN add-apt-repository \'deb http://mirror.stshosting.co.uk/mariadb/repo/10.0/ubuntu trusty main'
@@ -26,7 +26,7 @@ RUN ${APTGET_INSTALL} mariadb-server && \
     chmod +x /etc/service/${REPO}/run && \
     chmod +x /usr/local/bin/bootstrap-db.sh && \
     chmod +x /usr/local/bin/process-sqls.sh && \
-    chmod +x /usr/local/bin/mariadb-cron.sh
+    chmod +x /usr/local/bin/${IMAGE}-cron.sh
 
 COPY setup.sql /usr/local/src/setup.sql.tpl
 

@@ -1,0 +1,4 @@
+This image prepares a simple development environment with sdkman ready to use.
+
+You can run me with
+docker run -it -v [my-development-project-folder]:/home/${NAMESPACE} -p [app-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}

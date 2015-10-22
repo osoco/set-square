@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ ! -e /var/lib/mysql/.bootstrapped ]]; then
+  /usr/local/bin/bootstrap-db.sh
+  chown -R mysql:mysql /var/lib/mysql /var/lib/mysql/*
+  while [ ! -e /var/lib/mysql/.bootstrapped ]; do
+    echo "Waiting ${SLEEP}s for db bootstrap"
+    sleep ${SLEEP}
+  done
+fi
+
+exec 2>&1
+#exec /usr/bin/mysqld_safe --console --user=mysql  | /opt/logstash/bin/logstash agent -f /etc/logstash/conf.d/mariadb.conf
+exec /usr/bin/mysqld_safe --console --user=mysql

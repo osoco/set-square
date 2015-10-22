@@ -1,0 +1,43 @@
+#!/bin/bash
+
+touch /var/log/${IMAGE}.log
+chown ${NAMESPACE} /var/log/${IMAGE}.log
+chown -R ${NAMESPACE} /home/${NAMESPACE}/.grails
+
+_rabbitmq_port="$(echo ${RABBITMQ_PORT} | cut -d':' -f 3)"
+_postgresql_port="$(echo ${POSTGRESQL_PORT} | cut -d':' -f 3)"
+_mongodb_port="$(echo ${MONGODB_PORT} | cut -d':' -f 3)"
+
+_sleep=3
+
+if [ ! -z ${_rabbitmq_port} ]; then
+    while ! nc -z rabbitmq ${_rabbitmq_port}; do
+        echo "Waiting until RabbitMQ is ready (in ${RABBITMQ_PORT#tcp://})"
+        sleep ${_sleep};
+    done
+fi
+if [ ! -z ${_postgresql_port} ]; then
+    while ! nc -z postgresql ${_postgresql_port}; do
+        echo "Waiting until PostgreSQL is ready (in ${POSTGRESQL_PORT#tcp://})"
+        sleep ${_sleep};
+    done
+fi
+if [ ! -z ${_mongodb_port} ]; then
+    while ! nc -z mongodb ${_mongodb_port}; do
+        echo "Waiting until MongoDB is ready (in ${MONGODB_PORT#tcp://})"
+        sleep ${_sleep};
+    done
+fi
+
+_env="${OB_ENV}"
+if [ -z ${_env} ]; then
+    _env="docker"
+fi
+_env="-D OB_ENV=\"${_env}\" -D PHARO_ENV=\"${_env}\""
+
+su - ${NAMESPACE} -c "\
+source /home/${NAMESPACE}/.sdkman/bin/sdkman-init.sh && \
+cd /home/${NAMESPACE}/work && \
+grails run-app ${_env}"
+
+# vim: syntax=sh ts=4 sw=4 sts=4 sr noet

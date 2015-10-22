@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ ! -e /var/lib/postgresql/.bootstrapped ]]; then
+  /usr/local/bin/bootstrap-db.sh
+  chown -R mysql:mysql /var/lib/postgresql /var/lib/postgresql/*
+  while [ ! -e /var/lib/postgresql/.bootstrapped ]; do
+    echo "Waiting ${SLEEP}s for db bootstrap"
+    sleep ${SLEEP}
+  done
+fi
+
+exec 2>&1
+exec setuidgid postgres /usr/lib/postgresql/bin/postmaster \
+   -D /var/lib/postgres/data 2>&1

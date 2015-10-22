@@ -1,0 +1,29 @@
+# ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${NAMESPACE}/sdkman:${TAG}
+MAINTAINER ${MAINTAINER}
+
+USER ${NAMESPACE}
+
+RUN cd /home/${NAMESPACE} && \
+    source /home/${NAMESPACE}/.sdkman/bin/sdkman-init.sh && \
+    sdk install grails ${GRAILS_VERSION}
+
+USER root
+
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+COPY service /etc/service/${IMAGE}/run
+RUN chmod +x /etc/service/${IMAGE}/run
+COPY README /README
+
+VOLUME /home/${NAMESPACE}/.grails
+VOLUME /home/${NAMESPACE}/work
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+EXPOSE 8080
+
+# Run with
+# docker run -d -e PROJECT_NAME=[project-folder-name] -v [root-folder]:/home/${NAMESPACE}/work -p [host-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}
+# or
+# docker run -d -v [my-grails-project]:/home/${NAMESPACE}/work -p [host-port]:$[app-port] ${NAMESPACE}/${IMAGE}:${TAG}

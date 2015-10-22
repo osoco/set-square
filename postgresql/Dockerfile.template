@@ -2,29 +2,34 @@
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
-COPY rc.local /etc/rc.local
+RUN mkdir /etc/service/${IMAGE} && cp -r /etc/service/.template/* /etc/service/${IMAGE}
+COPY service /etc/service/${IMAGE}/run
+#COPY logstash.conf /etc/logstash/conf.d/${IMAGE}.conf
+COPY README /README
+COPY bootstrap-db /usr/local/bin/bootstrap-db.sh
+COPY process-sqls.sh /usr/local/bin/process-sqls.sh
+COPY ${IMAGE}-cron.sh /usr/local/bin/${IMAGE}-cron.sh
+COPY ${IMAGE}-sqls.cron /etc/cron.d/${IMAGE}-sqls
 
 # From http://docs.docker.com/examples/postgresql_service
 
 # Add the PostgreSQL PGP key to verify their Debian packages.
 # It should be the same key as https://www.postgresql.org/media/keys/ACCC4CF8.asc
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 && \
-    echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
-    apt-get install -y python-software-properties software-properties-common postgresql-${POSTGRESQL_VERSION} postgresql-client-${POSTGRESQL_VERSION} postgresql-contrib-${POSTGRESQL_VERSION} && \
-    chmod +x /etc/rc.local
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+RUN ${APTGET_INSTALL} python-software-properties software-properties-common postgresql-${POSTGRESQL_VERSION} postgresql-client-${POSTGRESQL_VERSION} postgresql-contrib-${POSTGRESQL_VERSION} && \
+    ${APTGET_CLEANUP}
+RUN    update-rc.d postgresql disable
+RUN    gpasswd -a postgres crontab
+RUN    rm -f /etc/init.d/postgres
+RUN    mkdir /var/lib/postgresql-sql
+RUN    chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql-sql
+RUN    chmod +x /etc/service/${REPO}/run
+RUN    chmod +x /usr/local/bin/bootstrap-db.sh
+RUN    chmod +x /usr/local/bin/process-sqls.sh
+RUN    chmod +x /usr/local/bin/${IMAGE}-cron.sh
 
-# Run the rest of the commands as the ``postgres`` user created by the ``postgres-${POSTGRESQL_VERSION}`` package when it was ``apt-get installed``
-USER postgres
-
-# Create a PostgreSQL role named ``docker`` with ``docker`` as the password and
-# then create a database `docker` owned by the ``docker`` role.
-# Note: here we use ``&&\`` to run commands one after the other - the ``\``
-#       allows the RUN command to span multiple lines.
-RUN    /etc/init.d/postgresql start && \
-    psql --command "CREATE USER ${POSTGRESQL_ROOT_USER} WITH SUPERUSER PASSWORD '${POSTGRESQL_ROOT_PASSWORD}';" && \
-    sed -i 's_^local\(\s\+\)all\(\s\+\)all\(\s\+\)peer\(.*\)$_local\1all\2all\3md5\4_g' /etc/postgresql/9.3/main/pg_hba.conf && \
-    echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
-    echo "listen_addresses='*'" >> /etc/postgresql/9.3/main/postgresql.conf
+COPY setup.sql /usr/local/src/setup.sql.tpl
 
 # Expose the PostgreSQL port
 EXPOSE 5432
@@ -34,4 +39,4 @@ EXPOSE 5432
 # See http://stackoverflow.com/questions/27377876/docker-postgres-with-initial-data-is-not-persisted-over-commits
 #VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
-COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}

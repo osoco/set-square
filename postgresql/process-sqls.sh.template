@@ -1,0 +1,282 @@
+#!/bin/bash dry-wit
+# Copyright 2014-today Automated Computing Machinery S.L.
+# Distributed under the terms of the GNU General Public License v3
+
+function usage() {
+cat <<EOF
+$SCRIPT_NAME [-v[v]|-q|--quiet] [sql-folder]
+$SCRIPT_NAME [-h|--help]
+(c) 2014-today Automated Computing Machinery S.L.
+    Distributed under the terms of the GNU General Public License v3
+ 
+Checks whether there're new PostgreSQL SQL files to run.
+
+Where:
+  * sql-folder: the folder where the SQL files are located.
+Common flags:
+    * -h | --help: Display this message.
+    * -v: Increase the verbosity.
+    * -vv: Increase the verbosity further.
+    * -q | --quiet: Be silent.
+EOF
+}
+
+# Requirements
+function checkRequirements() {
+  checkReq awk AWK_NOT_INSTALLED;
+}
+ 
+# Error messages
+function defineErrors() {
+  export INVALID_OPTION="Unrecognized option";
+  export AWK_NOT_INSTALLED="awk is not installed";
+  export FIND_NOT_INSTALLED="find is not installed";
+  export EGREP_NOT_INSTALLED="egrep is not installed";
+  export NO_SQL_FOLDER_SPECIFIED="The SQL folder is mandatory";
+
+  ERROR_MESSAGES=(\
+    INVALID_OPTION \
+    AWK_NOT_INSTALLED \
+    FIND_NOT_INSTALLED \
+    EGREP_NOT_INSTALLED \
+    NO_SQL_FOLDER_SPECIFIED \
+  );
+
+  export ERROR_MESSAGES;
+}
+
+## Parses the input
+## dry-wit hook
+function parseInput() {
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  local _currentCount;
+
+  # Flags
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+         shift;
+         ;;
+    esac
+  done
+ 
+  if [[ ! -n ${SQL} ]]; then
+    TAG="${DATE}";
+  fi
+
+# Parameters
+  if [[ -z ${FOLDER} ]]; then
+    FOLDER="$1";
+    shift;
+  fi
+
+  if [[ -z ${FOLDER} ]]; then
+    FOLDER="${SQL_FOLDER}";
+  fi
+}
+
+## Checking input
+## dry-wit hook
+function checkInput() {
+
+  local _flags=$(extractFlags $@);
+  local _flagCount;
+  local _currentCount;
+  logDebug -n "Checking input";
+
+  # Flags
+  for _flag in ${_flags}; do
+    _flagCount=$((_flagCount+1));
+    case ${_flag} in
+      -h | --help | -v | -vv | -q | --quiet)
+	 ;;
+      *) logDebugResult FAILURE "fail";
+         exitWithErrorCode INVALID_OPTION ${_flag};
+         ;;
+    esac
+  done
+ 
+  if [[ -z ${FOLDER} ]]; then
+    logDebugResult FAILURE "fail";
+    exitWithErrorCode NO_SQL_FOLDER_SPECIFIED;
+  else
+    logDebugResult SUCCESS "valid";
+  fi 
+}
+
+## Checks whether given SQL file is marked as processed.
+## -> 1: The SQL folder.
+## -> 2: The SQL file.
+## <- 0 if it's marked as processed already, 1 otherwise.
+## Example:
+##   if is_sql_file_marked_as_processed /tmp my.sql; then echo "/tmp/my.sql Already processed"; fi
+function is_sql_file_marked_as_processed() {
+  local _folder="${1}";
+  local _file="${2}";
+  local _rescode=0;
+  if [ -e "${_folder}"/."${_file}".done ]; then
+    _rescode=0;
+  else
+    _rescode=1;
+  fi
+  return ${_rescode};
+}
+
+## Marks given SQL file as processed.
+## -> 1: The SQL folder.
+## -> 2: The SQL file.
+## <- 0 if it's marked successfully, 1 otherwise.
+## Example:
+##   if ! mark_sql_file_as_processed /tmp my.sql; then echo "Cannot mark SQL file as processed"; fi
+function mark_sql_file_as_processed() {
+  local _folder="${1}";
+  local _file="${2}";
+  touch "${_folder}"/."${_file}".done 2> /dev/null
+  return $?;
+}
+
+## Finds the SQL files in given folder.
+## -> 1: The folder
+## <- RESULT: A space-separated list of file names (relative to the folder).
+## Example:
+##   for f in find_sql_files /tmp; do echo "Found SQL: $f"; done
+function find_sql_files() {
+  local _folder="${1}";
+  local _result=();
+
+  for _aux in $(find "${_folder}" -maxdepth 1 -type f \( ! -iname '.*' \)); do
+    if ! is_sql_file_marked_as_processed "${_folder}" "${_aux}"; then
+      _result[${#_result[@]}]="${_aux}";
+    fi
+  done
+  export RESULT=${_result[@]};
+}
+
+## Processes given SQL file.
+## -> 1: The base folder.
+## -> 2: The SQL file to process.
+## -> 3: The database user.
+## -> 4: The database password.
+## <- 0 if the file is processed; 1 otherwise.
+## Example:
+##   if process_sql_file /tmp my.dll dbuser secret; then echo "Done"; else echo "Failed"; fi
+function process_sql_file() {
+  local _folder="${1}";
+  local _file="${2}";
+  local _user="${3}";
+  local _password="${4}";
+  local _logFile;
+  logInfo -n "Processing ${_file}";
+  createTempFile;
+  _logFile="${RESULT}";
+  echo "${_password}" | /usr/bin/psql -U ${_user} --password < "${_folder}/${_file}" 2>&1 > ${_logFile}
+  if [ $? -eq 0 ]; then
+    if ! mark_sql_file_as_processed "${_folder}" "${_file}"; then
+      logInfoResult SUCCESS "warning";
+      logInfo "Cannot mark ${_folder}/${_file} as processed";
+    else
+      logInfoResult SUCCESS "done";
+    fi
+  else
+    logInfoResult FAILURE "failed";
+    logDebugFile ${_logFile};
+  fi
+}
+
+## Retrieves the users having SQL files.
+## -> 1: The base folder.
+## <- RESULT: The space-separated list of users.
+## Example:
+##   find_dbusers_with_sql_files /tmp
+##   for u in ${RESULT}; do; echo "Found ${u}"; done
+function find_dbusers_with_sql_files() {
+  local _folder="${1}";
+  local _user;
+  local _result=();
+
+  for _dir in $(find "${_folder}" -maxdepth 1 -type d | egrep -v "^${_folder}$"); do
+    _user="${_dir#${_folder}}";
+    _user="${_user#/}";
+    _result[${#_result[@]}]="${_user}";
+  done
+  export RESULT=${_result[@]};
+}
+
+## Retrieves the folder for user-specific SQL files.
+## -> 1: The base folder.
+## -> 2: The db user.
+## <- RESULT: the folder.
+## Example:
+##   retrieve_sql_folder_for_user /tmp mydbuser
+##   echo "The folder for mydbuser is ${RESULT}"
+function retrieve_sql_folder_for_user() {
+  local _folder="${1}";
+  local _user="${2}";
+  # This summarizes the convention, which could change
+  # in the future.
+  export RESULT="${_folder}/${_user}";
+}
+
+## Retrieves the password for given database user, provided externally
+## using a convention.
+## -> 1: The base folder.
+## -> 2: The database user.
+## <- 0 if the password is available; 1 otherwise.
+## <- RESULT: The database password for given user, if it's available.
+## Example
+##   if retrieve_password_for_user /tmp/dbuser dbuser; then
+##     echo "The password for dbuser is ${RESULT}";
+##   else
+##     echo "Database password for dbuser is unavailable";
+##   fi
+function retrieve_password_for_user() {
+  local _folder="${1}";
+  local _user="${2}";
+  local _file="${_folder}/.${_user}";
+  local _result;
+  local _rescode=1;
+  if [ -r "${_file}" ]; then
+    _result="$(cat "${_file}")";
+    _rescode=0;
+    export RESULT="${_result}";
+  fi
+  return ${_rescode};
+}
+
+# Main logic
+## dry-wit hook
+function main() {
+  local _sqlFiles;
+  local _users;
+  local _userFolder;
+  local _password;
+
+  # SQL files for the admin user.
+  find_sql_files "${FOLDER}";
+  _sqlFiles="${RESULT}";
+  for _file in ${_sqlFiles}; do
+    process_sql_file "${FOLDER}" "$(basename ${_file})" "${MARIADB_ADMIN_USER}" "${MARIADB_ADMIN_PASSWORD}";
+  done
+
+  # SQL files specific for certain db users.
+  find_dbusers_with_sql_files "${FOLDER}";
+  _users="${RESULT}";
+  for _user in ${_users}; do
+    retrieve_sql_folder_for_user "${FOLDER}" "${_user}";
+    _userFolder="${RESULT}";
+    if retrieve_password_for_user "${_userFolder}" "${_user}"; then
+      _password="${RESULT}";
+    else
+      logInfo -n "Trying to authenticate ${_user} with no password";
+      logInfoResult WARNING "warn";
+    fi
+    find_sql_files "${_userFolder}";
+    _sqlFiles="${RESULT}";
+    for _file in ${_sqlFiles}; do
+      process_sql_file "${_userFolder}" "$(basename ${_file})" "${_user}" "${_password}";
+    done
+  done
+}

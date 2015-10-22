@@ -37,3 +37,15 @@ base/remote-rsyslogd.conf
 java/README
 base/README
 base/10_append_backup_to_etc_hosts.inc.sh
+data/README
+postgresql/README
+postgresql/process-sqls.sh
+postgresql/setup.sql
+liquibase/README
+postgresql/bootstrap-db
+liquibase-postgresql/README
+sdkman/setup.sql
+grails/service
+grails/setup.sql
+grails/README
+gradle/README
