@@ -1,0 +1,26 @@
+# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${TIME})
+FROM ${NAMESPACE}/apache:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY README /README
+COPY graphite-vhost.conf /etc/apache2/sites-available/001-graphite-vhost.conf
+
+RUN ${APTGET_INSTALL} python python-cairo libapache2-mod-wsgi python-django python-memcache python-sqlite python-pip && \
+    ${APTGET_INSTALL} -np python-dev && \
+    pip install carbon && \
+    pip install whisper && \
+    pip install graphite-web && \
+    pip install "django-tagging<0.4" && \
+    a2ensite 001-graphite-vhost && \
+    a2dissite 000-default-vhost && \
+    a2enmod wsgi
+
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+
+EXPOSE 80
+
+# Preferably run with
+# docker run -d --name graphite ${NAMESPACE}/${REPO}:${TAG}
+# otherwise with
+# docker run -d -p [port]:3306 ${NAMESPACE}/${REPO}:${TAG}
