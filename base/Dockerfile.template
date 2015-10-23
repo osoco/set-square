@@ -45,7 +45,7 @@ COPY service.monit /etc/service/monit/run
 
 RUN mkdir /Dockerfiles && \
     /etc/my_init.d/00_regen_ssh_host_keys.sh -f && \
-    ${APTGET_INSTALL} wget rsnapshot monit mailutils envsubst && \
+    ${APTGET_INSTALL} wget rsnapshot monit mailutils gettext && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && \
     mkfifo /var/spool/postfix/public/pickup && \
     chmod +x /etc/service/.template/log/run && \
