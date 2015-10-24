@@ -2,9 +2,9 @@
 FROM ${NAMESPACE}/java:${TAG}
 MAINTAINER ${MAINTAINER}
 
-#COPY service /etc/rc.local
 COPY README /README
 COPY liquibase.sh /usr/local/bin/liquibase
+ENTRYPOINT [ "/usr/local/bin/liquibase" ]
 
 RUN mkdir /opt/liquibase-${LIQUIBASE_VERSION} && \
     cd /opt && \

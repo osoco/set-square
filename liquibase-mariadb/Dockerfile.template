@@ -6,7 +6,7 @@ COPY liquibase.sh /usr/local/bin/liquibase
 COPY README /README
 
 RUN cd /opt/liquibase/lib && \
-    wget ${POSTGRESQL_JDBC_DRIVER_URL} && \
+    wget ${MARIADB_JDBC_DRIVER_URL} && \
     chmod +x /usr/local/bin/liquibase
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
