@@ -15,6 +15,7 @@ COPY 20_create_rsnapshot_conf.sh 20_create_rsnapshot_conf.inc.sh \
 COPY display-dockerfile.sh /usr/local/bin/Dockerfile
 COPY display-file.sh /usr/local/bin/show
 COPY display-help.sh /usr/local/bin/help
+COPY my_exec /sbin/my_exec
 COPY README /README
 COPY rsnapshot.daily /etc/cron.daily/rsnapshot.daily
 COPY rsnapshot.weekly /etc/cron.weekly/rsnapshot.weekly
@@ -35,6 +36,7 @@ RUN mkdir -p /etc/service/.template/log && \
     chmod +x /etc/my_init.d/32_create_monit_port_check.sh && \
     chmod -x /etc/my_init.d/32_create_monit_port_check.inc.sh && \
     chmod +x /usr/local/bin/show && \
+    chmod +x /sbin/my_exec && \
     chmod +x /etc/cron.daily/rsnapshot.daily && \
     chmod +x /etc/cron.weekly/rsnapshot.weekly && \
     chmod +x /etc/cron.monthly/rsnapshot.monthly    
@@ -63,6 +65,7 @@ RUN mkdir /Dockerfiles && \
     sed -i 's|^\(\s*\)set logfile\(.*\)|#\1set logfile\2|g' /etc/monit/monitrc && \
     ${APTGET_CLEANUP}
 
+ENTRYPOINT ["/sbin/my_exec"]
 CMD ["/sbin/my_init"]
 
 COPY monit-syslog.conf /etc/monit/conf.d/syslog.conf

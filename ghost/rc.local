@@ -1,0 +1,65 @@
+#!/bin/bash
+
+_host=${VIRTUAL_HOST%:*}
+_host=${_host:-$(hostname)}
+_port=${VIRTUAL_HOST#*:}
+if [ "${_port}" == "${VIRTUAL_HOST}" ]; then
+  _port=80
+fi
+
+cat <<EOF > /etc/apache2/sites-available/${_host}.conf
+<VirtualHost *:80>
+    ServerName ${_host}
+    RewriteEngine On
+    RewriteRule ^/?$ http://private-03998-testapi468.apiary-mock.com/${_host}/ [L,P]
+    RewriteRule ^(.*)$ http://${_host}\$1 [L,P]
+</VirtualHost>
+
+EOF
+
+cat <<EOF > /etc/apache2/ports.conf
+Listen ${_port}
+
+<IfModule ssl_module>
+        Listen 443
+</IfModule>
+
+<IfModule mod_gnutls.c>
+        Listen 443
+</IfModule>
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet
+EOF
+
+cat <<EOF > /tmp/testapi468.apib
+FORMAT: 1A
+
+# PageCare
+
+PageCare provides a simple API to serve third-party websites.
+
+# Serve [/]
+
+Third-party web content.
+
+## Retrieve URL [/{url}]
+
++ Parameters
+    + url: www.example.com (required, text) - the url
+
+### View a URL [GET]
+
++ Response 200 (text/html)
+$(curl -s http://www.stateless.co | sed 's/^/        /g')
+EOF
+
+apiary publish --api-name=testapi468 --path=/tmp/testapi468.apib --message="Testing PageCare API with ${_host} mock"
+
+a2ensite ${_host}
+a2enmod proxy
+a2enmod proxy_http
+a2enmod rewrite
+
+service apache2 start &
+
+exit 0

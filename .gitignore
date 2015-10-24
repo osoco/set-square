@@ -50,3 +50,6 @@ grails/setup.sql
 grails/README
 gradle/README
 sdkman/README
+gradle/service
+.build*
+*/.build*

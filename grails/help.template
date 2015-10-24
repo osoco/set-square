@@ -1,0 +1,21 @@
+#!/bin/bash
+
+cat <<EOF
+${NAMESPACE}/${IMAGE}:${TAG}
+(c) 2015-today Osoco
+
+This image runs "gradle run" on a host-supplied Gradle project.
+
+You can run me with
+docker run -it -v [my-gradle-project-folder]:/home/${NAMESPACE}/work -p [host-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}
+
+This image was generated with rydnr's script:
+https://github.com/rydnr/set-square
+
+The Dockerfiles can be inspected with 
+docker run ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile
+EOF
+
+for d in $(ls /Dockerfiles/* | grep -v -e '^Dockerfile$'); do
+  echo "docker run ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile $d";
+done

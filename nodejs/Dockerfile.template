@@ -1,0 +1,17 @@
+# ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile (generated at ${DATE})
+FROM ${BASE_IMAGE}:${TAG}
+MAINTAINER ${MAINTAINER}
+
+COPY README /README
+
+# From https://github.com/nodejs/node-v0.x-archive/wiki/Installing-Node.js-via-package-manager#debian-and-ubuntu-based-linux-distributions
+RUN curl --silent --location --location https://deb.nodesource.com/setup_0.12 | bash - && \
+    ${APTGET_INSTALL} nodejs && \
+    ${APTGET_CLEANUP}
+
+COPY Dockerfile /Dockerfiles/Dockerfile
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
+
+# This image is the base of NodeJS applications.
+# If interested, you can run me with
+# > docker run -it --link loghost:logger ${NAMESPACE}/${IMAGE}:${TAG} /bin/bash

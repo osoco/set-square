@@ -1,0 +1,11 @@
+#!/bin/bash
+
+read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+cd /var/www/ghost
+
+exec 2>&1
+exec npm start --production
+
+# vim: syntax=sh ts=4 sw=4 sts=4 sr noet
