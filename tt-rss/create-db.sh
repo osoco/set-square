@@ -184,7 +184,8 @@ function process_sql_template() {
   logInfo -n "Processing ${_folder}/${_template}";
   if find_ip "${NETWORK_INTERFACE}"; then
     _ip="${RESULT}";
-    sed "s/__MYIP__/${_ip}/g" "${_folder}/$(basename ${_template})" > "${_folder}/$(basename ${_template} .tpl)";
+    sed "s/___MYIP___/${_ip}/g" "${_folder}/$(basename ${_template})" > "${_folder}/$(basename ${_template} .tpl)";
+    sed -i "s ___LAN___ $(echo ${_ip} | awk -F'.' '{printf("%d.%d.%d.%%\n", $1, $2, $3);}') g"  "${_folder}/$(basename ${_template} .tpl)";
     _rescode=$?;
   fi
   if [ ${_rescode} -eq 0 ]; then

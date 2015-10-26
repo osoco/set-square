@@ -4,6 +4,7 @@ FROM ${ROOT_IMAGE}
 MAINTAINER ${MAINTAINER}
 
 ENV DEBIAN_FRONTEND noninteractive
+ENV TERM Linux
 
 COPY dry-wit aptget-install.sh aptget-install.inc.sh aptget-cleanup.sh aptget-cleanup.inc.sh \
      /usr/local/bin/
