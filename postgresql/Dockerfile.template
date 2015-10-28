@@ -17,17 +17,18 @@ COPY ${IMAGE}-sqls.cron /etc/cron.d/${IMAGE}-sqls
 # It should be the same key as https://www.postgresql.org/media/keys/ACCC4CF8.asc
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 && \
     echo "deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main" > /etc/apt/sources.list.d/pgdg.list
-RUN ${APTGET_INSTALL} python-software-properties software-properties-common postgresql-${POSTGRESQL_VERSION} postgresql-client-${POSTGRESQL_VERSION} postgresql-contrib-${POSTGRESQL_VERSION} && \
-    ${APTGET_CLEANUP}
-RUN    update-rc.d postgresql disable
-RUN    gpasswd -a postgres crontab
-RUN    rm -f /etc/init.d/postgres
-RUN    mkdir /var/lib/postgresql-sql
-RUN    chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql-sql
-RUN    chmod +x /etc/service/${REPO}/run
-RUN    chmod +x /usr/local/bin/bootstrap-db.sh
-RUN    chmod +x /usr/local/bin/process-sqls.sh
-RUN    chmod +x /usr/local/bin/${IMAGE}-cron.sh
+RUN ${APTGET_INSTALL} python-software-properties software-properties-common postgresql-${POSTGRESQL_VERSION} postgresql-client-${POSTGRESQL_VERSION} postgresql-contrib-${POSTGRESQL_VERSION} daemontools && \
+    ${APTGET_CLEANUP} && \
+    update-rc.d postgresql disable && \
+    gpasswd -a postgres crontab && \
+    gpasswd -a postgres ssl-cert && \
+    rm -f /etc/init.d/postgres && \
+    mkdir -p /var/lib/postgresql-sql && \
+    chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql-sql && \
+    chmod +x /etc/service/${IMAGE}/run && \
+    chmod +x /usr/local/bin/bootstrap-db.sh && \
+    chmod +x /usr/local/bin/process-sqls.sh && \
+    chmod +x /usr/local/bin/${IMAGE}-cron.sh
 
 COPY setup.sql /usr/local/src/setup.sql.tpl
 
@@ -39,4 +40,8 @@ EXPOSE 5432
 # See http://stackoverflow.com/questions/27377876/docker-postgres-with-initial-data-is-not-persisted-over-commits
 #VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 
+COPY Dockerfile /Dockerfiles/Dockerfile
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
+
+# You can run this image with
+# docker run -d --[loghost]:logger --name ${IMAGE} -p 5432:5432 ${NAMESPACE}/${IMAGE}

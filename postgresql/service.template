@@ -1,0 +1,17 @@
+#!/bin/bash
+
+_SLEEP=3
+if [[ ! -e /var/lib/postgresql/.bootstrapped ]]; then
+  /usr/local/bin/bootstrap-db.sh
+  chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql/*
+  while [ ! -e /var/lib/postgresql/.bootstrapped ]; do
+    echo "Waiting ${_SLEEP}s for db bootstrap"
+    sleep ${_SLEEP}
+  done
+fi
+
+exec 2>&1
+exec su - postgres -c "\
+     /usr/lib/postgresql/${POSTGRESQL_VERSION}/bin/postgres \
+     -D /var/lib/postgresql/${POSTGRESQL_VERSION}/main \
+     -c config_file=/etc/postgresql/${POSTGRESQL_VERSION}/main/postgresql.conf 2>&1"

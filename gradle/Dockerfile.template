@@ -24,6 +24,6 @@ COPY Dockerfile /Dockerfiles/Dockerfile
 EXPOSE 8080
 
 # Run with
-# docker run -d -e PROJECT_NAME=[project-folder-name] -v [root-folder]:/home/${NAMESPACE}/work -p [host-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}
+# docker run -d -e PROJECT_NAME=[project-folder-name] -v [root-folder]:/home/${NAMESPACE}/work -p [host-port]:8080 ${NAMESPACE}/${IMAGE}:${TAG}
 # or
-# docker run -d -v [project-folder]:/home/${NAMESPACE}/work -p [host-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}
+# docker run -d -v [project-folder]:/home/${NAMESPACE}/work -p [host-port]:8080 ${NAMESPACE}/${IMAGE}:${TAG}

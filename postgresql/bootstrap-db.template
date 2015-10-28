@@ -1,21 +1,21 @@
 #!/bin/bash
 
-_SLEEP=10;
+_sleep=10;
 # Just in case Monit is configured to restart ${IMAGE}
 service monit stop
-while ps -ef | grep postgres | grep -v grep > /dev/null; do
-  echo "Waiting ${_SLEEP}s for ${IMAGE} to shut down"
+while ps -ef | grep postgres | grep -v grep | grep -v runsv | grep -v /etc/service/postgresql/run > /dev/null; do
+  echo "Waiting ${_sleep}s for ${IMAGE} to shut down"
   killall postgresql
-  sleep ${_SLEEP}
+  sleep ${_sleep}
 done
 
 /etc/init.d/postgresql start && \
-su - postgres -c" \
-psql --command "CREATE USER ${POSTGRESQL_ROOT_USER} WITH SUPERUSER PASSWORD '${POSTGRESQL_ROOT_PASSWORD}';" && \
-sed -i 's_^local\(\s\+\)all\(\s\+\)all\(\s\+\)peer\(.*\)$_local\1all\2all\3md5\4_g' /etc/postgresql/9.3/main/pg_hba.conf && \
-echo \"host all  all    $(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}' | awk -F'.' '{printf(\"%d.%d.%d.0/24\n\", $1, $2, $3);}')  md5\" >> /etc/postgresql/9.3/main/pg_hba.conf && \
-echo \"listen_addresses='*'-" >> /etc/postgresql/${POSTGRESQL_VERSION}/main/postgresql.conf"
+setuidgid postgres psql --command "CREATE USER ${POSTGRESQL_ROOT_USER} WITH SUPERUSER PASSWORD '${POSTGRESQL_ROOT_PASSWORD}'" && \
+setuidgid postgres sed -i 's ^local\(\s\+\)all\(\s\+\)all\(\s\+\)peer\(.*\)$ local\1all\2all\3md5\4 g' /etc/postgresql/9.3/main/pg_hba.conf && \
+setuidgid postgres echo "host all  all    $(ifconfig eth0 | grep 'inet addr' | cut -d':' -f 2 | awk '{print $1;}' | awk -F'.' '{printf("%d.%d.%d.0/24\n", $1, $2, $3);}')  md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
+setuidgid postgres echo "listen_addresses='*'" >> /etc/postgresql/${POSTGRESQL_VERSION}/main/postgresql.conf && \
+/etc/init.d/postgresql stop && \
+chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql-sql && \
 
-chown -R postgres:postgres /var/lib/postgresql /var/lib/postgresql-sql/* && \
 touch /var/lib/postgresql/.bootstrapped
 service monit start

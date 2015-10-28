@@ -1,4 +1,4 @@
 This image runs ${IMAGE}.
 
 You can run this image with
-docker run -d --name ${IMAGE} -p 5432:5432 ${NAMESPACE}/${IMAGE}
+docker run -d --[loghost]:logger --name ${IMAGE} -p 5432:5432 ${NAMESPACE}/${IMAGE}

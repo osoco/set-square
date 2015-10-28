@@ -44,9 +44,8 @@ fi
 chown -R ${NAMESPACE} ${_folder}
 chmod -R a+w /home/${NAMESPACE}/.gradle
 
-echo "Running \"gradle ${_env} run\" in ${_folder}, as ${NAMESPACE}"
 su - ${NAMESPACE} -c "\
   source /home/${NAMESPACE}/.sdkman/bin/sdkman-init.sh && \
-  cd ${_folder} && gradle ${_env} run"
+  cd ${_folder} && gradle run ${_env}"
 
 # vim: syntax=sh ts=4 sw=4 sts=4 sr noet

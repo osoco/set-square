@@ -13,4 +13,7 @@ COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile
 
 # Preferably run with
-# docker run -it --link loghost:logger --link [db-container]:db -v [changelog-folder]:/changelogs ${NAMESPACE}/${IMAGE} liquibase [liquibase-args]
+# docker run -it --link [postgres-container]:db -v [changelog-folder]:/changelogs ${NAMESPACE}/${IMAGE} liquibase --username=[dbuser] --password="[dbpassword]" --url="jdbc:postgresql://db:5432/[db]" [liquibase-args]
+#
+# For example
+# docker run -it --link postgresql:db -v ${PWD}:/changelogs ${NAMESPACE}/${IMAGE} liquibase --username=openbadges --password="openbadges" --url="jdbc:postgresql://db:5432/openbadges" update

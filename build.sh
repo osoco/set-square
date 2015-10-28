@@ -274,7 +274,7 @@ function reduce_image_size() {
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_REDUCEING_IMAGE "${_namespace}/${_repo}:${_currentTag}";
+    exitWithErrorCode ERROR_REDUCING_IMAGE "${_namespace}/${_repo}:${_currentTag}";
   fi
 }
 
