@@ -1,4 +1,4 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
+# ${NAMESPACE}/${IMAGE}:${TAG} Dockerfile (generated at ${DATE})
 FROM ${BASE_IMAGE}:${TAG}
 MAINTAINER ${MAINTAINER}
 
@@ -28,4 +28,8 @@ EXPOSE 27017
 # Cannot define the volume here, only in leaf Dockerfiles
 # VOLUME /data/db
 
-COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
+COPY Dockerfile /Dockerfiles/Dockerfile
+COPY Dockerfile /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG}
+
+# Run with
+# > docker run -d -p 27017:27017 --link [loghost]:logger --name mongodb ${NAMESPACE}/${IMAGE}
