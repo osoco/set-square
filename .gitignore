@@ -22,6 +22,8 @@ getboo/dml.sql
 getboo/setup.sql
 gradle/README
 gradle/service
+gradle-daemon/README
+gradle-daemon/service
 gradle-pharo/README
 gradle-pharo/service
 grails/README
