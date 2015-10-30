@@ -74,6 +74,7 @@ COPY monit-mail.conf /etc/monit/conf.d/mail.conf
 
 COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}
 COPY Dockerfile /Dockerfiles/Dockerfile
+COPY ${COPYRIGHT_PREAMBLE_FILE} /Dockerfiles/copyright-preamble.txt
 
 # Children should provide:
 # - README: to describe the image.
