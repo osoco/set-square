@@ -10,7 +10,9 @@ RUN mkdir /opt/pharo-${PHARO_VERSION} && \
     dpkg --add-architecture i386 && \
     ${APTGET_INSTALL} pharo-vm-core pharo-launcher && \
     cd /opt/pharo && \
-    curl get.pharo.org/${PHARO_VERSION_ZEROCONF} | bash
+    curl get.pharo.org/${PHARO_VERSION_ZEROCONF} | bash && \
+    ln -s /opt/pharo/pharo /usr/local/bin/pharo && \
+    ln -s /opt/pharo/pharo-ui /usr/local/bin/pharo-ui 
     
 COPY README /README
 
