@@ -1,4 +1,0 @@
-This image runs "gradle run" on a host-supplied Gradle project.
-
-You can run me with
-docker run -it -v [my-gradle-project-folder]:/home/${NAMESPACE}/work -p [host-port]:[app-port] ${NAMESPACE}/${IMAGE}:${TAG}

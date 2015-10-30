@@ -1,1 +1,0 @@
-export JAVA_OPTS="-XX:MaxPermSize=128m -Dartifactory.home=/home/artifactory ${JAVA_OPTS}"

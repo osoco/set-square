@@ -1,5 +1,0 @@
-#!/bin/bash
-
-echo "### RSNAPSHOT MONTHLY ###"
-rsnapshot monthly
-echo

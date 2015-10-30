@@ -1,9 +1,0 @@
-# ${NAMESPACE}/${REPO}:${TAG} Dockerfile (generated at ${DATE})
-FROM ${BASE_IMAGE}:${TAG}
-MAINTAINER ${MAINTAINER}
-VOLUME /var/www
-
-EXPOSE 80
-EXPOSE 443
-
-COPY Dockerfile /Dockerfiles/${NAMESPACE}-${REPO}.${TAG}

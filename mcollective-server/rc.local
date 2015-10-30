@@ -1,8 +1,0 @@
-#!/bin/bash
-
-#sed -e "s/##ACTIVEMQ_PORT_61613_TCP_PORT##/${ACTIVEMQ_PORT_61613_TCP_PORT}/g" /etc/mcollective/server.cfg.tpl > /etc/mcollective/server.cfg
-
-/usr/local/bin/facts.sh > /etc/mcollective/facts.yaml
-/etc/init.d/mcollective start &
-
-exit 0

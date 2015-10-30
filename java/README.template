@@ -1,4 +1,0 @@
-Base image for applications running within a JVM.
-
-If you're interested, you can run me with
-docker run -it --link loghost:logger ${NAMESPACE}/${IMAGE}:${TAG} /bin/bash

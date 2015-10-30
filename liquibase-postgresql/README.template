@@ -1,8 +1,0 @@
-This image runs Liquibase agains PostgreSQL databases.
-
-You can run this image with
-> docker run -it --link [postgres-container]:db -v [changelog-folder]:/changelogs ${NAMESPACE}/${IMAGE} liquibase --username=[dbuser] --password="[dbpassword]" --url="jdbc:postgresql://db:5432/[db]" [liquibase-args]
-
-For example: 
-> docker run -it --link postgresql:db -v ${PWD}:/changelogs ${NAMESPACE}/${IMAGE} liquibase --username=openbadges --password="openbadges" --url="jdbc:postgresql://db:5432/openbadges" update
-

@@ -1,4 +1,0 @@
-This image runs Liquibase for MariaDB databases.
-
-You can run this image with
-docker run -it --link loghost:logger --link [db-container]:db -v [changelog-folder]:/changelogs ${NAMESPACE}/${IMAGE} liquibase [liquibase-args]

@@ -1,4 +1,0 @@
-This image runs Ghost.
-
-Run with
-> docker run -d -p [host-port]:2368 ${NAMESPACE}/${IMAGE}:${TAG}

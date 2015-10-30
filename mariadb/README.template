@@ -1,4 +1,0 @@
-This image runs MariaDB.
-
-You can run this image with
-docker run -d --name mariadb ${NAMESPACE}/${REPO}

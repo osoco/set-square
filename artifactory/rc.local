@@ -1,7 +1,0 @@
-#!/bin/bash
-
-chown -R artifactory:tomcat /home/artifactory
-chmod -R g+w /home/artifactory
-/etc/init.d/artifactory start &
-
-exit 0

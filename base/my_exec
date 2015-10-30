@@ -1,9 +1,0 @@
-#!/bin/bash
-
-function run_help() {
-  /usr/local/bin/help
-}
-
-trap 'run_help' ERR
-
-$*

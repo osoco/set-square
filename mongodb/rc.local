@@ -1,5 +1,0 @@
-#!/bin/bash
-
-sudo -u mongodb '/usr/bin/mongod' &
-
-exit 0
