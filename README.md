@@ -6,19 +6,33 @@ allowing the use of simple placeholders within Dockerfiles.
 The main idea was borrowed from wking's tool, and was adapted to be
 as simple to use as possible.
 
-# Installation
+# Motivation
 
+This tool allows building Docker images from Dockerfile templates.
+It relies upon ```envsubst```, so fear not: it doesn't convert Dockerfiles
+into Turing machines. It focuses exclusively on allow using variable
+placeholders which get resolved *at build time*.
+
+If you build your own images for third-party services such us Tomcat,
+MariaDB, RabbitMQ, etc., and the only difference from the image's
+point of view is the version of the package it bundles, then *set-square*
+alleviates you from the hassle of maintaining the different dockerfiles.
+
+*set-square* uses [dry-wit](https://github.com/rydnr/dry-wit), so it
+supports default values for variables. The user can easily choose which
+variables to override, and which don't.
+
+# Installation
 
     git clone --recurse-submodules https://github.com/rydnr/set-square
     cd set-square
     git submodules init
     git submodules update
 
-# Usage
+# Example
 
-Implement your image's dockerfile with no imposed restrictions.
-For example, let's say you want to implement your own PostgreSQL image,
-based on the official Dockerfile (available in github: https://github.com/docker-library/docs/tree/master/postgres).
+Let's say you want to implement your own PostgreSQL image,
+based on the official Dockerfile ([available in github](https://github.com/docker-library/docs/tree/master/postgres).
 
     # vim:set ft=dockerfile:
     FROM debian:jessie
@@ -26,25 +40,8 @@ based on the official Dockerfile (available in github: https://github.com/docker
     # explicitly set user/group IDs
     RUN groupadd -r postgres --gid=999 && useradd -r -g postgres --uid=999 postgres
     
-    # grab gosu for easy step-down from root
-    RUN gpg --keyserver pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
-    RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists    /* \
-    	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture)" \
-    	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture).asc" \
-    	&& gpg --verify /usr/local/bin/gosu.asc \
-    	&& rm /usr/local/bin/gosu.asc \
-    	&& chmod +x /usr/local/bin/gosu \
-    	&& apt-get purge -y --auto-remove ca-certificates wget
+    [..]
 
-    # make the "en_US.UTF-8" locale so postgres will be utf-8 enabled by default
-    RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
-    	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-    ENV LANG en_US.utf8
-    
-    RUN mkdir /docker-entrypoint-initdb.d
-    
-    RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
-    
     ENV PG_MAJOR 9.3
     ENV PG_VERSION 9.3.10-1.pgdg80+1
     
@@ -73,9 +70,9 @@ based on the official Dockerfile (available in github: https://github.com/docker
 
 However, you'd notice you'd like to specify certain information only when building the image,
 not hard-coding it in the Dockerfile. For example:
-  - PG_MAJOR and PG_MINOR,
-  - The Debian version it's based on,
-  - The uid and gid of the internal Postgres user.
+  - *PG_MAJOR* and *PG_MINOR*,
+  - The *Debian version* it's based on,
+  - The *uid* and *gid* of the internal Postgres user account.
 
 The Dockerfile you'd really want would be the following:
 
@@ -84,26 +81,8 @@ The Dockerfile you'd really want would be the following:
     
     # explicitly set user/group IDs
     RUN groupadd -r postgres --gid=${POSTGRES_GID} && useradd -r -g postgres --uid=${POSTGRES_UID} postgres
-    
-    # grab gosu for easy step-down from root
-    RUN gpg --keyserver pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
-    RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists    /* \
-    	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture)" \
-    	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/1.2/gosu-$(dpkg --print-architecture).asc" \
-    	&& gpg --verify /usr/local/bin/gosu.asc \
-    	&& rm /usr/local/bin/gosu.asc \
-    	&& chmod +x /usr/local/bin/gosu \
-    	&& apt-get purge -y --auto-remove ca-certificates wget
 
-    # make the "en_US.UTF-8" locale so postgres will be utf-8 enabled by default
-    RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
-    	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
-    ENV LANG en_US.utf8
-    
-    RUN mkdir /docker-entrypoint-initdb.d
-    
-    RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
-    
+    [..]
     # ENV PG_MAJOR 9.3
     # ENV PG_VERSION 9.3.10-1.pgdg80+1
     
@@ -119,7 +98,7 @@ The Dockerfile you'd really want would be the following:
     
     RUN mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
     
-    ENV PATH /usr/lib/postgresql/$PG_MAJOR/bin:$PATH
+    ENV PATH /usr/lib/postgresql/{}$PG_MAJOR/bin:$PATH
     ENV PGDATA /var/lib/postgresql/data
     VOLUME /var/lib/postgresql/data
     
@@ -130,9 +109,10 @@ The Dockerfile you'd really want would be the following:
     EXPOSE 5432
     CMD ["postgres"]
 
-First, place this Dockerfile template as {{{postgres/Dockerfile.template}}}.
-Secondly, create a new settings file ({{{postgres/build-settings.sh}}}) for specifying the default value you will be using normally:
+First, place this Dockerfile template as ```postgres/Dockerfile.template```.
+Secondly, create a new settings file (```postgres/build-settings.sh```) for specifying the default value you will be using normally:
 
+    defineEnvVar DEBIAN_VERSION "The Debian version" "jessie";
     defineEnvVar PG_MAJOR "The PostgreSQL major version" "9.3";
     defineEnvVar GP_VERSION "The complete PostgreSQL version" '${PG_MAJOR}.10-1.pgdg80+1';
 
@@ -140,5 +120,19 @@ You can now run set-square:
 
     ./build.sh -vv postgres
 
-set-square will just transform any file within that folder which ends in {{{.template}}},
+set-square will just transform any file within that folder which ends in *.template*,
 and then ask Docker to build the image.
+
+# Phusion-based images
+
+You can review a number of Phusion-based images built Using *set-square* in
+https://github.com/rydnr/set-square-phusion-images.
+
+# Documentation
+
+*set-square* is a [https://github.com/rydnr/dry-wit](dry-wit)-based Bash script.
+It should be self-explanatory and easy to read (and customize or extend).
+
+It the [https://github.com/rydnr/set-square/docs/](docs) folder there're some
+slides describing both the tool and the motivation behind the
+[https://github.com/rydnr/set-square-phusion-images](images) implemented using *set-square*.

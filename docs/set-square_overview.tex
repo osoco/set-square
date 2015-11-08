@@ -59,122 +59,154 @@
 
 \subsection{Motivation}
 
-\begin{frame}{Dockerfiles}
-	\begin{columns}[t]
-		\column{.5\textwidth}
-		\begin{block}{In theory}
+\begin{frame}{Dockerfiles (I)}
+		\begin{exampleblock}{In theory}
 			\begin{itemize}
-				\item Lorem ipsum.
+        \item Automates building Docker images.
+        \item Focuses on readability.
+        \item Uses a caching mechanism to speed up the process.
+        \item Advocates for deterministic/idempotent recipes: the same Dockerfile produces equivalent images.
 			\end{itemize}
-		\end{block}
-		\pause
+		\end{exampleblock}
+\end{frame}
 
-		\column{.5\textwidth}
-		\begin{block}{In practice}
+\begin{frame}{Dockerfiles (II)}
+  \begin{block}{\href{https://github.com/kstaken/dockerfile-examples/blob/master/apache/Dockerfile}{kstaken's} Apache dockerfile}
+    \inputminted[fontsize=\small]{bash}{apache.dockerfile}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Dockerfiles (III)}
+		\begin{alertblock}{In practice}
 			\begin{itemize}
-				\item Lorem ipsum.
+        \item It's \textbf{not a language}, only a variable-less DSL.
+        \item Using the operating system's package manager makes \textbf{idempotence mostly unachievable}.
+        \item Not using the operating system's package manager \textbf{complicates} Dockerfiles.
+        \item Images tend to \textbf{grow so much} the Dockerfiles need to
+          join steps together at the expense of simplicity.
 			\end{itemize}
-		\end{block}
-
-	\end{columns}
+		\end{alertblock}
 \end{frame}
 
 \section{Features}
 
 \begin{frame}{Features}
-  \begin{block}{Features}
+  \begin{block}{set-square}
     \begin{enumerate}
-    \item Lorem ipsum
+    \item Adds support for simple \textbf{variables} in Dockerfiles.
+    \item It's \textbf{not} a template engine (it's based on \texttt{envsubst}).
+    \item Maintains Dockerfile's \textit{original readability}.
+    \item \textbf{Simplifies} the process of building images.
     \end{enumerate}
   \end{block}
 \end{frame}
 
-\section{Phusion images}
+\begin{frame}{Example}
+  \begin{block}{\texttt{gradle/Dockerfile.template}}
+    \inputminted[fontsize=\small]{bash}{gradle.dockerfile}
+  \end{block}
+\end{frame}
+  
+\begin{frame}{Example: default values}
+  By default, we'd be interested in the latest stable version.
+  \begin{block}{\texttt{gradle/build-settings.sh}}
+    \inputminted[fontsize=\small]{bash}{gradle.settings}
+  \end{block}
+  \pause
 
-\begin{frame}{Approach}
-  \begin{block}{Approach}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
+  Of course, we can customize the default values.
+  \begin{exampleblock}{\texttt{gradle/.build-settings.sh}}
+    \inputminted[fontsize=\small]{bash}{gradle.settings.inc}
+  \end{exampleblock}
+  \pause
+
+  Even further!
+  \begin{alertblock}{}
+    \inputminted[fontsize=\small]{bash}{gradle.commandline}
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Common variables}
+  There're some variables we'll want to override, globally:
+  \begin{alertblock}{\texttt{.build.inc.sh}}
+    \inputminted[fontsize=\small]{bash}{build.inc.sh}
+  \end{alertblock}
+\end{frame}
+
+\section{Build process}
+
+\begin{frame}{Build process (I)}
+  \begin{block}{}
+    \inputminted[fontsize=\small]{bash}{liquibase.mkdir.bash}
+  \end{block}
+  \pause
+
+  \begin{exampleblock}{\texttt{liquibase/Dockerfile.template}}
+    \inputminted[fontsize=\small]{bash}{dockerfile.boilerplate}
+  \end{exampleblock}
+
+\end{frame}
+
+\begin{frame}{Build process (II)}
+  \begin{block}{}
+    \inputminted[fontsize=\small]{bash}{liquibase.build.bash}
+  \end{block}
+  \pause
+
+  \begin{exampleblock}{}
+    \inputminted[fontsize=\tiny]{bash}{liquibase.build.output}
+  \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Build process (III)}
+  Build the image, run it, test it, fix it.
+  \begin{block}{\texttt{liquibase/Dockerfile.template}}
+    \inputminted[fontsize=\tiny]{bash}{liquibase.dockerfile}
   \end{block}
 \end{frame}
 
-\begin{frame}{Built-in modes (I)}
-  \begin{block}{Built-in modes}
-    \begin{enumerate}
-    \item Monit: enabled by default.
-    \item Syslog-ng: enabled by default.
-    \item rsnapshot: enabled by default (if the image uses volumes)
-    \item ssh: disabled by default
-    \end{enumerate}
-  \end{block}
+\begin{frame}{Build process (IV)}
+  You can use templates for other files too.
+  \begin{exampleblock}{\texttt{liquibase/liquibase.sh.template}}
+    \inputminted[fontsize=\small]{bash}{liquibase.sh}
+  \end{exampleblock}
+
 \end{frame}
 
-\begin{frame}{Built-in modes (II)}
-  \begin{block}{Java images}
-    \begin{enumerate}
-    \item Logstash: enabled by default.
-    \end{enumerate}
-  \end{block}
+\section{Conclusion}
+
+\begin{frame}{Conclusion (I)}
+  \begin{exampleblock}{Simple but useful}
+    \begin{itemize}
+      \item Simple and straight-forward.
+      \item No hidden magic.
+      \item Avoids changing values manually.
+      \item Useful for CI jobs.
+    \end{itemize}
+  \end{exampleblock}
+
+  \pause
+
+  \begin{alertblock}{Try it}
+    \href{https://github.com/rydnr/set-square}{https://github.com/rydnr/set-square}
+  \end{alertblock}
+
 \end{frame}
 
-\subsection{base image}
+\begin{frame}{Conclusion (II)}
+  \begin{exampleblock}{\href{https://github.com/rydnr/set-square-phusion-images}{set-square-phusion-images}}
+    \begin{itemize}
+      \item Catalog of Docker images.
+      \item Based on \href{https://github.com/phusion/baseimage-docker}{phusion/baseimage-docker}.
+      \item Out-of-the-box (but optional):
+        \begin{itemize}
+          \item monitoring,
+          \item backup,
+          \item logging.
+        \end{itemize}
+    \end{itemize}
+  \end{exampleblock}
 
-\begin{frame}{Approach}
-  \begin{block}{Approach}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\subsection{MariaDB/PostgreSQL images}
-
-\begin{frame}{Approach}
-  \begin{block}{Approach}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Bootstrap}
-  \begin{block}{Bootstrap}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Liquibase}
-  \begin{block}{Liquibase}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\subsection{RabbitMQ/ActiveMQ images}
-
-\begin{frame}{Bootstrap}
-  \begin{block}{Bootstrap}
-    \begin{enumerate}
-    \item Lorem ipsum
-    \end{enumerate}
-  \end{block}
-\end{frame}
-
-\subsection{Web applications}
-
-\begin{frame}{Web applications}
-  \begin{block}{Web applications}
-    \begin{enumerate}
-    \item TT-RSS
-    \item Ghost
-    \item Getboo
-    \item Mediatomb
-    \end{enumerate}
-  \end{block}
 \end{frame}
 
 \end{document}

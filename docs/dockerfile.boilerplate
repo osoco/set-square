@@ -1,0 +1,10 @@
+FROM ${NAMESPACE}/fixme:${TAG}
+MAINTAINER ${MAINTAINER}
+
+# USER root
+COPY Dockerfile /Dockerfile
+
+# RUN apt-get update ...
+# CMD [ "args" ]
+# EXPOSE [port]
+# VOLUME [my-folder]

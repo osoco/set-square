@@ -1,0 +1,18 @@
+[2015/11/08 20:50:05 build:sanity-check] Checking mandatory constants     [done]
+[2015/11/08 20:50:05 build:sanity-check] Checking mandatory functions     [done]
+[2015/11/08 20:50:05 build:sanity-check] Checking declared requirements   [done]
+[2015/11/08 20:50:05 build:sanity-check] Checking input                  [valid]
+[2015/11/08 20:50:06 build:main] Building osoco/liquibase:201511
+Sending build context to Docker daemon 3.072 kB
+Sending build context to Docker daemon 
+Step 0 : FROM osoco/base:201511
+ ---> 4e111b99814b
+Step 1 : MAINTAINER Jose San Leandro <jose.sanleandro@osoco.es>
+ ---> Using cache
+ ---> 2112e7bdc2c4
+Step 2 : COPY Dockerfile /Dockerfile
+ ---> b94be96794f2
+Removing intermediate container 841272bd344b
+Successfully built b94be96794f2
+[2015/11/08 20:50:14 build:main] osoco/liquibase:201511                  [built]
+[2015/11/08 20:50:14 build:main] Cleaning up 1 stale container(s)         [done]

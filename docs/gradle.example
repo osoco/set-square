@@ -1,0 +1,8 @@
+FROM ${NAMESPACE}/sdkman:${TAG}
+MAINTAINER ${MAINTAINER}
+
+USER gradle
+
+RUN cd /home/gradle && \
+    source /home/gradle/.sdkman/bin/sdkman-init.sh && \
+    sdk install gradle ${GRADLE_VERSION}
