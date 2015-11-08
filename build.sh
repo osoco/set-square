@@ -39,7 +39,7 @@ function checkRequirements() {
   checkReq grep GREP_NOT_INSTALLED;
   checkReq awk AWK_NOT_INSTALLED;
 }
- 
+
 # Error messages
 function defineErrors() {
   export INVALID_OPTION="Unrecognized option";
@@ -458,6 +458,7 @@ function loadRepoEnvironmentVariables() {
   for _repo in ${_repos}; do
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
              "./${_repo}/build-settings.sh" \
+             "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
              "${_repo}/.build-settings.sh"; do
       if [ -e "${f}" ]; then
         source "${f}";
