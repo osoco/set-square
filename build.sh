@@ -456,7 +456,9 @@ function loadRepoEnvironmentVariables() {
   local _repos="${1}";
 
   for _repo in ${_repos}; do
-    for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" "${_repo}/.build-settings.sh"; do
+    for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
+             "./${_repo}/build-settings.sh" \
+             "${_repo}/.build-settings.sh"; do
       if [ -e "${f}" ]; then
         source "${f}";
       fi
