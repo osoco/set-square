@@ -16,10 +16,11 @@ placeholders which get resolved *at build time*.
 If you build your own images for third-party services such us Tomcat,
 MariaDB, RabbitMQ, etc., and the only difference from the image's
 point of view is the version of the package it bundles, then *set-square*
-alleviates you from the hassle of maintaining the different dockerfiles.
+alleviates you from the hassle of constantly maintaining almost-identical
+dockerfiles.
 
-*set-square* uses [dry-wit](https://github.com/rydnr/dry-wit), so it
-supports default values for variables. The user can easily choose which
+*set-square* uses [dry-wit](https://github.com/rydnr/dry-wit), and out-of-the-box
+it supports default values for variables. The user can easily choose which
 variables to override, and which don't.
 
 # Installation
@@ -32,7 +33,7 @@ variables to override, and which don't.
 # Example
 
 Let's say you want to implement your own PostgreSQL image,
-based on the official Dockerfile ([available in github](https://github.com/docker-library/docs/tree/master/postgres).
+based on the official Dockerfile ([available in github](https://github.com/docker-library/docs/tree/master/postgres)).
 
     # vim:set ft=dockerfile:
     FROM debian:jessie
@@ -45,11 +46,12 @@ based on the official Dockerfile ([available in github](https://github.com/docke
     ENV PG_MAJOR 9.3
     ENV PG_VERSION 9.3.10-1.pgdg80+1
     
-    RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list
+    RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR \
+        > /etc/apt/sources.list.d/pgdg.list
     
     RUN apt-get update \
     	&& apt-get install -y postgresql-common \
-    	&& sed -ri 's/#(create_main_cluster) .*$/\1 = false/' /etc/postgresql-common/createcluster.conf \
+    	&& sed -ri 's/#(create_main_cluster) .*$/\1 = false/' /etc/...
     	&& apt-get install -y \
     		postgresql-$PG_MAJOR=$PG_VERSION \
     		postgresql-contrib-$PG_MAJOR=$PG_VERSION \
@@ -69,7 +71,7 @@ based on the official Dockerfile ([available in github](https://github.com/docke
     CMD ["postgres"]
 
 However, you'd notice you'd like to specify certain information only when building the image,
-not hard-coding it in the Dockerfile. For example:
+to avoid modifying the Dockerfile every time it changes. For example:
   - *PG_MAJOR* and *PG_MINOR*,
   - The *Debian version* it's based on,
   - The *uid* and *gid* of the internal Postgres user account.
@@ -80,7 +82,8 @@ The Dockerfile you'd really want would be the following:
     FROM debian:${DEBIAN_VERSION}
     
     # explicitly set user/group IDs
-    RUN groupadd -r postgres --gid=${POSTGRES_GID} && useradd -r -g postgres --uid=${POSTGRES_UID} postgres
+    RUN groupadd -r postgres --gid=${POSTGRES_GID} \
+        && useradd -r -g postgres --uid=${POSTGRES_UID} postgres
 
     [..]
     # ENV PG_MAJOR 9.3
@@ -98,7 +101,7 @@ The Dockerfile you'd really want would be the following:
     
     RUN mkdir -p /var/run/postgresql && chown -R postgres /var/run/postgresql
     
-    ENV PATH /usr/lib/postgresql/{}$PG_MAJOR/bin:$PATH
+    ENV PATH /usr/lib/postgresql/${PG_MAJOR}/bin:$PATH
     ENV PGDATA /var/lib/postgresql/data
     VOLUME /var/lib/postgresql/data
     
@@ -130,9 +133,11 @@ https://github.com/rydnr/set-square-phusion-images.
 
 # Documentation
 
-*set-square* is a [https://github.com/rydnr/dry-wit](dry-wit)-based Bash script.
-It should be self-explanatory and easy to read (and customize or extend).
+*set-square* is a [dry-wit](https://github.com/rydnr/dry-wit)-based Bash script.
+It should be self-explanatory and easy to read (and customize or extend),
+once you learn the basics. For a brief introduction to dry-wit, you can
+review this 10-minute [slides](https://github.com/rydnr/dry-wit/raw/master/docs/overview.pdf).
 
-It the [https://github.com/rydnr/set-square/docs/](docs) folder there're some
+In the [docs](https://github.com/rydnr/set-square/docs/) folder there're some
 slides describing both the tool and the motivation behind the
-[https://github.com/rydnr/set-square-phusion-images](images) implemented using *set-square*.
+[images](https://github.com/rydnr/set-square-phusion-images) implemented using *set-square*.
