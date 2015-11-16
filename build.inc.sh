@@ -36,3 +36,20 @@ defineEnvVar MONIT_HTTP_PASSWORD \
 defineEnvVar MONIT_HTTP_TIMEOUT \
              "The timeout before alerting that monit's own http interface is down" \
              "15 seconds";
+defineEnvVar INCLUDES_FOLDER \
+             "The folder where 'include' files are located" \
+             "./.templates";
+defineEnvVar COPYRIGHT_PREAMBLE_FILE \
+             "The file with the copyright preamble" \
+             'copyright-preamble.default.txt';
+defineEnvVar LICENSE_FILE \
+             "The file with the license details" \
+             'LICENSE.gpl3';
+defineEnvVar ENABLE_SSH "Whether to enable SSH by default" "false";
+defineEnvVar ENABLE_MONIT "Whether to enable Monit" "true";
+defineEnvVar ENABLE_SYSLOG "Whether to enable syslog" "true";
+defineEnvVar ENABLE_CRON "Whether to enable cron" "true";
+defineEnvVar ENABLE_RSNAPSHOT "Whether to enable rsnapshot" "true";
+defineEnvVar ENABLE_LOGSTASH \
+             "Whether to enable logstash, if available for the specific image" \
+             "true";

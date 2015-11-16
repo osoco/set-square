@@ -54,6 +54,8 @@ function defineErrors() {
   export NO_REPOSITORIES_FOUND="no repositories found";
   export REPO_IS_NOT_STACKED="Repository is not stacked (it should end with -stack)";
   export INVALID_URL="Invalid command";
+  export CANNOT_PROCESS_TEMPLATE="Cannot process template";
+  export INCLUDED_FILE_NOT_FOUND="The included file is missing";
   export ERROR_BUILDING_REPO="Error building repository";
   export ERROR_TAGGING_IMAGE="Error tagging image";
   export ERROR_PUSHING_IMAGE="Error pushing image to ${REGISTRY}";
@@ -72,6 +74,8 @@ function defineErrors() {
     NO_REPOSITORIES_FOUND \
     REPO_IS_NOT_STACKED \
     INVALID_URL \
+    CANNOT_PROCESS_TEMPLATE \
+    INCLUDED_FILE_NOT_FOUND \
     ERROR_BUILDING_REPO \
     ERROR_TAGGING_IMAGE \
     ERROR_PUSHING_IMAGE \
@@ -278,6 +282,153 @@ function reduce_image_size() {
   fi
 }
 
+## Processes given file.
+## -> 1: the input file.
+## -> 2: the output file.
+## -> 3: the repo folder.
+## -> 4: the templates folder.
+## <- 0: if the file is processed correctly; 1 otherwise.
+## Example:
+##  if process_file "my.template" "my" "my-image-folder" ".templates"; then
+##    echo "File processed successfully";
+##  fi
+function process_file() {
+  local _file="${1}";
+  local _output="${2}";
+  local _repoFolder="${3}";
+  local _templateFolder="${4}";
+  local _rescode=1;
+  createTempFile;
+  local _temp1="${RESULT}";
+  logDebug -n "Resolving @include()s in ${_file}";
+  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}"; then
+    logDebugResult SUCCESS "done";
+    logDebug -n "Resolving placeholders in ${_file}";
+    if process_placeholders "${_temp1}" "${_output}"; then
+      _rescode=0;
+      logDebugResult SUCCESS "done";
+    else
+      _rescode=1;
+      logDebugResult FAILURE "failed";
+    fi
+  else
+    _rescode=1;
+    logDebugResult FAILURE "failed";
+  fi
+  return ${_rescode};
+}
+
+## Resolves given included file.
+## -> 1: The file name.
+## -> 2: The templates folder.
+## -> 3: The repository's own folder.
+## <- 0: if the file is found; 1 otherwise.
+## Example:
+##   if ! resolve_included_file "footer" "my-image-folder" ".templates"; then
+##     echo "'footer' not found";
+##   fi
+function resolve_included_file() {
+  local _file="${1}";
+  local _repoFolder="${2}";
+  local _templatesFolder="${3}";
+  local _result;
+  local _rescode=1;
+  for d in "${_repoFolder}" "." "${_templatesFolder}"; do
+    echo "Checking ${d}/${_file}" >> /tmp/log.txt;
+    if    [[ -e "${d}/${_file}" ]] \
+       || [[ -e "${d}/$(basename ${_file} .template).template" ]]; then
+      echo "${d}/${_file} found!" >> /tmp/log.txt;
+      _result="${d}/${_file}";
+      export RESULT="${_result}";
+      _rescode=0;
+      break;
+    fi
+  done
+  echo "${_file} resolved -> ${_rescode}" >> /tmp/log.txt;
+  return ${_rescode};
+}
+
+## Resolves any @include in given file.
+## -> 1: the input file.
+## -> 2: the output file.
+## -> 4: the repository folder.
+## -> 3: the templates folder.
+## <- 0: if the @include()s are resolved successfully; 1 otherwise.
+## Example:
+##  resolve_includes "my.template" "my" "my-image-folder" ".templates"
+function resolve_includes() {
+  local _input="${1}";
+  local _output="${2}";
+  local _repoFolder="${3}";
+  local _templateFolder="${4}";
+  local _rescode;
+  local _match;
+  local _includedFile;
+
+  echo '' > "${_output}";
+
+  while IFS='' read -r line; do
+    _match=1;
+    _includedFile="";
+    if    [[ "${line#@include(\"}" != "$line" ]] \
+       && [[ "${line%\")}" != "$line" ]]; then
+      _ref="$(echo "$line" | sed 's/@include(\"\(.*\)\")/\1/g')";
+      if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
+        _includedFile="${RESULT}";
+        if [ -e "${_includedFile}.template" ]; then
+          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}"; then
+            _match=0;
+          else
+            _match=1;
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}";
+          fi
+        else
+          _match=0;
+        fi
+      else
+        _match=1;
+        _errorRef="${_ref}";
+      fi
+    fi
+    if [[ ${_match} -eq 0 ]]; then
+      cat "${_includedFile}" >> "${_output}";
+    else
+      echo "$line" >> "${_output}";
+    fi
+  done < "${_input}";
+  _rescode=$?;
+  if [ "${_errorRef}" != "" ]; then
+    logDebugResult FAILURE "failed";
+    exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
+  fi
+  return ${_rescode};
+}
+
+## Processes placeholders in given file.
+## -> 1: the input file.
+## -> 2: the output file.
+## <- 0 if the file was processed successfully; 1 otherwise.
+## Example:
+##  if process_placeholders my.template" "my"; then
+##    echo "my.template -> my";
+##  fi
+function process_placeholders() {
+  local _file="${1}";
+  local _output="${2}";
+  local _rescode;
+  local _env="$( \
+    for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
+      echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
+    done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
+
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+
+  echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
+  _rescode=$?;
+  return ${_rescode};
+}
+
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -304,19 +455,12 @@ function build_repo() {
   fi
   retrieve_stack_suffix "${STACK}";
   _stackSuffix="${RESULT}";
-  local _env="$( \
-      for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do
-        echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-      done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
-
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
-      echo "${_env} \
-        envsubst \
-          ${_envsubstDecl} \
-      < ${f} > ${_repo}/$(basename ${f} .template)" | sh;
+      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}"; then
+        exitWithErrorCode  CANNOT_PROCESS_TEMPLATE "${f}";
+      fi
     done
   fi
 
