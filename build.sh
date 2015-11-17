@@ -8,7 +8,7 @@ $SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-p|--registry] [-r|--reduce-image]
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
- 
+
 Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.
 
 Where:
@@ -311,9 +311,6 @@ function process_file() {
       _rescode=1;
       logDebugResult FAILURE "failed";
     fi
-  else
-    _rescode=1;
-    logDebugResult FAILURE "failed";
   fi
   return ${_rescode};
 }
@@ -358,6 +355,7 @@ function resolve_included_file() {
 ## Resolves any @include in given file.
 ## -> 1: the input file.
 ## -> 2: the output file.
+## -> 3: the templates folder.
 ## -> 4: the repository folder.
 ## -> 3: the templates folder.
 ## <- 0: if the @include()s are resolved successfully; 1 otherwise.
@@ -412,6 +410,12 @@ function resolve_includes() {
   if [ "${_errorRef}" != "" ]; then
     logDebugResult FAILURE "failed";
     exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
+  else
+    if [ ${_rescode} -eq 0 ]; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+    fi
   fi
   return ${_rescode};
 }
