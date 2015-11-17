@@ -344,6 +344,13 @@ function resolve_included_file() {
       break;
     fi
   done
+  if isFalse ${_rescode}; then
+    eval "echo ${_file}" > /dev/null 2>&1;
+    if isTrue $?; then
+      resolve_included_file "$(eval "echo ${_file}")" "${_repoFolder}" "${_templatesFolder}";
+      _rescode=$?;
+    fi
+  fi
   echo "${_file} resolved -> ${_rescode}" >> /tmp/log.txt;
   return ${_rescode};
 }
@@ -389,6 +396,10 @@ function resolve_includes() {
       else
         _match=1;
         _errorRef="${_ref}";
+        eval "echo ${_ref}" > /dev/null 2>&1;
+        if [ $? -eq 0 ]; then
+          _errorRef="${_input} contains ${_ref} with evaluates to $(eval "echo ${_ref}" 2> /dev/null), and it's not found in any of the expected paths: ${_repoFolder}, ${_templateFolder}";
+        fi
       fi
     fi
     if [[ ${_match} -eq 0 ]]; then
