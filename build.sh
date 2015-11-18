@@ -300,9 +300,7 @@ function process_file() {
   local _rescode=1;
   createTempFile;
   local _temp1="${RESULT}";
-  logDebug -n "Resolving @include()s in ${_file}";
   if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}"; then
-    logDebugResult SUCCESS "done";
     logDebug -n "Resolving placeholders in ${_file}";
     if process_placeholders "${_temp1}" "${_output}"; then
       _rescode=0;
@@ -370,7 +368,9 @@ function resolve_includes() {
   local _match;
   local _includedFile;
 
-  echo '' > "${_output}";
+  logDebug -n "Resolving @include()s in ${_input}";
+
+  echo -n '' > "${_output}";
 
   while IFS='' read -r line; do
     _match=1;
@@ -481,7 +481,7 @@ function build_repo() {
 
   logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
 #  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
-  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "$(which docker) build ${BUILD_OPTS} -e TERM="${TERM}" -e TERMCAP="${TERMCAP}" -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then

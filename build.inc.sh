@@ -13,8 +13,8 @@ defineEnvVar REGISTRY "The registry to push Docker images to" "tutum.co";
 defineEnvVar REGISTRY_NAMESPACE "The namespace under the registry where the image is to be uploaded" '${NAMESPACE}';
 defineEnvVar JAVA_VERSION "The Java version" "8";
 defineEnvVar APTGET_INSTALL \
-             "Install a program via apt-get" \
-             '/usr/local/bin/aptget-install.sh -v ';
+             "Installs a program via apt-get" \
+             '/usr/local/bin/aptget-install.sh -vv ';
 defineEnvVar APTGET_CLEANUP \
              "The cleanup commands after an apt-get so that the resulting image size is optimal" \
              '/usr/local/bin/aptget-cleanup.sh -v ';
