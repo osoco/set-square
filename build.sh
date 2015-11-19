@@ -444,6 +444,7 @@ function process_placeholders() {
   return ${_rescode};
 }
 
+## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -474,14 +475,14 @@ function build_repo() {
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
       if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}"; then
-        exitWithErrorCode  CANNOT_PROCESS_TEMPLATE "${f}";
+        exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
       fi
     done
   fi
 
   logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
 #  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "$(which docker) build ${BUILD_OPTS} -e TERM="${TERM}" -e TERMCAP="${TERMCAP}" -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
+  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
@@ -662,7 +663,7 @@ function cleanup_containers() {
   #  _count=$((_count-1));
   if [ ${_count} -gt 0 ]; then
     logInfo -n "Cleaning up ${_count} stale container(s)";
-    ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm {} > /dev/null;
+    ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "done";
     else
