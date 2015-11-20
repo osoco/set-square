@@ -717,9 +717,9 @@ function main() {
 
       build_repo "${_repo}" "${TAG}" "${_stack}"
 
-      if registry_push_enabled; then
-        registry_push "${_repo}" "${TAG}" "${_stack}"
-      fi
+    fi
+    if registry_push_enabled; then
+      registry_push "${_repo}" "${TAG}" "${_stack}"
     fi
   done
   cleanup_containers;
