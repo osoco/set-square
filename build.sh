@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-p|--registry] [-r|--reduce-image] [repo]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [repo]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -15,6 +15,7 @@ Where:
   * repo: the repository to build (a folder with a Dockerfile template).
   * tag: the tag to use once the image is built successfully.
   * force: whether to build the image even if it's already built.
+  * overwrite-latest: whether to overwrite the "latest" tag with the new one (default: false).
   * registry: optionally, the registry to push the image to.
   * reduce-image: whether to reduce the size of the resulting image.
   * stack-name: for stack images, the stack name (mandatory if the repository name ends with -stack).
@@ -102,16 +103,20 @@ function parseInput() {
          ;;
       -t | --tag)
          shift;
-	 export TAG="${1}";
+	       export TAG="${1}";
          shift;
-	 ;;
+	       ;;
       -p | --registry)
          shift;
-	 export REGISTRY_PUSH=0;
-	 ;;
+	       export REGISTRY_PUSH=0;
+	       ;;
       -f | --force)
           shift;
           export FORCE_MODE=0;
+          ;;
+      -o | --overwrite-latest)
+          shift;
+          export OVERWRITE_LATEST=0;
           ;;
       -r | --reduce-image)
           shift;
@@ -158,8 +163,10 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -t | --tag | -p | --registry | -f | --force | -r | --reduce-image | -s | --stack)
-	 ;;
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -o | --overwrite-latest)
+        ;;
+      -t | --tag | -p | --registry | -f | --force | -r | --reduce-image | -s | --stack)
+	      ;;
       *) logDebugResult FAILURE "fail";
          exitWithErrorCode INVALID_OPTION ${_flag};
          ;;
@@ -225,7 +232,7 @@ function repo_exists() {
 
 ## Returns the suffix to use should the image is part of
 ## a stack, and leaving it empty if not.
-## -> 1: stack (optional)
+## -> 1: stack (optional).
 ## <- RESULT: "_${stack}" if stack is not empty, the empty string otherwise.
 ## Example:
 ##   retrieve_stack_suffix "examplecom"
@@ -300,20 +307,20 @@ function process_file() {
   local _rescode=1;
   createTempFile;
   local _temp1="${RESULT}";
-  logDebug -n "Resolving @include()s in ${_file}";
+  logTrace -n "Resolving @include()s in ${_file}";
   if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}"; then
-    logDebugResult SUCCESS "done";
-    logDebug -n "Resolving placeholders in ${_file}";
+    logTraceResult SUCCESS "done";
+    logTrace -n "Resolving placeholders in ${_file}";
     if process_placeholders "${_temp1}" "${_output}"; then
       _rescode=0;
-      logDebugResult SUCCESS "done";
+      logTraceResult SUCCESS "done";
     else
       _rescode=1;
-      logDebugResult FAILURE "failed";
+      logTraceResult FAILURE "failed";
     fi
   else
     _rescode=1;
-    logDebugResult FAILURE "failed";
+    logTraceResult FAILURE "failed";
   fi
   return ${_rescode};
 }
@@ -440,6 +447,18 @@ function process_placeholders() {
   return ${_rescode};
 }
 
+## Updates the log category to include the current image.
+## -> 1: the image.
+## Example:
+##   update_log_category "mysql"
+function update_log_category() {
+  local _image="${1}";
+  local _logCategory;
+  getLogCategory;
+  _logCategory="${RESULT%/*}/${_image}";
+  setLogCategory "${_logCategory}";
+}
+
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -464,6 +483,7 @@ function build_repo() {
   else
     _rootImage="${ROOT_IMAGE_64BIT}:${ROOT_IMAGE_VERSION}";
   fi
+  update_log_category "${_repo}";
   retrieve_stack_suffix "${STACK}";
   _stackSuffix="${RESULT}";
 
@@ -490,13 +510,15 @@ function build_repo() {
   if reduce_image_enabled; then
     reduce_image_size "${NAMESPACE}" "${_repo%%-stack}${_stack}" "${_tag}" "${_canonicalTag}";
   fi
-  logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}"
-  docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-  if [ $? -eq 0 ]; then
-    logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
-  else
-    logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo%%-stack}${_stack}";
+  if overwrite_latest_enabled; then
+    logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag} as ${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
+    docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
+    if [ $? -eq 0 ]; then
+      logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
+    else
+      logInfoResult FAILURE "failed"
+      exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo%%-stack}${_stack}";
+    fi
   fi
 }
 
@@ -512,9 +534,10 @@ function registry_push() {
   local _stack="${3}";
   local _stackSuffix;
   local _pushResult;
+  update_log_category "${_repo}";
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
-  logInfo -n "Tagging image for uploading to ${REGISTRY}";
+  logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} for uploading to ${REGISTRY}";
   docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
@@ -522,10 +545,10 @@ function registry_push() {
     logInfoResult FAILURE "failed"
     exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
   fi
-  logInfo "Pushing image to ${REGISTRY}";
+  logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
   docker push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   _pushResult=$?;
-  logInfo -n "Pushing image to ${REGISTRY}";
+  logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
   if [ ${_pushResult} -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
@@ -629,6 +652,13 @@ function force_mode_enabled() {
   _flagEnabled FORCE_MODE;
 }
 
+## Checks whether the -o flag is enabled
+## Example:
+##   if overwrite_latest_enabled; then [..]; fi
+function overwrite_latest_enabled() {
+  _flagEnabled OVERWRITE_LATEST;
+}
+
 ## Checks whether the -p flag is enabled
 ## Example:
 ##   if registry_push_enabled; then [..]; fi
@@ -700,7 +730,7 @@ function main() {
     elif ! repo_exists "${_repo}" "${TAG}" "${_stack}"; then
       _buildRepo=0;
     else
-      logInfo -n "Not building ${_repo} since it's already built";
+      logInfo -n "Not building ${NAMESPACE}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
     if [ ${_buildRepo} -eq 0 ]; then
@@ -711,9 +741,11 @@ function main() {
       done
 
       build_repo "${_repo}" "${TAG}" "${_stack}"
-
-      if registry_push_enabled; then
-        registry_push "${_repo}" "${TAG}" "${_stack}"
+    fi
+    if registry_push_enabled; then
+      registry_push "${_repo}" "${TAG}" "${_stack}"
+      if overwrite_latest_enabled; then
+        registry_push "${_repo}" "latest" "${_stack}"
       fi
     fi
   done
