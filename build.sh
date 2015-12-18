@@ -8,7 +8,7 @@ $SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--regis
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
- 
+
 Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.
 
 Where:
@@ -365,6 +365,7 @@ function resolve_included_file() {
 ## Resolves any @include in given file.
 ## -> 1: the input file.
 ## -> 2: the output file.
+## -> 3: the templates folder.
 ## -> 4: the repository folder.
 ## -> 3: the templates folder.
 ## <- 0: if the @include()s are resolved successfully; 1 otherwise.
@@ -379,7 +380,9 @@ function resolve_includes() {
   local _match;
   local _includedFile;
 
-  echo '' > "${_output}";
+  logDebug -n "Resolving @include()s in ${_input}";
+
+  echo -n '' > "${_output}";
 
   while IFS='' read -r line; do
     _match=1;
@@ -419,6 +422,12 @@ function resolve_includes() {
   if [ "${_errorRef}" != "" ]; then
     logDebugResult FAILURE "failed";
     exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
+  else
+    if [ ${_rescode} -eq 0 ]; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+    fi
   fi
   return ${_rescode};
 }
@@ -459,6 +468,7 @@ function update_log_category() {
   setLogCategory "${_logCategory}";
 }
 
+## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -490,14 +500,14 @@ function build_repo() {
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
       if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}"; then
-        exitWithErrorCode  CANNOT_PROCESS_TEMPLATE "${f}";
+        exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
       fi
     done
   fi
 
   logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
 #  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
-  docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
@@ -688,7 +698,7 @@ function cleanup_containers() {
   #  _count=$((_count-1));
   if [ ${_count} -gt 0 ]; then
     logInfo -n "Cleaning up ${_count} stale container(s)";
-    ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm {} > /dev/null;
+    ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "done";
     else
