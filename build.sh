@@ -61,6 +61,10 @@ function defineErrors() {
   export ERROR_TAGGING_IMAGE="Error tagging image";
   export ERROR_PUSHING_IMAGE="Error pushing image to ${REGISTRY}";
   export ERROR_REDUCING_IMAGE="Error reducing the image size";
+  export CANNOT_COPY_LICENSE_FILE="Cannot copy the license file ${LICENSE_FILE}";
+  export LICENSE_FILE_DOES_NOT_EXIST="The specified license ${LICENSE_FILE} does not exist";
+  export CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE="Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
+  export COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST="The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 
   ERROR_MESSAGES=(\
     INVALID_OPTION \
@@ -81,6 +85,10 @@ function defineErrors() {
     ERROR_TAGGING_IMAGE \
     ERROR_PUSHING_IMAGE \
     ERROR_REDUCING_IMAGE \
+    CANNOT_COPY_LICENSE_FILE \
+    LICENSE_FILE_DOES_NOT_EXIST \
+    CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE \
+    COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST \
   );
 
   export ERROR_MESSAGES;
@@ -294,6 +302,11 @@ function reduce_image_size() {
 ## -> 2: the output file.
 ## -> 3: the repo folder.
 ## -> 4: the templates folder.
+## -> 5: the image.
+## -> 6: the root image.
+## -> 7: the namespace.
+## -> 8: the tag.
+## -> 9: the stack suffix.
 ## <- 0: if the file is processed correctly; 1 otherwise.
 ## Example:
 ##  if process_file "my.template" "my" "my-image-folder" ".templates"; then
@@ -304,14 +317,17 @@ function process_file() {
   local _output="${2}";
   local _repoFolder="${3}";
   local _templateFolder="${4}";
+  local _repo="${5}";
+  local _rootImage="${6}";
+  local _namespace="${7}";
+  local _tag="${8}";
+  local _stackSuffix="${9}";
   local _rescode=1;
   createTempFile;
   local _temp1="${RESULT}";
-  logTrace -n "Resolving @include()s in ${_file}";
-  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}"; then
-    logTraceResult SUCCESS "done";
+  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
     logTrace -n "Resolving placeholders in ${_file}";
-    if process_placeholders "${_temp1}" "${_output}"; then
+    if process_placeholders "${_temp1}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
       _rescode=0;
       logTraceResult SUCCESS "done";
     else
@@ -320,7 +336,6 @@ function process_file() {
     fi
   else
     _rescode=1;
-    logTraceResult FAILURE "failed";
   fi
   return ${_rescode};
 }
@@ -367,20 +382,29 @@ function resolve_included_file() {
 ## -> 2: the output file.
 ## -> 3: the templates folder.
 ## -> 4: the repository folder.
-## -> 3: the templates folder.
+## -> 5: the image.
+## -> 6: the root image.
+## -> 7: the namespace.
+## -> 8: the tag.
+## -> 9: the stack suffix.
 ## <- 0: if the @include()s are resolved successfully; 1 otherwise.
 ## Example:
-##  resolve_includes "my.template" "my" "my-image-folder" ".templates"
+##  resolve_includes "my.template" "my" "my-image-folder" ".templates" "myImage" "myRoot" "example" "latest" ""
 function resolve_includes() {
   local _input="${1}";
   local _output="${2}";
   local _repoFolder="${3}";
   local _templateFolder="${4}";
+  local _repo="${5}";
+  local _rootImage="${6}";
+  local _namespace="${7}";
+  local _tag="${8}";
+  local _stackSuffix="${9}";
   local _rescode;
   local _match;
   local _includedFile;
 
-  logDebug -n "Resolving @include()s in ${_input}";
+  logTrace -n "Resolving @include()s in ${_input}";
 
   echo -n '' > "${_output}";
 
@@ -393,11 +417,11 @@ function resolve_includes() {
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
         _includedFile="${RESULT}";
         if [ -e "${_includedFile}.template" ]; then
-          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}"; then
+            if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
             _match=0;
           else
             _match=1;
-            logDebugResult FAILURE "failed";
+            logTraceResult FAILURE "failed";
             exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}";
           fi
         else
@@ -420,13 +444,13 @@ function resolve_includes() {
   done < "${_input}";
   _rescode=$?;
   if [ "${_errorRef}" != "" ]; then
-    logDebugResult FAILURE "failed";
+    logTraceResult FAILURE "failed";
     exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
   else
     if [ ${_rescode} -eq 0 ]; then
-      logDebugResult SUCCESS "done";
+      logTraceResult SUCCESS "done";
     else
-      logDebugResult FAILURE "failed";
+      logTraceResult FAILURE "failed";
     fi
   fi
   return ${_rescode};
@@ -435,21 +459,31 @@ function resolve_includes() {
 ## Processes placeholders in given file.
 ## -> 1: the input file.
 ## -> 2: the output file.
+## -> 3: the image.
+## -> 4: the root image.
+## -> 5: the namespace.
+## -> 6: the tag.
+## -> 7: the stack suffix.
 ## <- 0 if the file was processed successfully; 1 otherwise.
 ## Example:
-##  if process_placeholders my.template" "my"; then
+##  if process_placeholders my.template" "my" "myImage" "root" "example" "latest" ""; then
 ##    echo "my.template -> my";
 ##  fi
 function process_placeholders() {
   local _file="${1}";
   local _output="${2}";
+  local _repo="${3}";
+  local _rootImage="${4}";
+  local _namespace="${5}";
+  local _tag="${6}";
+  local _stackSuffix="${7}";
   local _rescode;
   local _env="$( \
     for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
       echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-    done;) TAG=\"${_canonicalTag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" DOLLAR='$' ";
+    done;) TAG=\"${_tag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" NAMESPACE=\"${_namespace}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{NAMESPACE} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
   _rescode=$?;
@@ -466,6 +500,52 @@ function update_log_category() {
   getLogCategory;
   _logCategory="${RESULT%/*}/${_image}";
   setLogCategory "${_logCategory}";
+}
+
+## PUBLIC
+## Copies the license file from specified folder to the repository folder.
+## -> 1: the repository.
+## -> 2: the folder where the license file is included.
+## Example:
+##   copy_license_file "myImage" ${PWD}
+function copy_license_file() {
+  local _repo="${1}";
+  local _folder="${2}";
+  if [ -e "${_folder}/${LICENSE_FILE}" ]; then
+    logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
+    cp "${_folder}/${LICENSE_FILE}" "${_repo}";
+    if [ $? -eq 0 ]; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+      exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
+    fi
+  else
+    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}";
+  fi
+}
+
+## PUBLIC
+## Copies the copyright-preamble file from specified folder to the repository folder.
+## -> 1: the repository.
+## -> 2: the folder where the copyright preamble file is included.
+## Example:
+##   copy_copyright_preamble_file "myImage" ${PWD}
+function copy_copyright_preamble_file() {
+  local _repo="${1}";
+  local _folder="${2}";
+  if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+      logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
+      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}";
+      if [ $? -eq 0 ]; then
+          logDebugResult SUCCESS "done";
+      else
+        logDebugResult FAILURE "failed";
+        exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
+      fi
+  else
+    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}";
+  fi
 }
 
 ## PUBLIC
@@ -488,6 +568,7 @@ function build_repo() {
   local _stackSuffix;
   local _cmdResult;
   local _rootImage=;
+
   if is_32bit; then
     _rootImage="${ROOT_IMAGE_32BIT}:${ROOT_IMAGE_VERSION}";
   else
@@ -497,9 +578,12 @@ function build_repo() {
   retrieve_stack_suffix "${STACK}";
   _stackSuffix="${RESULT}";
 
+  copy_license_file "${_repo}" "${PWD}";
+  copy_copyright_preamble_file "${_repo}" "${PWD}";
+
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
-      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}"; then
+      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_stackSuffix}"; then
         exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
       fi
     done
@@ -647,7 +731,7 @@ function loadRepoEnvironmentVariables() {
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
              "./${_repo}/build-settings.sh" \
              "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
-             "${_repo}/.build-settings.sh"; do
+             "./${_repo}/.build-settings.sh"; do
       if [ -e "${f}" ]; then
         source "${f}";
       fi

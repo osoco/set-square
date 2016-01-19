@@ -24,6 +24,9 @@ defineEnvVar SMTP_HOST \
 defineEnvVar BACKUP_HOST \
              "The backup host to send the backup files" \
              "backup.example.com";
+defineEnvVar LDAP_HOST \
+             "The LDAP host to authorize and/or authenticate users" \
+             "ldap.example.com";
 defineEnvVar MONIT_HTTP_PORT \
              "The port used by Monit's webapp" \
              "2812";
@@ -41,10 +44,10 @@ defineEnvVar INCLUDES_FOLDER \
              "./.templates";
 defineEnvVar COPYRIGHT_PREAMBLE_FILE \
              "The file with the copyright preamble" \
-             'copyright-preamble.default.txt';
+             'copyright-preamble.txt';
 defineEnvVar LICENSE_FILE \
              "The file with the license details" \
-             'LICENSE.gpl3';
+             'LICENSE';
 defineEnvVar ENABLE_SSH "Whether to enable SSH by default" "false";
 defineEnvVar ENABLE_MONIT "Whether to enable Monit" "true";
 defineEnvVar ENABLE_SYSLOG "Whether to enable syslog" "true";
