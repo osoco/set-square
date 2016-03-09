@@ -32,7 +32,7 @@ DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
 # Requirements
 function checkRequirements() {
-  checkReq ${DOCKER} DOCKER_NOT_INSTALLED;
+  checkReq docker DOCKER_NOT_INSTALLED;
   checkReq date DATE_NOT_INSTALLED;
   checkReq realpath REALPATH_NOT_INSTALLED;
   checkReq envsubst ENVSUBST_NOT_INSTALLED;
@@ -521,7 +521,7 @@ function copy_license_file() {
       exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
     fi
   else
-    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}";
+    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
   fi
 }
 
@@ -544,7 +544,7 @@ function copy_copyright_preamble_file() {
         exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
       fi
   else
-    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}";
+    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
   fi
 }
 
