@@ -325,11 +325,21 @@ function process_file() {
   local _rescode=1;
   createTempFile;
   local _temp1="${RESULT}";
+  createTempFile;
+  local _temp2="${RESULT}";
+
   if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
-    logTrace -n "Resolving placeholders in ${_file}";
-    if process_placeholders "${_temp1}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
-      _rescode=0;
+    logTrace -n "Resolving @include_env in ${_file}";
+    if resolve_include_env "${_temp1}" "${_temp2}"; then
       logTraceResult SUCCESS "done";
+      logTrace -n "Resolving placeholders in ${_file}";
+      if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
+        _rescode=0;
+        logTraceResult SUCCESS "done"
+      else
+        _rescode=1;
+        logTraceResult FAILURE "failed";
+      fi
     else
       _rescode=1;
       logTraceResult FAILURE "failed";
@@ -403,6 +413,7 @@ function resolve_includes() {
   local _rescode;
   local _match;
   local _includedFile;
+  local line;
 
   logTrace -n "Resolving @include()s in ${_input}";
 
@@ -417,7 +428,7 @@ function resolve_includes() {
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
         _includedFile="${RESULT}";
         if [ -e "${_includedFile}.template" ]; then
-            if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
+          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
             _match=0;
           else
             _match=1;
@@ -487,6 +498,55 @@ function process_placeholders() {
 
   echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
   _rescode=$?;
+  return ${_rescode};
+}
+
+## Resolves any @include_env in given file.
+## -> 1: the input file.
+## -> 2: the output file.
+## <- 0: if the @include_env is resolved successfully; 1 otherwise.
+## Example:
+##  resolve_include_env "my.template" "my"
+function resolve_include_env() {
+  local _input="${1}";
+  local _output="${2}";
+  local _includedFile;
+  local _rescode;
+  local _envVar;
+  local line;
+
+  logTrace -n "Resolving @include_env in ${_input}";
+
+  echo -n '' > "${_output}";
+
+  while IFS='' read -r line; do
+    _includedFile="";
+    if [[ "${line#@include_env}" != "$line" ]]; then
+      echo -n "ENV " >> "${_output}";
+      for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
+        _envVar="${ENV_VARIABLES[$i]}";
+        if [ "${_envVar#ENABLE_}" == "${_envVar}" ]; then
+          if [ $i -ne 0 ]; then
+            echo >> "${_output}";
+            echo -n "    " >> "${_output}";
+          fi
+          echo "${_envVar}" | awk -v dollar="$" -v quote="\"" '{printf("echo -n \"SQ_%s=\\\"%s%s{%s}%s\\\"\"", $0, quote, dollar, $0, quote);}' | sh >> "${_output}"
+          if [ $i -lt $((${#ENV_VARIABLES[@]} - 1)) ]; then
+            echo -n " \\" >> "${_output}";
+          fi
+        fi
+      done
+      echo >> "${_output}";
+    elif [[ "${line# +}" == "${line}" ]]; then
+      echo "$line" >> "${_output}";
+    fi
+  done < "${_input}";
+  _rescode=$?;
+  if [ ${_rescode} -eq 0 ]; then
+    logTraceResult SUCCESS "done";
+  else
+    logTraceResult FAILURE "failed";
+  fi
   return ${_rescode};
 }
 
