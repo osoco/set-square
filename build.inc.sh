@@ -39,6 +39,9 @@ defineEnvVar MONIT_HTTP_PASSWORD \
 defineEnvVar MONIT_HTTP_TIMEOUT \
              "The timeout before alerting that monit's own http interface is down" \
              "15 seconds";
+defineEnvVar MONIT_ALERT_EMAIL \
+             "The email address to send alerts to" \
+             '${AUTHOR_EMAIL}';
 defineEnvVar INCLUDES_FOLDER \
              "The folder where 'include' files are located" \
              "./.templates";
