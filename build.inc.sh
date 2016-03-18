@@ -59,3 +59,4 @@ defineEnvVar ENABLE_RSNAPSHOT "Whether to enable rsnapshot" "true";
 defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "true";
+defineEnvVar BUILDER "The builder of the image" '${AUTHOR}';
