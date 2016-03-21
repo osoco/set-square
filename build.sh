@@ -307,6 +307,7 @@ function reduce_image_size() {
 ## -> 7: the namespace.
 ## -> 8: the tag.
 ## -> 9: the stack suffix.
+## -> 10: the backup host's SSH port (optional).
 ## <- 0: if the file is processed correctly; 1 otherwise.
 ## Example:
 ##  if process_file "my.template" "my" "my-image-folder" ".templates"; then
@@ -322,18 +323,19 @@ function process_file() {
   local _namespace="${7}";
   local _tag="${8}";
   local _stackSuffix="${9}";
+  local _backupHostSshPort="${10:-22}";
   local _rescode=1;
   createTempFile;
   local _temp1="${RESULT}";
   createTempFile;
   local _temp2="${RESULT}";
 
-  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
+  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
     logTrace -n "Resolving @include_env in ${_file}";
-    if resolve_include_env "${_temp1}" "${_temp2}"; then
+    if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
       logTraceResult SUCCESS "done";
       logTrace -n "Resolving placeholders in ${_file}";
-      if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
+      if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
         _rescode=0;
         logTraceResult SUCCESS "done"
       else
@@ -397,9 +399,10 @@ function resolve_included_file() {
 ## -> 7: the namespace.
 ## -> 8: the tag.
 ## -> 9: the stack suffix.
+## -> 10: the backup host's SSH port for this image (optional).
 ## <- 0: if the @include()s are resolved successfully; 1 otherwise.
 ## Example:
-##  resolve_includes "my.template" "my" "my-image-folder" ".templates" "myImage" "myRoot" "example" "latest" ""
+##  resolve_includes "my.template" "my" "my-image-folder" ".templates" "myImage" "myRoot" "example" "latest" "" "22"
 function resolve_includes() {
   local _input="${1}";
   local _output="${2}";
@@ -410,6 +413,7 @@ function resolve_includes() {
   local _namespace="${7}";
   local _tag="${8}";
   local _stackSuffix="${9}";
+  local _backupHostSshPort="${10:-22}";
   local _rescode;
   local _match;
   local _includedFile;
@@ -428,7 +432,7 @@ function resolve_includes() {
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
         _includedFile="${RESULT}";
         if [ -e "${_includedFile}.template" ]; then
-          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}"; then
+          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
             _match=0;
           else
             _match=1;
@@ -475,9 +479,10 @@ function resolve_includes() {
 ## -> 5: the namespace.
 ## -> 6: the tag.
 ## -> 7: the stack suffix.
+## -> 8: the backup host's SSH port (optional).
 ## <- 0 if the file was processed successfully; 1 otherwise.
 ## Example:
-##  if process_placeholders my.template" "my" "myImage" "root" "example" "latest" ""; then
+##  if process_placeholders my.template" "my" "myImage" "root" "example" "latest" "" "2222"; then
 ##    echo "my.template -> my";
 ##  fi
 function process_placeholders() {
@@ -488,13 +493,14 @@ function process_placeholders() {
   local _namespace="${5}";
   local _tag="${6}";
   local _stackSuffix="${7}";
+  local _backupHostSshPort="${8:-22}";
   local _rescode;
   local _env="$( \
     for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
       echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-    done;) TAG=\"${_tag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" NAMESPACE=\"${_namespace}\" DOLLAR='$' ";
+    done;) TAG=\"${_tag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{NAMESPACE} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{NAMESPACE} $"; echo -n "{BACKUP_HOST_SSH_PORT} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
   _rescode=$?;
@@ -504,16 +510,45 @@ function process_placeholders() {
 ## Resolves any @include_env in given file.
 ## -> 1: the input file.
 ## -> 2: the output file.
+## -> 3: the image.
+## -> 4: the root image.
+## -> 5: the namespace.
+## -> 6: the tag.
+## -> 7: the stack suffix.
+## -> 8: the backup host's SSH port (optional).
 ## <- 0: if the @include_env is resolved successfully; 1 otherwise.
 ## Example:
 ##  resolve_include_env "my.template" "my"
 function resolve_include_env() {
   local _input="${1}";
   local _output="${2}";
+  export IMAGE="${3}";
+  export ROOT_IMAGE="${4}";
+  export NAMESPACE="${5}";
+  export TAG="${6}";
+  export STACK_SUFFIX="${7}";
+  export BACKUP_HOST_SSH_PORT="${8:-22}";
   local _includedFile;
   local _rescode;
   local _envVar;
   local line;
+  local -a _envVars=();
+  for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
+    _envVars[${i}]="${ENV_VARIABLES[${i}]}";
+  done
+  _envVars[${#_envVars[*]}]="IMAGE";
+  _envVars[${#_envVars[*]}]="TAG";
+  _envVars[${#_envVars[*]}]="DATE";
+  _envVars[${#_envVars[*]}]="TIME";
+  _envVars[${#_envVars[*]}]="MAINTAINER";
+  _envVars[${#_envVars[*]}]="AUTHOR";
+  _envVars[${#_envVars[*]}]="AUTHOR_EMAIL";
+  _envVars[${#_envVars[*]}]="STACK";
+  _envVars[${#_envVars[*]}]="ROOT_IMAGE";
+  _envVars[${#_envVars[*]}]="BASE_IMAGE";
+  _envVars[${#_envVars[*]}]="STACK_SUFFIX";
+  _envVars[${#_envVars[*]}]="NAMESPACE";
+  _envVars[${#_envVars[*]}]="BACKUP_HOST_SSH_PORT";
 
   logTrace -n "Resolving @include_env in ${_input}";
 
@@ -523,15 +558,15 @@ function resolve_include_env() {
     _includedFile="";
     if [[ "${line#@include_env}" != "$line" ]]; then
       echo -n "ENV " >> "${_output}";
-      for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
-        _envVar="${ENV_VARIABLES[$i]}";
+      for ((i = 0; i < ${#_envVars[*]}; i++)); do \
+        _envVar="${_envVars[$i]}";
         if [ "${_envVar#ENABLE_}" == "${_envVar}" ]; then
           if [ $i -ne 0 ]; then
             echo >> "${_output}";
             echo -n "    " >> "${_output}";
           fi
           echo "${_envVar}" | awk -v dollar="$" -v quote="\"" '{printf("echo -n \"SQ_%s=\\\"%s%s{%s}%s\\\"\"", $0, quote, dollar, $0, quote);}' | sh >> "${_output}"
-          if [ $i -lt $((${#ENV_VARIABLES[@]} - 1)) ]; then
+          if [ $i -lt $((${#_envVars[@]} - 1)) ]; then
             echo -n " \\" >> "${_output}";
           fi
         fi
@@ -609,6 +644,24 @@ function copy_copyright_preamble_file() {
 }
 
 ## PUBLIC
+## Resolves the BACKUP_HOST_SSH_PORT variable.
+## -> 1: the image.
+## <- RESULT: the value of such variable.
+## Example:
+##   retrieve_backup_host_ssh_port mariadb;
+##   export BACKUP_HOST_SSH_PORT="${RESULT}";f
+function retrieve_backup_host_ssh_port() {
+  local _repo="${1}";
+  local _result;
+  if [ -e "${SSHPORTS_FILE}" ]; then
+    _result="$(echo -n ''; (grep -e ${_repo} ${SSHPORTS_FILE} || echo ${_repo} 22) | awk '{print $2;}')";
+  else
+    _result="";
+  fi
+  export RESULT="${_result}";
+}
+
+## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -628,7 +681,8 @@ function build_repo() {
   local _stackSuffix;
   local _cmdResult;
   local _rootImage=;
-
+  retrieve_backup_host_ssh_port "${_repo}";
+  local _backupHostSshPort="${RESULT:-22}";
   if is_32bit; then
     _rootImage="${ROOT_IMAGE_32BIT}:${ROOT_IMAGE_VERSION}";
   else
@@ -643,7 +697,7 @@ function build_repo() {
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
-      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_stackSuffix}"; then
+      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
         exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
       fi
     done

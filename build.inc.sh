@@ -5,12 +5,17 @@ defineEnvVar DATE "The date format used to tag images" "$(date '+%Y%m')";
 defineEnvVar TIME "A timestamp" "$(date)";
 defineEnvVar ROOT_IMAGE_VERSION "The root image version" "0.9.18";
 defineEnvVar ROOT_IMAGE_64BIT "The default root image for 64 bits" "phusion/baseimage"
-defineEnvVar RANDOM_PASSWORD "A random password" "secret" 'head -c 20 /dev/urandom | sha1sum | cut -d' ' -f1';
+defineEnvVar RANDOM_PASSWORD \
+             "A random password" \
+             "secret" \
+             'head -c 20 /dev/urandom | sha1sum | cut -d' ' -f1';
 defineEnvVar ROOT_IMAGE_32BIT "The default root image for 32 bits" "${ROOT_IMAGE_64BIT_DEFAULT}32";
 defineEnvVar BASE_IMAGE_64BIT "The base image for 64 bits" '${NAMESPACE}/base';
 defineEnvVar BASE_IMAGE_32BIT "The base image for 32 bits" '${BASE_IMAGE_64BIT_DEFAULT%%64}32';
 defineEnvVar REGISTRY "The registry to push Docker images to" "tutum.co";
-defineEnvVar REGISTRY_NAMESPACE "The namespace under the registry where the image is to be uploaded" '${NAMESPACE}';
+defineEnvVar REGISTRY_NAMESPACE \
+             "The namespace under the registry where the image is to be uploaded" \
+             '${NAMESPACE}';
 defineEnvVar JAVA_VERSION "The Java version" "8";
 defineEnvVar APTGET_INSTALL \
              "Installs a program via apt-get" \
@@ -21,12 +26,19 @@ defineEnvVar APTGET_CLEANUP \
 defineEnvVar SMTP_HOST \
              "The SMTP host to send emails, including monit's" \
              "mail.example.com";
-defineEnvVar BACKUP_HOST \
-             "The backup host to send the backup files" \
-             "backup.example.com";
 defineEnvVar LDAP_HOST \
              "The LDAP host to authorize and/or authenticate users" \
              "ldap.example.com";
+defineEnvVar BACKUP_HOST_SUFFIX \
+             "The prefix of the backup host to send the backup files" \
+             "-backup.example.com";
+defineEnvVar SSHPORTS_FILE \
+             "The file with the SSH port mappings" \
+             "sshports.txt";
+defineEnvVar CUSTOM_BACKUP_SCRIPTS_FOLDER \
+             "The folder with the custom backup scripts" \
+             "/usr/local/bin";
+defineEnvVar CUSTOM_BACKUP_SCRIPTS_PREFIX "The prefix of all custom backup scripts" "backup-";
 defineEnvVar MONIT_HTTP_PORT \
              "The port used by Monit's webapp" \
              "2812";
