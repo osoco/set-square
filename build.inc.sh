@@ -1,5 +1,6 @@
 defineEnvVar AUTHOR "The author of the image(s) to build" "me";
-defineEnvVar AUTHOR_EMAIL "The author's email" "me@example.com";
+defineEnvVar DOMAIN "The domain" "example.com";
+defineEnvVar AUTHOR_EMAIL "The author's email" 'me@${DOMAIN}';
 defineEnvVar NAMESPACE "The docker registry's namespace" "example";
 defineEnvVar DATE "The date format used to tag images" "$(date '+%Y%m')";
 defineEnvVar TIME "A timestamp" "$(date)";
@@ -25,13 +26,13 @@ defineEnvVar APTGET_CLEANUP \
              '/usr/local/bin/aptget-cleanup.sh -v ';
 defineEnvVar SMTP_HOST \
              "The SMTP host to send emails, including monit's" \
-             "mail.example.com";
+             'mail.${DOMAIN}';
 defineEnvVar LDAP_HOST \
              "The LDAP host to authorize and/or authenticate users" \
-             "ldap.example.com";
+             'ldap.${DOMAIN}';
 defineEnvVar BACKUP_HOST_SUFFIX \
              "The prefix of the backup host to send the backup files" \
-             "-backup.example.com";
+             '-backup.${DOMAIN}';
 defineEnvVar SSHPORTS_FILE \
              "The file with the SSH port mappings" \
              "sshports.txt";
@@ -72,3 +73,23 @@ defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "true";
 defineEnvVar BUILDER "The builder of the image" '${AUTHOR}';
+defineEnvVar SSL_CERTIFICATE_ALIAS "The alias of the SSL certificate" "\${SQ_IMAGE}";
+defineEnvVar SSL_KEY_ALGORITHM "The algorithm of the SSL key" "rsa";
+defineEnvVar SSL_KEY_LENGTH "The length of the SSL key" "2048";
+defineEnvVar SSL_KEY_FOLDER "The folder storing the SSL key pairs" "/etc/ssl/private";
+defineEnvVar SSL_KEY_PASSWORD "The key password" '\${SQ_NAMESPACE}-\${SQ_IMAGE}';
+defineEnvVar SSL_CERTIFICATE_COMMON_NAME "The common name for the SSL certificate" '\${SQ_IMAGE}.\${SQ_DOMAIN}';
+defineEnvVar SSL_CERTIFICATE_ORGANIZATIONAL_UNIT "The organizational unit for the SSL certificate" "IT";
+defineEnvVar SSL_CERTIFICATE_ORGANIZATION "The organization behind the SSL certificate" '\${SQ_DOMAIN}';
+defineEnvVar SSL_CERTIFICATE_LOCALITY "The locality information in the SSL certificate" "Madrid";
+defineEnvVar SSL_CERTIFICATE_STATE "The state information in the SSL certificate" "Madrid";
+defineEnvVar SSL_CERTIFICATE_COUNTRY "The country information in the SSL certificate" "ES";
+defineEnvVar SSL_CERTIFICATE_SUBJECT "The subject of the SSL certificate" '/C=\${SQ_SSL_CERTIFICATE_COUNTRY}/ST=\${SQ_SSL_CERTIFICATE_STATE}/L=\${SQ_SSL_CERTIFICATE_LOCALITY}/O=\${SQ_SSL_CERTIFICATE_ORGANIZATION}/OU=\${SQ_SSL_CERTIFICATE_ORGANIZATIONAL_UNIT}/CN=\${SQ_SSL_CERTIFICATE_COMMON_NAME}';
+defineEnvVar SSL_CERTIFICATE_DNAME "The DName of the SSL certificate" 'CN=\${SQ_SSL_CERTIFICATE_COMMON_NAME}, OU=\${SQ_SSL_CERTIFICATE_ORGANIZATIONAL_UNIT}, O=\${SQ_SSL_CERTIFICATE_ORGANIZATION}, L=\${SQ_SSL_CERTIFICATE_LOCALITY}, S=\${SQ_SSL_CERTIFICATE_STATE}, C=\${SQ_SSL_CERTIFICATE_COUNTRY}';
+defineEnvVar SSL_CERTIFICATE_EXPIRATION_DAYS "The number of days until the certificate expires" "3650";
+defineEnvVar SSL_KEYSTORE_NAME "The keystore name" '${NAMESPACE}';
+defineEnvVar SSL_KEYSTORE_PASSWORD "The keystore password" '${NAMESPACE}-${IMAGE}';
+defineEnvVar SSL_KEYSTORE_FOLDER "The folder storing the SSL keystore" '${SSL_KEY_FOLDER}';
+defineEnvVar SSL_KEYSTORE_PATH '\${SQ_SSL_KEY_FOLDER}/\${SQ_SSL_KEYSTORE_NAME}.jks';
+defineEnvVar SSL_JAVA_SIGN_ALGORITHM "The algorithm used to sign the SSL certificate" "SHA256withRSA";
+defineEnvVar SSL_SAN_EXTENSIONS "The SAN extensions for the SSL certificate" 'dns:${SSL_CERTIFICATE_COMMON_NAME},dns:*.${SSL_CERTIFICATE_COMMON_NAME},dns:*.${IMAGE}.${DOMAIN},dns:*.${DOMAIN}';
