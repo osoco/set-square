@@ -48,6 +48,7 @@ defineEnvVar MONIT_HTTP_USER \
              "monit";
 defineEnvVar MONIT_HTTP_PASSWORD \
              "The password to login in monit's webapp" \
+             '${RANDOM_PASSWORD}' \
              "head -c 20 /dev/urandom | sha1sum | cut -d' ' -f1";
 defineEnvVar MONIT_HTTP_TIMEOUT \
              "The timeout before alerting that monit's own http interface is down" \
@@ -73,23 +74,19 @@ defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "true";
 defineEnvVar BUILDER "The builder of the image" '${AUTHOR}';
-defineEnvVar SSL_CERTIFICATE_ALIAS "The alias of the SSL certificate" "\${SQ_IMAGE}";
 defineEnvVar SSL_KEY_ALGORITHM "The algorithm of the SSL key" "rsa";
 defineEnvVar SSL_KEY_LENGTH "The length of the SSL key" "2048";
 defineEnvVar SSL_KEY_FOLDER "The folder storing the SSL key pairs" "/etc/ssl/private";
-defineEnvVar SSL_KEY_PASSWORD "The key password" '\${SQ_NAMESPACE}-\${SQ_IMAGE}';
-defineEnvVar SSL_CERTIFICATE_COMMON_NAME "The common name for the SSL certificate" '\${SQ_IMAGE}.\${SQ_DOMAIN}';
+defineEnvVar SSL_KEY_PASSWORD "The key password" '${RANDOM_PASSWORD}';
+defineEnvVar SSL_CERTIFICATE_COMMON_NAME "The common name for the SSL certificate" '${SQ_IMAGE}.${DOMAIN}';
 defineEnvVar SSL_CERTIFICATE_ORGANIZATIONAL_UNIT "The organizational unit for the SSL certificate" "IT";
-defineEnvVar SSL_CERTIFICATE_ORGANIZATION "The organization behind the SSL certificate" '\${SQ_DOMAIN}';
+defineEnvVar SSL_CERTIFICATE_ORGANIZATION "The organization behind the SSL certificate" '${DOMAIN}';
 defineEnvVar SSL_CERTIFICATE_LOCALITY "The locality information in the SSL certificate" "Madrid";
 defineEnvVar SSL_CERTIFICATE_STATE "The state information in the SSL certificate" "Madrid";
 defineEnvVar SSL_CERTIFICATE_COUNTRY "The country information in the SSL certificate" "ES";
-defineEnvVar SSL_CERTIFICATE_SUBJECT "The subject of the SSL certificate" '/C=\${SQ_SSL_CERTIFICATE_COUNTRY}/ST=\${SQ_SSL_CERTIFICATE_STATE}/L=\${SQ_SSL_CERTIFICATE_LOCALITY}/O=\${SQ_SSL_CERTIFICATE_ORGANIZATION}/OU=\${SQ_SSL_CERTIFICATE_ORGANIZATIONAL_UNIT}/CN=\${SQ_SSL_CERTIFICATE_COMMON_NAME}';
-defineEnvVar SSL_CERTIFICATE_DNAME "The DName of the SSL certificate" 'CN=\${SQ_SSL_CERTIFICATE_COMMON_NAME}, OU=\${SQ_SSL_CERTIFICATE_ORGANIZATIONAL_UNIT}, O=\${SQ_SSL_CERTIFICATE_ORGANIZATION}, L=\${SQ_SSL_CERTIFICATE_LOCALITY}, S=\${SQ_SSL_CERTIFICATE_STATE}, C=\${SQ_SSL_CERTIFICATE_COUNTRY}';
 defineEnvVar SSL_CERTIFICATE_EXPIRATION_DAYS "The number of days until the certificate expires" "3650";
 defineEnvVar SSL_KEYSTORE_NAME "The keystore name" '${NAMESPACE}';
-defineEnvVar SSL_KEYSTORE_PASSWORD "The keystore password" '${NAMESPACE}-${IMAGE}';
+defineEnvVar SSL_KEYSTORE_PASSWORD "The keystore password" '${RANDOM_PASSWORD}';
 defineEnvVar SSL_KEYSTORE_FOLDER "The folder storing the SSL keystore" '${SSL_KEY_FOLDER}';
-defineEnvVar SSL_KEYSTORE_PATH '\${SQ_SSL_KEY_FOLDER}/\${SQ_SSL_KEYSTORE_NAME}.jks';
+defineEnvVar SSL_KEYSTORE_PATH "The path of the keystore" '${SSL_KEY_FOLDER}/${SSL_KEYSTORE_NAME}.jks';
 defineEnvVar SSL_JAVA_SIGN_ALGORITHM "The algorithm used to sign the SSL certificate" "SHA256withRSA";
-defineEnvVar SSL_SAN_EXTENSIONS "The SAN extensions for the SSL certificate" 'dns:${SSL_CERTIFICATE_COMMON_NAME},dns:*.${SSL_CERTIFICATE_COMMON_NAME},dns:*.${IMAGE}.${DOMAIN},dns:*.${DOMAIN}';
