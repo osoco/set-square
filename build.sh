@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [repo]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [-ci|--cleanup-images] [-cc|--cleanup-containers] [repo]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -18,7 +18,8 @@ Where:
   * overwrite-latest: whether to overwrite the "latest" tag with the new one (default: false).
   * registry: optionally, the registry to push the image to.
   * reduce-image: whether to reduce the size of the resulting image.
-  * stack-name: for stack images, the stack name (mandatory if the repository name ends with -stack).
+  * cleanup-images: Whether to try to cleanup images.
+  * cleanup-containers: Whether to try to cleanup containers.
 Common flags:
     * -h | --help: Display this message.
     * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
@@ -116,25 +117,33 @@ function parseInput() {
 	       ;;
       -p | --registry)
          shift;
-	       export REGISTRY_PUSH=0;
+	       export REGISTRY_PUSH=TRUE;
 	       ;;
       -f | --force)
           shift;
-          export FORCE_MODE=0;
+          export FORCE_MODE=TRUE;
           ;;
       -o | --overwrite-latest)
           shift;
-          export OVERWRITE_LATEST=0;
+          export OVERWRITE_LATEST=TRUE;
           ;;
       -r | --reduce-image)
           shift;
-          export REDUCE_IMAGE=0;
+          export REDUCE_IMAGE=TRUE;
           ;;
       -s | --stack)
           shift;
           export STACK="${1}";
           shift;
           ;;
+      -ci | --cleanup-images)
+          shift;
+          export CLEAUP_IMAGES=TRUE;
+          ;;
+      -cc | --cleanup-containers)
+        shift;
+        export CLEAUP_CONTAINERS=TRUE;
+        ;;
     esac
   done
  
@@ -888,35 +897,54 @@ function stack_image_enabled() {
   _flagEnabled STACK;
 }
 
+## Checks whether the -cc flag is enabled.
+## Example:
+##   if cleanup_containers_enabled; then [..]; fi
+function cleanup_containers_enabled() {
+  _flagEnabled CLEANUP_CONTAINERS;
+}
+
 ## Cleans up the docker containers
 ## Example:
 ##   cleanup_containers
 function cleanup_containers() {
-  local _count="$(${DOCKER} ps -a -q | xargs -n 1 -I {} | wc -l)";
-  #  _count=$((_count-1));
-  if [ ${_count} -gt 0 ]; then
-    logInfo -n "Cleaning up ${_count} stale container(s)";
-    ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
-    if [ $? -eq 0 ]; then
-      logInfoResult SUCCESS "done";
-    else
-      logInfoResult FAILED "failed";
+
+  if cleanup_containers_enabled; then
+    local _count="$(${DOCKER} ps -a -q | xargs -n 1 -I {} | wc -l)";
+    #  _count=$((_count-1));
+    if [ ${_count} -gt 0 ]; then
+      logInfo -n "Cleaning up ${_count} stale container(s)";
+      ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
+      if [ $? -eq 0 ]; then
+        logInfoResult SUCCESS "done";
+      else
+        logInfoResult FAILED "failed";
+      fi
     fi
   fi
 }
 
-## Cleans up unused docker images
+## Checks whether the -ci flag is enabled.
+## Example:
+##   if cleanup_images_enabled; then [..]; fi
+function cleanup_images_enabled() {
+  _flagEnabled CLEANUP_IMAGES;
+}
+
+## Cleans up unused docker images.
 ## Example:
 ##   cleanup_images
 function cleanup_images() {
-  local _count="$(${DOCKER} images | grep '<none>' | wc -l)";
-  if [ ${_count} -gt 0 ]; then
-    logInfo -n "Trying to delete up to ${_count} unnamed image(s)";
-    ${DOCKER} images | grep '<none>' | awk '{printf("docker rmi -f %s\n", $3);}' | sh > /dev/null
-    if [ $? -eq 0 ]; then
-      logInfoResult SUCCESS "done";
-    else
-      logInfoResult FAILED "failed";
+  if cleanup_images_enabled; then
+    local _count="$(${DOCKER} images | grep '<none>' | wc -l)";
+    if [ ${_count} -gt 0 ]; then
+      logInfo -n "Trying to delete up to ${_count} unnamed image(s)";
+      ${DOCKER} images | grep '<none>' | awk '{printf("docker rmi -f %s\n", $3);}' | sh > /dev/null
+      if [ $? -eq 0 ]; then
+        logInfoResult SUCCESS "done";
+      else
+        logInfoResult FAILED "failed";
+      fi
     fi
   fi
 }

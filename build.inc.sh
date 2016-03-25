@@ -84,9 +84,8 @@ defineEnvVar SSL_CERTIFICATE_LOCALITY "The locality information in the SSL certi
 defineEnvVar SSL_CERTIFICATE_STATE "The state information in the SSL certificate" "Madrid";
 defineEnvVar SSL_CERTIFICATE_COUNTRY "The country information in the SSL certificate" "ES";
 defineEnvVar SSL_CERTIFICATE_EXPIRATION_DAYS "The number of days until the certificate expires" "3650";
-defineEnvVar SSL_KEYSTORE_NAME "The keystore name" '${NAMESPACE}';
 defineEnvVar SSL_KEYSTORE_PASSWORD "The keystore password" 'nmGEQlbT2qnCrBsfQDGFkygj8exgEmTCvmc1KSQ8VebBh5';
 defineEnvVar SSL_KEYSTORE_FOLDER "The folder storing the SSL keystore" '${SSL_KEY_FOLDER}';
 defineEnvVar SSL_KEYSTORE_TYPE "The type of the keystore" "jks";
-defineEnvVar SSL_KEYSTORE_PATH "The path of the keystore" '${SSL_KEY_FOLDER}/${SSL_KEYSTORE_NAME}.${SSL_KEYSTORE_TYPE}';
+defineEnvVar SSL_KEYSTORE_PATH "The path of the keystore" '${SSL_KEY_FOLDER}/${SQ_SSL_KEYSTORE_NAME}.${SSL_KEYSTORE_TYPE}';
 defineEnvVar SSL_JAVA_SIGN_ALGORITHM "The algorithm used to sign the SSL certificate" "SHA256withRSA";
