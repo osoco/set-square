@@ -33,6 +33,7 @@ defineEnvVar LDAP_HOST \
 defineEnvVar BACKUP_HOST_SUFFIX \
              "The prefix of the backup host to send the backup files" \
              '-backup.${DOMAIN}';
+defineEnvVar BACKUP_USER "The backup user" "backup";
 defineEnvVar SSHPORTS_FILE \
              "The file with the SSH port mappings" \
              "sshports.txt";
