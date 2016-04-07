@@ -40,6 +40,8 @@ defineEnvVar CUSTOM_BACKUP_SCRIPTS_FOLDER \
              "The folder with the custom backup scripts" \
              "/usr/local/bin";
 defineEnvVar CUSTOM_BACKUP_SCRIPTS_PREFIX "The prefix of all custom backup scripts" "backup-";
+defineEnvVar BACKUP_USER "The backup user" "backup";
+defineEnvVar BACKUP_GROUP "The backup group" '${BACKUP_USER}';
 defineEnvVar MONIT_HTTP_PORT \
              "The port used by Monit's webapp" \
              "2812";
