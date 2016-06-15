@@ -32,7 +32,7 @@ EOF
 DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
 # Requirements
-function checkRequirements() {
+function defineRequirements() {
   checkReq docker DOCKER_NOT_INSTALLED;
   checkReq date DATE_NOT_INSTALLED;
   checkReq realpath REALPATH_NOT_INSTALLED;
