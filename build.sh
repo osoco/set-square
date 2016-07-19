@@ -617,7 +617,7 @@ function copy_license_file() {
   local _folder="${2}";
   if [ -e "${_folder}/${LICENSE_FILE}" ]; then
     logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-    cp "${_folder}/${LICENSE_FILE}" "${_repo}";
+    cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
     if [ $? -eq 0 ]; then
       logDebugResult SUCCESS "done";
     else
@@ -640,7 +640,7 @@ function copy_copyright_preamble_file() {
   local _folder="${2}";
   if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
-      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}";
+      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/copyright-preamble.txt";
       if [ $? -eq 0 ]; then
           logDebugResult SUCCESS "done";
       else
