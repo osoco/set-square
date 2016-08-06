@@ -702,7 +702,7 @@ function build_repo() {
   _stackSuffix="${RESULT}";
 
   copy_license_file "${_repo}" "${PWD}";
-  copy_copyright_preamble_file "${_repo}" "${PWD}";
+  copy_copyright_preamble_file "${_repo}" "${INCLUDES_FOLDER}";
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
