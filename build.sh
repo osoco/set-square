@@ -235,7 +235,7 @@ function repo_exists() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
 
-  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}")
+  local _images=$(${DOCKER} ${DOCKER_OPTS} images "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}")
   local _matches=$(echo "${_images}" | grep "${_tag}")
   local _rescode;
   if [ -z "${_matches}" ]; then
@@ -297,7 +297,7 @@ function reduce_image_size() {
   local _tag="${4}";
   checkReq docker-squash DOCKER_SQUASH_NOT_INSTALLED;
   logInfo -n "Squashing ${_image} as ${_namespace}/${_repo}:${_tag}"
-  ${DOCKER} save "${_namespace}/${_repo}:${_currentTag}" | sudo docker-squash -t "${_namespace}/${_repo}:${_tag}" | ${DOCKER} load
+  ${DOCKER} ${DOCKER_OPTS} save "${_namespace}/${_repo}:${_currentTag}" | sudo docker-squash -t "${_namespace}/${_repo}:${_tag}" | ${DOCKER} ${DOCKER_OPTS} load
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
@@ -713,8 +713,8 @@ function build_repo() {
   fi
 
   logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
-#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
+#  echo ${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
@@ -729,7 +729,7 @@ function build_repo() {
   fi
   if overwrite_latest_enabled; then
     logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag} as ${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-    docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
+    ${DOCKER} ${DOCKER_OPTS} tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
     else
@@ -755,7 +755,7 @@ function registry_push() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
   logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} for uploading to ${REGISTRY}";
-  docker tag -f "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
+  ${DOCKER} ${DOCKER_OPTS} tag -f "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
@@ -763,7 +763,7 @@ function registry_push() {
     exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
   fi
   logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
-  docker push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
+  ${DOCKER} ${DOCKER_OPTS} push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   _pushResult=$?;
   logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
   if [ ${_pushResult} -eq 0 ]; then
@@ -910,11 +910,11 @@ function cleanup_containers_enabled() {
 function cleanup_containers() {
 
   if cleanup_containers_enabled; then
-    local _count="$(${DOCKER} ps -a -q | xargs -n 1 -I {} | wc -l)";
+    local _count="$(${DOCKER} ${DOCKER_OPTS} ps -a -q | xargs -n 1 -I {} | wc -l)";
     #  _count=$((_count-1));
     if [ ${_count} -gt 0 ]; then
       logInfo -n "Cleaning up ${_count} stale container(s)";
-      ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
+      ${DOCKER} ${DOCKER_OPTS} ps -a -q | xargs -n 1 -I {} sudo ${DOCKER} ${DOCKER_OPTS} rm -v {} > /dev/null;
       if [ $? -eq 0 ]; then
         logInfoResult SUCCESS "done";
       else
@@ -936,10 +936,10 @@ function cleanup_images_enabled() {
 ##   cleanup_images
 function cleanup_images() {
   if cleanup_images_enabled; then
-    local _count="$(${DOCKER} images | grep '<none>' | wc -l)";
+    local _count="$(${DOCKER} ${DOCKER_OPTS} images | grep '<none>' | wc -l)";
     if [ ${_count} -gt 0 ]; then
       logInfo -n "Trying to delete up to ${_count} unnamed image(s)";
-      ${DOCKER} images | grep '<none>' | awk '{printf("docker rmi -f %s\n", $3);}' | sh > /dev/null
+      ${DOCKER} ${DOCKER_OPTS} images | grep '<none>' | awk '{printf("${DOCKER} ${DOCKER_OPTS} rmi -f %s\n", $3);}' | sh > /dev/null
       if [ $? -eq 0 ]; then
         logInfoResult SUCCESS "done";
       else

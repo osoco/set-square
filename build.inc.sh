@@ -94,3 +94,4 @@ defineEnvVar SSL_KEYSTORE_TYPE "The type of the keystore" "jks";
 defineEnvVar SSL_JAVA_SIGN_ALGORITHM "The algorithm used to sign the SSL certificate" "SHA256withRSA";
 defineEnvVar HOST_VOLUMES_ROOT_FOLDER "The root folder for host volumes" "/var/lib/docker/data";
 defineEnvVar DEVELOPMENT_USER_ID "The user id used when developing code (to match host user id)" "$(id -u)";
+defineEnvVar DOCKER_OPTS "Generic Docker options" "";
