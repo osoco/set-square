@@ -64,7 +64,7 @@ function defineErrors() {
   export ERROR_REDUCING_IMAGE="Error reducing the image size";
   export CANNOT_COPY_LICENSE_FILE="Cannot copy the license file ${LICENSE_FILE}";
   export LICENSE_FILE_DOES_NOT_EXIST="The specified license ${LICENSE_FILE} does not exist";
-  export CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE="Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
+  export CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE="Cannot copy the copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE}";
   export COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST="The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 
   ERROR_MESSAGES=(\
@@ -615,17 +615,19 @@ function update_log_category() {
 function copy_license_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ -e "${_folder}/${LICENSE_FILE}" ]; then
-    logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-    cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
-    if [ $? -eq 0 ]; then
-      logDebugResult SUCCESS "done";
+  if [ ! -e "${_repo}/LICENSE" ]; then
+    if [ -e "${_folder}/${LICENSE_FILE}" ]; then
+      logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
+      cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
+      if [ $? -eq 0 ]; then
+        logDebugResult SUCCESS "done";
+      else
+        logDebugResult FAILURE "failed";
+        exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
+      fi
     else
-      logDebugResult FAILURE "failed";
-      exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
+      exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
     fi
-  else
-    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
   fi
 }
 
@@ -638,17 +640,19 @@ function copy_license_file() {
 function copy_copyright_preamble_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+  if [ ! -e "${_repo}/copyright-preamble.txt" ]; then
+    if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
       cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/copyright-preamble.txt";
       if [ $? -eq 0 ]; then
-          logDebugResult SUCCESS "done";
+        logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
         exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
       fi
-  else
-    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
+    else
+      exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
+    fi
   fi
 }
 
@@ -702,7 +706,7 @@ function build_repo() {
   _stackSuffix="${RESULT}";
 
   copy_license_file "${_repo}" "${PWD}";
-  copy_copyright_preamble_file "${_repo}" "${INCLUDES_FOLDER}";
+  copy_copyright_preamble_file "${_repo}" "${PWD}";
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
@@ -729,7 +733,7 @@ function build_repo() {
   fi
   if overwrite_latest_enabled; then
     logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag} as ${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-    ${DOCKER} ${DOCKER_OPTS} tag -f "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
+    ${DOCKER} ${DOCKER_OPTS} tag "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
     else
@@ -755,7 +759,7 @@ function registry_push() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
   logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} for uploading to ${REGISTRY}";
-  ${DOCKER} ${DOCKER_OPTS} tag -f "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
+  ${DOCKER} ${DOCKER_OPTS} tag "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
