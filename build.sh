@@ -33,66 +33,38 @@ DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
 # Requirements
 function defineRequirements() {
-  checkReq docker DOCKER_NOT_INSTALLED;
-  checkReq date DATE_NOT_INSTALLED;
-  checkReq realpath REALPATH_NOT_INSTALLED;
-  checkReq envsubst ENVSUBST_NOT_INSTALLED;
-  checkReq head HEAD_NOT_INSTALLED;
-  checkReq grep GREP_NOT_INSTALLED;
-  checkReq awk AWK_NOT_INSTALLED;
+  checkReq docker;
+  checkReq date;
+  checkReq realpath;
+  checkReq envsubst;
+  checkReq head;
+  checkReq grep;
+  checkReq awk;
 }
 
 # Error messages
 function defineErrors() {
-  export INVALID_OPTION="Unrecognized option";
-  export DOCKER_NOT_INSTALLED="docker is not installed";
-  export DATE_NOT_INSTALLED="date is not installed";
-  export REALPATH_NOT_INSTALLED="realpath is not installed";
-  export ENVSUBST_NOT_INSTALLED="envsubst is not installed";
-  export HEAD_NOT_INSTALLED="head is not installed";
-  export GREP_NOT_INSTALLED="grep is not installed";
-  export AWK_NOT_INSTALLED="awk is not installed";
-  export DOCKER_SQUASH_NOT_INSTALLED="docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
-  export NO_REPOSITORIES_FOUND="no repositories found";
-  export REPO_IS_NOT_STACKED="Repository is not stacked (it should end with -stack)";
-  export INVALID_URL="Invalid command";
-  export CANNOT_PROCESS_TEMPLATE="Cannot process template";
-  export INCLUDED_FILE_NOT_FOUND="The included file is missing";
-  export ERROR_BUILDING_REPO="Error building repository";
-  export ERROR_TAGGING_IMAGE="Error tagging image";
-  export ERROR_PUSHING_IMAGE="Error pushing image to ${REGISTRY}";
-  export ERROR_REDUCING_IMAGE="Error reducing the image size";
-  export CANNOT_COPY_LICENSE_FILE="Cannot copy the license file ${LICENSE_FILE}";
-  export LICENSE_FILE_DOES_NOT_EXIST="The specified license ${LICENSE_FILE} does not exist";
-  export CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE="Cannot copy the copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE}";
-  export COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST="The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
-
-  ERROR_MESSAGES=(\
-    INVALID_OPTION \
-    DOCKER_NOT_INSTALLED \
-    DATE_NOT_INSTALLED \
-    REALPATH_NOT_INSTALLED \
-    ENVSUBST_NOT_INSTALLED \
-    HEAD_NOT_INSTALLED \
-    GREP_NOT_INSTALLED \
-    AWK_NOT_INSTALLED \
-    DOCKER_SQUASH_NOT_INSTALLED \
-    NO_REPOSITORIES_FOUND \
-    REPO_IS_NOT_STACKED \
-    INVALID_URL \
-    CANNOT_PROCESS_TEMPLATE \
-    INCLUDED_FILE_NOT_FOUND \
-    ERROR_BUILDING_REPO \
-    ERROR_TAGGING_IMAGE \
-    ERROR_PUSHING_IMAGE \
-    ERROR_REDUCING_IMAGE \
-    CANNOT_COPY_LICENSE_FILE \
-    LICENSE_FILE_DOES_NOT_EXIST \
-    CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE \
-    COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST \
-  );
-
-  export ERROR_MESSAGES;
+  addError "INVALID_OPTION" "Unknown option";
+  addError "DOCKER_NOT_INSTALLED" "docker is not installed";
+  addError "DATE_NOT_INSTALLED" "date is not installed";
+  addError "REALPATH_NOT_INSTALLED" "realpath is not installed";
+  addError "ENVSUBST_NOT_INSTALLED" "envsubst is not installed";
+  addError "HEAD_NOT_INSTALLED" "head is not installed";
+  addError "GREP_NOT_INSTALLED" "grep is not installed";
+  addError "AWK_NOT_INSTALLED" "awk is not installed";
+  addError "DOCKER_SQUASH_NOT_INSTALLED" "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
+  addError "NO_REPOSITORIES_FOUND" "no repositories found";
+  addError "REPO_IS_NOT_STACKED" "Repository is not stacked (it should end with -stack)";
+  addError "CANNOT_PROCESS_TEMPLATE" "Cannot process template";
+  addError "INCLUDED_FILE_NOT_FOUND" "The included file is missing";
+  addError "ERROR_BUILDING_REPO" "Error building repository";
+  addError "ERROR_TAGGING_IMAGE" "Error tagging image";
+  addError "ERROR_PUSHING_IMAGE" "Error pushing image to ${REGISTRY}";
+  addError "ERROR_REDUCING_IMAGE" "Error reducing the image size";
+  addError "CANNOT_COPY_LICENSE_FILE" "Cannot copy the license file ${LICENSE_FILE}";
+  addError "LICENSE_FILE_DOES_NOT_EXIST" "The specified license ${LICENSE_FILE} does not exist";
+  addError "CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE" "Cannot copy the copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE}";
+  addError "COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST" "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 }
 
 ## Parses the input
@@ -100,7 +72,7 @@ function defineErrors() {
 function parseInput() {
 
   local _flags=$(extractFlags $@);
-  local _flagCount;
+  local _flagCount=0;
   local _currentCount;
 
   # Flags
@@ -147,12 +119,12 @@ function parseInput() {
     esac
   done
  
-  if [[ ! -n ${TAG} ]]; then
-    TAG="${DATE}";
+  if [[ -z "${TAG:-}" ]]; then
+    TAG="${DATE:-$(date '+%Y%m')}";
   fi
 
   # Parameters
-  if [[ -z ${REPOS} ]]; then
+  if [[ -z "${REPOS:-}" ]]; then
     REPOS="$@";
     shift;
   fi
