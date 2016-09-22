@@ -34,6 +34,7 @@ defineEnvVar BACKUP_HOST_SUFFIX \
              "The prefix of the backup host to send the backup files" \
              '-backup.${DOMAIN}';
 defineEnvVar BACKUP_USER "The backup user" "backup";
+defineEnvVar DOCKER_GROUP "The docker group" "docker";
 defineEnvVar SSHPORTS_FILE \
              "The file with the SSH port mappings" \
              "sshports.txt";
@@ -77,6 +78,7 @@ defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "true";
 defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "true";
+defineEnvVar ENABLE_NTPD "Whether to enable the NTPD daemon" "true";
 defineEnvVar BUILDER "The builder of the image" '${AUTHOR}';
 defineEnvVar SSL_KEY_ALGORITHM "The algorithm of the SSL key" "rsa";
 defineEnvVar SSL_KEY_LENGTH "The length of the SSL key" "2048";
@@ -95,3 +97,8 @@ defineEnvVar SSL_JAVA_SIGN_ALGORITHM "The algorithm used to sign the SSL certifi
 defineEnvVar HOST_VOLUMES_ROOT_FOLDER "The root folder for host volumes" "/var/lib/docker/data";
 defineEnvVar DEVELOPMENT_USER_ID "The user id used when developing code (to match host user id)" "$(id -u)";
 defineEnvVar DOCKER_OPTS "Generic Docker options" "";
+defineEnvVar DOCKER_TAG_OPTS "Docker tag options" "";
+defineEnvVar ISO639_1_LANGUAGE_CODE "The two-letter ISO 639-1 language code" "en";
+defineEnvVar ISO3166_COUNTRY_CODE "The two-letter ISO3166 country code" "US";
+defineEnvVar ENCODING "The file encoding" "UTF-8";
+defineEnvVar TIMEZONE "The timezone" "Etc/UTC";

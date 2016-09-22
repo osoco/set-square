@@ -118,7 +118,7 @@ function parseInput() {
         ;;
     esac
   done
- 
+
   if [[ -z "${TAG:-}" ]]; then
     TAG="${DATE:-$(date '+%Y%m')}";
   fi
@@ -161,7 +161,7 @@ function checkInput() {
          ;;
     esac
   done
- 
+
   if [[ -z ${REPOS} ]]; then
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
@@ -175,7 +175,7 @@ function checkInput() {
       done
     fi
     logDebugResult SUCCESS "valid";
-  fi 
+  fi
 }
 
 ## Checks whether the repository is part of a stack.
@@ -587,19 +587,20 @@ function update_log_category() {
 function copy_license_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ ! -e "${_repo}/LICENSE" ]; then
-    if [ -e "${_folder}/${LICENSE_FILE}" ]; then
+  if [ -e "${_repo}/${LICENSE_FILE}" ] || \
+     [ -e "${_folder}/${LICENSE_FILE}" ]; then
+    if [ ! -e "${_repo}/${LICENSE_FILE}" ]; then
       logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-      cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
+      cp "${_folder}/${LICENSE_FILE}" "${_repo}/${LICENSE_FILE}";
       if [ $? -eq 0 ]; then
         logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
         exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
       fi
-    else
-      exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
     fi
+  else
+    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
   fi
 }
 
@@ -612,19 +613,20 @@ function copy_license_file() {
 function copy_copyright_preamble_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ ! -e "${_repo}/copyright-preamble.txt" ]; then
-    if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+  if [ -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ] || \
+     [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+    if [ ! -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
-      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/copyright-preamble.txt";
+      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/${COPYRIGHT_PREAMBLE_FILE}";
       if [ $? -eq 0 ]; then
         logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
         exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
       fi
-    else
-      exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
     fi
+  else
+    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
   fi
 }
 
@@ -705,7 +707,7 @@ function build_repo() {
   fi
   if overwrite_latest_enabled; then
     logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag} as ${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-    ${DOCKER} ${DOCKER_OPTS} tag "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
+    ${DOCKER} ${DOCKER_OPTS} tag ${DOCKER_TAG_OPTS} "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
     if [ $? -eq 0 ]; then
       logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
     else
@@ -731,7 +733,7 @@ function registry_push() {
   retrieve_stack_suffix "${_stack}";
   _stackSuffix="${RESULT}";
   logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} for uploading to ${REGISTRY}";
-  ${DOCKER} ${DOCKER_OPTS} tag "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
+  ${DOCKER} ${DOCKER_OPTS} tag ${DOCKER_TAG_OPTS} "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
   if [ $? -eq 0 ]; then
     logInfoResult SUCCESS "done"
   else
