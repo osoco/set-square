@@ -591,7 +591,7 @@ function copy_license_file() {
      [ -e "${_folder}/${LICENSE_FILE}" ]; then
     if [ ! -e "${_repo}/${LICENSE_FILE}" ]; then
       logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-      cp "${_folder}/${LICENSE_FILE}" "${_repo}/${LICENSE_FILE}";
+      cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
       if [ $? -eq 0 ]; then
         logDebugResult SUCCESS "done";
       else
