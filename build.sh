@@ -2,6 +2,8 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
+#set -o xtrace
+
 function usage() {
 cat <<EOF
 $SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [-ci|--cleanup-images] [-cc|--cleanup-containers] [repo]+
@@ -33,7 +35,7 @@ DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
 # Requirements
 function defineRequirements() {
-  checkReq docker;
+  checkReq $(basename ${DOCKER:-docker});
   checkReq date;
   checkReq realpath;
   checkReq envsubst;
