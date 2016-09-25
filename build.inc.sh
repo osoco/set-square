@@ -74,7 +74,7 @@ defineEnvVar ENABLE_MONIT "Whether to enable Monit" "true";
 defineEnvVar ENABLE_SYSLOG "Whether to enable syslog" "true";
 defineEnvVar ENABLE_CRON "Whether to enable cron" "true";
 defineEnvVar ENABLE_RSNAPSHOT "Whether to enable rsnapshot" "true";
-defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "true";
+defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "false";
 defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "true";

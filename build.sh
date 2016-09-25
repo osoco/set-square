@@ -82,38 +82,39 @@ function parseInput() {
     _flagCount=$((_flagCount+1));
     case ${_flag} in
       -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
-         shift;
-         ;;
+        export _help=${TRUE};
+        shift;
+        ;;
       -t | --tag)
-         shift;
-	       export TAG="${1}";
-         shift;
-	       ;;
+        shift;
+	      export TAG="${1}";
+        shift;
+	      ;;
       -p | --registry)
-         shift;
-	       export REGISTRY_PUSH=TRUE;
-	       ;;
+        shift;
+	      export REGISTRY_PUSH=TRUE;
+	      ;;
       -f | --force)
-          shift;
-          export FORCE_MODE=TRUE;
-          ;;
+        shift;
+        export FORCE_MODE=TRUE;
+        ;;
       -o | --overwrite-latest)
-          shift;
-          export OVERWRITE_LATEST=TRUE;
-          ;;
+        shift;
+        export OVERWRITE_LATEST=TRUE;
+        ;;
       -r | --reduce-image)
-          shift;
-          export REDUCE_IMAGE=TRUE;
-          ;;
+        shift;
+        export REDUCE_IMAGE=TRUE;
+        ;;
       -s | --stack)
-          shift;
-          export STACK="${1}";
-          shift;
-          ;;
+        shift;
+        export STACK="${1}";
+        shift;
+        ;;
       -ci | --cleanup-images)
-          shift;
-          export CLEAUP_IMAGES=TRUE;
-          ;;
+        shift;
+        export CLEAUP_IMAGES=TRUE;
+        ;;
       -cc | --cleanup-containers)
         shift;
         export CLEAUP_CONTAINERS=TRUE;
@@ -121,23 +122,23 @@ function parseInput() {
     esac
   done
 
-  if [[ -z "${TAG:-}" ]]; then
+  if isEmpty "${TAG}"; then
     TAG="${DATE:-$(date '+%Y%m')}";
   fi
 
   # Parameters
-  if [[ -z "${REPOS:-}" ]]; then
+  if isEmpty "${REPOS}"; then
     REPOS="$@";
     shift;
   fi
 
-  if [[ -z ${REPOS} ]]; then
+  if isEmpty "${REPOS}"; then
     REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
   fi
 
-  if [[ -n ${REPOS} ]]; then
-      loadRepoEnvironmentVariables "${REPOS}";
-      evalEnvVars;
+  if ! isTrue ${_help} && ! isEmpty ${REPOS}; then
+    loadRepoEnvironmentVariables "${REPOS}";
+    evalEnvVars;
   fi
 }
 
@@ -313,6 +314,24 @@ function process_file() {
   createTempFile;
   local _temp2="${RESULT}";
 
+  if isEmpty "${_file}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'file' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_output}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'output' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repoFolder}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_templateFolder}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repo}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_rootImage}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'rootImage' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_namespace}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'namespace' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_tag}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  fi
+
   if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
     logTrace -n "Resolving @include_env in ${_file}";
     if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
@@ -337,9 +356,9 @@ function process_file() {
 
 ## Resolves given included file.
 ## -> 1: The file name.
-## -> 2: The templates folder.
-## -> 3: The repository's own folder.
-## <- 0: if the file is found; 1 otherwise.
+## -> 2: The repository's own folder.
+## -> 3: The templates folder.
+## <- 0/${TRUE}: if the file is found; 1/${FALSE} otherwise.
 ## Example:
 ##   if ! resolve_included_file "footer" "my-image-folder" ".templates"; then
 ##     echo "'footer' not found";
@@ -349,26 +368,34 @@ function resolve_included_file() {
   local _repoFolder="${2}";
   local _templatesFolder="${3}";
   local _result;
-  local _rescode=1;
+  local _rescode=${FALSE};
+  local _fileAux;
+
+  if isEmpty "${_repoFolder}"; then
+      exitWithErrorCode UNACCEPTABLE_API_CALL "'file' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repoFolder}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_templatesFolder}"; then
+      exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  fi
   for d in "${_repoFolder}" "." "${_templatesFolder}"; do
-    echo "Checking ${d}/${_file}" >> /tmp/log.txt;
+#    echo "Checking ${d}/${_file}" >> /tmp/log.txt;
     if    [[ -e "${d}/${_file}" ]] \
        || [[ -e "${d}/$(basename ${_file} .template).template" ]]; then
-      echo "${d}/${_file} found!" >> /tmp/log.txt;
+#      echo "${d}/${_file} found!" >> /tmp/log.txt;
       _result="${d}/${_file}";
       export RESULT="${_result}";
-      _rescode=0;
+      _rescode=${TRUE};
       break;
     fi
   done
   if isFalse ${_rescode}; then
-    eval "echo ${_file}" > /dev/null 2>&1;
+    _fileAux=$(eval "echo ${_file}" 2>&1);
     if isTrue $?; then
-      resolve_included_file "$(eval "echo ${_file}")" "${_repoFolder}" "${_templatesFolder}";
+      resolve_included_file "${_fileAux}" "${_repoFolder}" "${_templatesFolder}";
       _rescode=$?;
     fi
   fi
-  echo "${_file} resolved -> ${_rescode}" >> /tmp/log.txt;
   return ${_rescode};
 }
 
@@ -401,6 +428,24 @@ function resolve_includes() {
   local _match;
   local _includedFile;
   local line;
+
+  if isEmpty "${_input}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'input' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_output}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'output' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repoFolder}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_templateFolder}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repo}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_rootImage}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'rootImage' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_namespace}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'namespace' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_tag}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  fi
 
   logTrace -n "Resolving @include()s in ${_input}";
 
@@ -660,13 +705,24 @@ function retrieve_backup_host_ssh_port() {
 function build_repo() {
   local _repo="${1}";
   local _canonicalTag="${2}";
+
+  if isEmpty "${_repo}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repository' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_canonicalTag}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${INCLUDES_FOLDER}"; then
+    exitWithErrorCode UNACCEPTABLE_ENVIRONMENT_VARIABLE "'INCLUDES_FOLDER' cannot be empty";
+  fi
+
+  local _stack="${3}";
+
   if reduce_image_enabled; then
-    _rawTag="${2}-raw";
-    _tag="${_rawTag}";
+      _rawTag="${2}-raw";
+      _tag="${_rawTag}";
   else
     _tag="${_canonicalTag}";
   fi
-  local _stack="${3}";
+
   local _stackSuffix;
   local _cmdResult;
   local _rootImage=;
@@ -934,10 +990,8 @@ function main() {
   local _repo;
   local _parents;
   local _stack="${STACK}";
-  local _buildRepo=1;
-  if [ "x${_stack}" != "x" ]; then
-    _stack="_${_stack}";
-  fi
+  local _buildRepo=${FALSE};
+
   resolve_base_image
   for _repo in ${REPOS}; do
     _buildRepo=1;
