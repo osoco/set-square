@@ -102,4 +102,4 @@ defineEnvVar ISO639_1_LANGUAGE_CODE "The two-letter ISO 639-1 language code" "en
 defineEnvVar ISO3166_COUNTRY_CODE "The two-letter ISO3166 country code" "US";
 defineEnvVar ENCODING "The file encoding" "UTF-8";
 defineEnvVar TIMEZONE "The timezone" "Etc/UTC";
-defineEnvVar DW_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
+defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";

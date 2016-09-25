@@ -76,13 +76,17 @@ function parseInput() {
   local _flags=$(extractFlags $@);
   local _flagCount=0;
   local _currentCount;
+  local _help=${FALSE};
 
   # Flags
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
-        export _help=${TRUE};
+      -h | --help)
+        _help=${TRUE};
+        shift;
+        ;;
+      -v | -vv | -q | -X:e | --X:eval-defaults)
         shift;
         ;;
       -t | --tag)
@@ -891,9 +895,7 @@ function loadRepoEnvironmentVariables() {
              "./${_repo}/build-settings.sh" \
              "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
              "./${_repo}/.build-settings.sh"; do
-      if [ -e "${f}" ]; then
-        source "${f}";
-      fi
+      sourceFileIfExists "${f}";
     done
   done
 }
