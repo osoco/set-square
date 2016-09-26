@@ -77,7 +77,7 @@ defineEnvVar ENABLE_RSNAPSHOT "Whether to enable rsnapshot" "true";
 defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "false";
 defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
-             "true";
+             "false";
 defineEnvVar ENABLE_NTPD "Whether to enable the NTPD daemon" "true";
 defineEnvVar BUILDER "The builder of the image" '${AUTHOR}';
 defineEnvVar SSL_KEY_ALGORITHM "The algorithm of the SSL key" "rsa";

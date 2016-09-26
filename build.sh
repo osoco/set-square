@@ -700,6 +700,35 @@ function retrieve_backup_host_ssh_port() {
 }
 
 ## PUBLIC
+## Copies dry-wit to the repository folder if it's used.
+## The rationale is to make sure dry-wit inside the repository is up to date.
+## Docker does not allow using symlinks for files to be copied inside the container.
+## -> 1: The repository.
+## -> 2: The location of the dry-wit file.
+## <- 0/${TRUE}: if dry-wit is not used, or if it is copied successfully;
+##    1/${FALSE}: if it was meant to be copied but it failed for some reason.
+## Example:
+##   copy_dry_wit_if_needed "base" "${PWD}/dry-wit"
+function copy_dry_wit_if_needed() {
+  local _repo="${1}";
+  local _dryWit="${2}";
+  local -i _rescode=${TRUE};
+
+  if isEmpty "${_repo}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repository' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_canonicalTag}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  fi
+
+  if [ -e "${_repo}/dry-wit" ]; then
+    cp "${_dryWit}" ${_repo}/dry-wit
+    _rescode=$?;
+  fi
+
+  return ${_rescode};
+}
+
+## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -741,6 +770,7 @@ function build_repo() {
   retrieve_stack_suffix "${STACK}";
   _stackSuffix="${RESULT}";
 
+  copy_dry_wit_if_needed "${_repo}" "${PWD}/dry-wit";
   copy_license_file "${_repo}" "${PWD}";
   copy_copyright_preamble_file "${_repo}" "${PWD}";
 
@@ -805,11 +835,11 @@ function registry_push() {
   logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
   ${DOCKER} ${DOCKER_OPTS} push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   _pushResult=$?;
-  logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
+  logInfo -n "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
   if [ ${_pushResult} -eq 0 ]; then
-    logInfoResult SUCCESS "done"
+    logInfoResult SUCCESS "done";
   else
-    logInfoResult FAILURE "failed"
+    logInfoResult FAILURE "failed";
     exitWithErrorCode ERROR_PUSHING_IMAGE "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
   fi
 }
