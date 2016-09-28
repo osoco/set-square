@@ -798,8 +798,8 @@ function build_repo() {
   fi
 
   logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
-#  echo ${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} --rm=true ${_repo}";
+#  echo ${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" ${DOCKER_BUILD_OPTS} "${_repo}"
+  runCommandLongOutput "${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} ${DOCKER_BUILD_OPTS} ${_repo}";
   _cmdResult=$?
   logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
