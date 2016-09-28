@@ -169,7 +169,7 @@ function checkInput() {
     esac
   done
 
-  if [[ -z ${REPOS} ]]; then
+  if isEmpty "${REPOS}"; then
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
@@ -181,8 +181,17 @@ function checkInput() {
         fi
       done
     fi
-    logDebugResult SUCCESS "valid";
   fi
+
+#  if isEmpty "${INCLUDES_FOLDER}"; then
+#    logDebugResult FAILURE "fail";
+#    exitWithErrorCode INCLUDES_FOLDER_IS_NOT_DEFINED;
+#  elif [ ! -e "${INCLUDES_FOLDER}" ]; then
+#    logDebugResult FAILURE "fail";
+#    exitWithErrorCode INCLUDES_FOLDER_DOES_NOT_EXIST "${INCLUDES_FOLDER}";
+#  fi
+
+  logDebugResult SUCCESS "valid";
 }
 
 ## Checks whether the repository is part of a stack.
@@ -435,12 +444,18 @@ function resolve_includes() {
 
   if isEmpty "${_input}"; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "'input' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif [ ! -e "${_input}" ]; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'input' \"${_input}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   elif isEmpty "${_output}"; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "'output' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   elif isEmpty "${_repoFolder}"; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif [ ! -e "${_repoFolder}" ]; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' \"${_repoFolder}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   elif isEmpty "${_templateFolder}"; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif [ ! -e "${_templateFolder}" ]; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' \"${_templateFolder}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   elif isEmpty "${_repo}"; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   elif isEmpty "${_rootImage}"; then

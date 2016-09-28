@@ -74,7 +74,7 @@ defineEnvVar ENABLE_MONIT "Whether to enable Monit" "true";
 defineEnvVar ENABLE_SYSLOG "Whether to enable syslog" "true";
 defineEnvVar ENABLE_CRON "Whether to enable cron" "true";
 defineEnvVar ENABLE_RSNAPSHOT "Whether to enable rsnapshot" "true";
-defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "false";
+defineEnvVar ENABLE_LOCAL_SMTP "Whether to run a local SMTP server" "true";
 defineEnvVar ENABLE_LOGSTASH \
              "Whether to enable logstash, if available for the specific image" \
              "false";
@@ -103,3 +103,5 @@ defineEnvVar ISO3166_COUNTRY_CODE "The two-letter ISO3166 country code" "US";
 defineEnvVar ENCODING "The file encoding" "UTF-8";
 defineEnvVar TIMEZONE "The timezone" "Etc/UTC";
 defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
+defineEnvVar GMAIL_USER_FOR_SMTP_RELAY "The gmail user for sending locally-generated emails through gmail" "";
+defineEnvVar GMAIL_PASSWORD_FOR_SMTP_RELAY "The password for sending locally-generated emails through gmail" "";
