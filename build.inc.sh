@@ -100,8 +100,8 @@ defineEnvVar DEVELOPMENT_USER_ID "The user id used when developing code (to matc
 defineEnvVar DOCKER_OPTS "Generic Docker options" "";
 defineEnvVar DOCKER_TAG_OPTS "Docker tag options" "";
 defineEnvVar DOCKER_BUILD_OPTS "Docker build options" "--rm=true";
-defineEnvVar DEFAULT_LOCALE "The default locale" "es_ES.UTF-8";
-defineEnvVar LOCALES "The supported locales" '${DEFAULT_LOCALE} en_US.UTF-8 es_ES.UTF-8';
+defineEnvVar DEFAULT_LOCALE "The default locale" "en_US.UTF-8";
+defineEnvVar LOCALES "The supported locales" '${DEFAULT_LOCALE} en_US.UTF-8 es_ES.ISO8859-1 es_ES.ISO8859-15@euro';
 defineEnvVar TIMEZONE "The timezone" "Etc/UTC";
 defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
 defineEnvVar GMAIL_USER_FOR_SMTP_RELAY "The gmail user for sending locally-generated emails through gmail" "";
