@@ -34,7 +34,8 @@ defineEnvVar BACKUP_HOST_SUFFIX \
              "The prefix of the backup host to send the backup files" \
              '-backup.${DOMAIN}';
 defineEnvVar BACKUP_USER "The backup user" "backup";
-defineEnvVar DOCKER_GROUP "The docker group" "docker";
+defineEnvVar DOCKER_USER "The Docker group" "docker";
+defineEnvVar DOCKER_GROUP "The Docker group" "docker";
 defineEnvVar SSHPORTS_FILE \
              "The file with the SSH port mappings" \
              "sshports.txt";
@@ -99,9 +100,8 @@ defineEnvVar DEVELOPMENT_USER_ID "The user id used when developing code (to matc
 defineEnvVar DOCKER_OPTS "Generic Docker options" "";
 defineEnvVar DOCKER_TAG_OPTS "Docker tag options" "";
 defineEnvVar DOCKER_BUILD_OPTS "Docker build options" "--rm=true";
-defineEnvVar ISO639_1_LANGUAGE_CODE "The two-letter ISO 639-1 language code" "es";
-defineEnvVar ISO3166_COUNTRY_CODE "The two-letter ISO3166 country code" "ES";
-defineEnvVar ENCODING "The file encoding" "UTF-8";
+defineEnvVar DEFAULT_LOCALE "The default locale" "es_ES.UTF-8";
+defineEnvVar LOCALES "The supported locales" '${DEFAULT_LOCALE} en_US.UTF-8 es_ES.UTF-8';
 defineEnvVar TIMEZONE "The timezone" "Etc/UTC";
 defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
 defineEnvVar GMAIL_USER_FOR_SMTP_RELAY "The gmail user for sending locally-generated emails through gmail" "";
