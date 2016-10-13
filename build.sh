@@ -123,6 +123,10 @@ function parseInput() {
         shift;
         export CLEAUP_CONTAINERS=TRUE;
         ;;
+      --)
+        shift;
+        break;
+        ;;
     esac
   done
 
@@ -163,6 +167,9 @@ function checkInput() {
         ;;
       -t | --tag | -p | --registry | -f | --force | -r | --reduce-image | -s | --stack)
 	      ;;
+      --)
+        break;
+        ;;
       *) logDebugResult FAILURE "fail";
          exitWithErrorCode INVALID_OPTION ${_flag};
          ;;
@@ -351,19 +358,20 @@ function process_file() {
       logTraceResult SUCCESS "done";
       logTrace -n "Resolving placeholders in ${_file}";
       if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-        _rescode=0;
+        _rescode=${TRUE};
         logTraceResult SUCCESS "done"
       else
-        _rescode=1;
+        _rescode=${FALSE};
         logTraceResult FAILURE "failed";
       fi
     else
-      _rescode=1;
+      _rescode=${FALSE};
       logTraceResult FAILURE "failed";
     fi
   else
-    _rescode=1;
+    _rescode=${FALSE};
   fi
+
   return ${_rescode};
 }
 
@@ -392,10 +400,8 @@ function resolve_included_file() {
       exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
   for d in "${_repoFolder}" "." "${_templatesFolder}"; do
-#    echo "Checking ${d}/${_file}" >> /tmp/log.txt;
     if    [[ -e "${d}/${_file}" ]] \
        || [[ -e "${d}/$(basename ${_file} .template).template" ]]; then
-#      echo "${d}/${_file} found!" >> /tmp/log.txt;
       _result="${d}/${_file}";
       export RESULT="${_result}";
       _rescode=${TRUE};
@@ -409,6 +415,7 @@ function resolve_included_file() {
       _rescode=$?;
     fi
   fi
+
   return ${_rescode};
 }
 
@@ -658,7 +665,7 @@ function copy_license_file() {
     if [ ! -e "${_repo}/${LICENSE_FILE}" ]; then
       logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
       cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
-      if [ $? -eq 0 ]; then
+      if isTrue $?; then
         logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
@@ -684,7 +691,7 @@ function copy_copyright_preamble_file() {
     if [ ! -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
       cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/${COPYRIGHT_PREAMBLE_FILE}";
-      if [ $? -eq 0 ]; then
+      if isTrue $?; then
         logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
@@ -736,8 +743,14 @@ function copy_dry_wit_if_needed() {
   fi
 
   if [ -e "${_repo}/dry-wit" ]; then
+    logDebug -n "Copying dry-wit to ${_repo}";
     cp "${_dryWit}" ${_repo}/dry-wit
     _rescode=$?;
+    if isTrue ${_rescode}; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+    fi
   fi
 
   return ${_rescode};
