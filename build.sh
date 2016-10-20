@@ -56,6 +56,8 @@ function defineErrors() {
   addError "AWK_NOT_INSTALLED" "awk is not installed";
   addError "DOCKER_SQUASH_NOT_INSTALLED" "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
   addError "NO_REPOSITORIES_FOUND" "no repositories found";
+  addError "REPO_DOES_NOT_EXIST" "Repository does not exist";
+  addError "REPO_IS_NOT_A_FOLDER" "Repository is not a folder";
   addError "REPO_IS_NOT_STACKED" "Repository is not stacked (it should end with -stack)";
   addError "CANNOT_PROCESS_TEMPLATE" "Cannot process template";
   addError "INCLUDED_FILE_NOT_FOUND" "The included file is missing";
@@ -157,6 +159,8 @@ function checkInput() {
   local _flags=$(extractFlags $@);
   local _flagCount;
   local _currentCount;
+  local _oldIfs;
+
   logDebug -n "Checking input";
 
   # Flags
@@ -180,8 +184,23 @@ function checkInput() {
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
+    _oldIfs="${IFS}";
+    IFS="\n\t";
+    for _repo in ${REPOS}; do
+      IFS="${_oldIfs}";
+      if [ ! -e "${_repo}" ]; then
+          logDebugResult FAILURE "fail";
+          exitWithErrorCode REPO_DOES_NOT_EXIST "${_repo}";
+      elif [ ! -d "${_repo}" ]; then
+        logDebugResult FAILURE "fail";
+        exitWithErrorCode REPO_IS_NOT_A_DIRECTORY "${_repo}";
+      fi
+    done
+
     if stack_image_enabled; then
+      IFS="\n\t";
       for _repo in ${REPOS}; do
+        IFS="${_oldIfs}";
         if ! is_stacked_repo "${_repo}"; then
           logDebugResult FAILURE "fail";
           exitWithErrorCode REPO_IS_NOT_STACKED;
