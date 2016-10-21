@@ -761,9 +761,10 @@ function copy_dry_wit_if_needed() {
     exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
 
-  if [ -e "${_repo}/dry-wit" ]; then
-    logDebug -n "Copying dry-wit to ${_repo}";
-    cp "${_dryWit}" ${_repo}/dry-wit
+  if    [ -e "${_repo}/dry-wit" ] \
+     || [ "x${_repo}" == "xbase" ]; then
+    logDebug -n "Copying dry-wit to ${_repo}/dry-wit";
+    cp "${_dryWit}" "${_repo}"/dry-wit
     _rescode=$?;
     if isTrue ${_rescode}; then
       logDebugResult SUCCESS "done";
