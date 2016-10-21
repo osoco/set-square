@@ -185,7 +185,7 @@ function checkInput() {
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
     _oldIfs="${IFS}";
-    IFS="\n\t";
+    IFS=$'\t\n';
     for _repo in ${REPOS}; do
       IFS="${_oldIfs}";
       if [ ! -e "${_repo}" ]; then
@@ -198,7 +198,7 @@ function checkInput() {
     done
 
     if stack_image_enabled; then
-      IFS="\n\t";
+      IFS=$'\t\n';
       for _repo in ${REPOS}; do
         IFS="${_oldIfs}";
         if ! is_stacked_repo "${_repo}"; then
