@@ -419,8 +419,8 @@ function resolve_included_file() {
       exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
   for d in "${_repoFolder}" "." "${_templatesFolder}"; do
-    if    [[ -e "${d}/${_file}" ]] \
-       || [[ -e "${d}/$(basename ${_file} .template).template" ]]; then
+    if    [[ -f "${d}/${_file}" ]] \
+       || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
       _result="${d}/${_file}";
       export RESULT="${_result}";
       _rescode=${TRUE};
@@ -466,6 +466,9 @@ function resolve_includes() {
   local _rescode;
   local _match;
   local _includedFile;
+  local _includedFolder;
+  local _includedFolderBundle;
+  local _includedFolderBundleName;
   local line;
 
   if isEmpty "${_input}"; then
@@ -504,6 +507,23 @@ function resolve_includes() {
       _ref="$(echo "$line" | sed 's/@include(\"\(.*\)\")/\1/g')";
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
         _includedFile="${RESULT}";
+        _includedFileBundleSettings="$(basename ${_includedFile} .template).settings";
+        if [ -e "${_includedFileBundleSettings}" ]; then
+          source "${_includedFileBundleSettings}";
+        fi
+        _includedFolder="$(dirname ${_includedFile})";
+        _includedFileBundleName="$(basename ${_includedFile} .template)-files";
+        _includedFileBundle="${_includedFolder}/${_includedFileBundleName}";
+        if [ -e "${_includedFileBundleSettings}" ]; then
+          source "${_includedFileBundleSettings}";
+        fi
+        if [ -d "${_includedFileBundle}" ]; then
+          if [ -d "${_repoFolder}/${_includedFileBundleName}" ]; then
+            rsync -az "${_includedFileBundle}/" "${_repoFolder}/${_includedFileBundleName}/";
+          else
+            cp -r "${_includedFileBundle}" "${_repoFolder}";
+          fi
+        fi
         if [ -e "${_includedFile}.template" ]; then
           if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
             _match=0;
