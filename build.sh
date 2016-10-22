@@ -467,8 +467,9 @@ function resolve_includes() {
   local _match;
   local _includedFile;
   local _includedFolder;
-  local _includedFolderBundle;
-  local _includedFolderBundleName;
+  local _includedFileBundle;
+  local _includedFileBundleName;
+  local _includedFileBundleSettings;
   local line;
 
   if isEmpty "${_input}"; then
@@ -507,11 +508,13 @@ function resolve_includes() {
       _ref="$(echo "$line" | sed 's/@include(\"\(.*\)\")/\1/g')";
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
         _includedFile="${RESULT}";
-        _includedFileBundleSettings="$(basename ${_includedFile} .template).settings";
-        if [ -e "${_includedFileBundleSettings}" ]; then
-          source "${_includedFileBundleSettings}";
-        fi
         _includedFolder="$(dirname ${_includedFile})";
+        _includedFileBundleSettings="${_includedFolder}/$(basename ${_includedFile} .template).settings";
+        if [ -e "${_includedFileBundleSettings}" ]; then
+          logDebug -n "Reading ${_includedFileBundleSettings}";
+          source "${_includedFileBundleSettings}";
+          logDebugResult SUCCESS "done";
+        fi
         _includedFileBundleName="$(basename ${_includedFile} .template)-files";
         _includedFileBundle="${_includedFolder}/${_includedFileBundleName}";
         if [ -e "${_includedFileBundleSettings}" ]; then
