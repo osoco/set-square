@@ -526,6 +526,12 @@ function resolve_includes() {
           else
             cp -r "${_includedFileBundle}" "${_repoFolder}";
           fi
+          for f in $(find ${_repoFolder}/${_includedFileBundleName}/ -name '*.template'); do
+            if [ -e ${f} ]; then
+#              _debugEcho "process_file ${f} ${_repoFolder}/${_includedFileBundleName}/$(basename ${f} .template) ${_repoFolder} ${_templateFolder} ${_repo} ${_rootImage} ${_namespace} ${_tag} ${_stackSuffix} ${_backupHostSshPort}";
+              process_file "${f}" "${_repoFolder}/${_includedFileBundleName}/$(basename ${f} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}";
+            fi
+          done
         fi
         if [ -e "${_includedFile}.template" ]; then
           if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
@@ -1125,3 +1131,4 @@ function main() {
   cleanup_containers;
   cleanup_images;
 }
+
