@@ -43,3 +43,10 @@ defineEnvVar DOCKER_TAG_OPTS "Docker tag options" "";
 defineEnvVar DOCKER_BUILD_OPTS "Docker build options" "--rm=true";
 defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
 
+defineEnvVar APTGET_INSTALL \
+             "Installs a program via apt-get" \
+             '/usr/local/bin/aptget-install.sh -vv ';
+defineEnvVar APTGET_CLEANUP \
+             "The cleanup commands after an apt-get so that the resulting image size is optimal" \
+             '/usr/local/bin/aptget-cleanup.sh -v ';
+
