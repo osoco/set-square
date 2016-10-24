@@ -699,13 +699,13 @@ function update_log_category() {
 
 ## PUBLIC
 ## Copies the license file from specified folder to the repository folder.
-## -> 1: the repository.
-## -> 2: the folder where the license file is included.
+## -> 1: the folder where the license file is included.
+## -> 2: the repository.
 ## Example:
-##   copy_license_file "myImage" ${PWD}
+##   copy_license_file "${PWD}" "myImage"
 function copy_license_file() {
-  local _repo="${1}";
-  local _folder="${2}";
+  local _folder="${1}";
+  local _repo="${2}";
   if [ -e "${_repo}/${LICENSE_FILE}" ] || \
      [ -e "${_folder}/${LICENSE_FILE}" ]; then
     if [ ! -e "${_repo}/${LICENSE_FILE}" ]; then
@@ -725,13 +725,14 @@ function copy_license_file() {
 
 ## PUBLIC
 ## Copies the copyright-preamble file from specified folder to the repository folder.
-## -> 1: the repository.
-## -> 2: the folder where the copyright preamble file is included.
+## -> 1: the folder where the copyright preamble file is included.
+## -> 2: the repository.
 ## Example:
-##   copy_copyright_preamble_file "myImage" ${PWD}
+##   copy_copyright_preamble_file "${PWD}" "myImage";
 function copy_copyright_preamble_file() {
-  local _repo="${1}";
-  local _folder="${2}";
+  local _folder="${1}";
+  local _repo="${2}";
+
   if [ -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ] || \
      [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
     if [ ! -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
@@ -768,36 +769,59 @@ function retrieve_backup_host_ssh_port() {
 }
 
 ## PUBLIC
+## Copies dry-wit to given folder.
+## -> 1: dry-wit location.
+## -> 2: The destination folder.
+## <- 0/${TRUE}: if dry-wit is copied correctly; 1/${FALSE} otherwise.
+## Example:
+##   copy_dry_wit_to_folder "${PWD}/dry-wit" ".templates/common-files"
+function copy_dry_wit_to_folder() {
+  local _dryWit="${1}";
+  local _folder="${2}";
+  local -i _rescode=${TRUE};
+
+  if isEmpty "${_dryWit}"; then
+      exitWithErrorCode UNACCEPTABLE_API_CALL "'dryWit' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_folder}"; then
+      exitWithErrorCode UNACCEPTABLE_API_CALL "'folder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  fi
+
+  logDebug -n "Copying dry-wit to ${_folder}";
+  cp "${_dryWit}" "${_folder}"/
+  _rescode=$?;
+  if isTrue ${_rescode}; then
+    logDebugResult SUCCESS "done";
+  else
+    logDebugResult FAILURE "failed";
+  fi
+
+  return ${_rescode};
+}
+
+## PUBLIC
 ## Copies dry-wit to the repository folder if it's used.
 ## The rationale is to make sure dry-wit inside the repository is up to date.
 ## Docker does not allow using symlinks for files to be copied inside the container.
-## -> 1: The repository.
-## -> 2: The location of the dry-wit file.
+## -> 1: The location of the dry-wit file.
+## -> 2: The repository.
 ## <- 0/${TRUE}: if dry-wit is not used, or if it is copied successfully;
 ##    1/${FALSE}: if it was meant to be copied but it failed for some reason.
 ## Example:
-##   copy_dry_wit_if_needed "base" "${PWD}/dry-wit"
+##   copy_dry_wit_if_needed "${PWD}/dry-wit" "base"
 function copy_dry_wit_if_needed() {
-  local _repo="${1}";
-  local _dryWit="${2}";
+  local _dryWit="${1}";
+  local _repo="${2}";
   local -i _rescode=${TRUE};
 
-  if isEmpty "${_repo}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repository' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_canonicalTag}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  if isEmpty "${_dryWit}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'dryWit' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  elif isEmpty "${_repo}"; then
+    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
 
   if    [ -e "${_repo}/dry-wit" ] \
      || [ "x${_repo}" == "xbase" ]; then
-    logDebug -n "Copying dry-wit to ${_repo}/dry-wit";
-    cp "${_dryWit}" "${_repo}"/dry-wit
-    _rescode=$?;
-    if isTrue ${_rescode}; then
-      logDebugResult SUCCESS "done";
-    else
-      logDebugResult FAILURE "failed";
-    fi
+    copy_dry_wit_to_folder "${_dryWit}" "${_repo}";
   fi
 
   return ${_rescode};
@@ -845,9 +869,10 @@ function build_repo() {
   retrieve_stack_suffix "${STACK}";
   _stackSuffix="${RESULT}";
 
-  copy_dry_wit_if_needed "${_repo}" "${PWD}/dry-wit";
-  copy_license_file "${_repo}" "${PWD}";
-  copy_copyright_preamble_file "${_repo}" "${PWD}";
+  copy_dry_wit_to_folder "${PWD}/dry-wit" "${INCLUDES_FOLDER}/common-files";
+#  copy_dry_wit_if_needed "${PWD}/dry-wit" "${_repo}";
+  copy_license_file "${PWD}" "${_repo}";
+  copy_copyright_preamble_file "${PWD}" "${_repo}";
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
     for f in ${_repo}/*.template; do
