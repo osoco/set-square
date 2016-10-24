@@ -511,9 +511,7 @@ function resolve_includes() {
         _includedFolder="$(dirname ${_includedFile})";
         _includedFileBundleSettings="${_includedFolder}/$(basename ${_includedFile} .template).settings";
         if [ -e "${_includedFileBundleSettings}" ]; then
-          logDebug -n "Reading ${_includedFileBundleSettings}";
           source "${_includedFileBundleSettings}";
-          logDebugResult SUCCESS "done";
         fi
         _includedFileBundleName="$(basename ${_includedFile} .template)-files";
         _includedFileBundle="${_includedFolder}/${_includedFileBundleName}";
