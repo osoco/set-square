@@ -786,13 +786,13 @@ function copy_dry_wit_to_folder() {
       exitWithErrorCode UNACCEPTABLE_API_CALL "'folder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
 
-  logDebug -n "Copying dry-wit to ${_folder}";
+  logTrace -n "Copying dry-wit to ${_folder}";
   cp "${_dryWit}" "${_folder}"/
   _rescode=$?;
   if isTrue ${_rescode}; then
-    logDebugResult SUCCESS "done";
+    logTraceResult SUCCESS "done";
   else
-    logDebugResult FAILURE "failed";
+    logTraceResult FAILURE "failed";
   fi
 
   return ${_rescode};
