@@ -49,4 +49,3 @@ defineEnvVar APTGET_INSTALL \
 defineEnvVar APTGET_CLEANUP \
              "The cleanup commands after an apt-get so that the resulting image size is optimal" \
              '/usr/local/bin/aptget-cleanup.sh -v ';
-
