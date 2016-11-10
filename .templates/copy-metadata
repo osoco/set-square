@@ -1,0 +1,8 @@
+# copy-metadata template
+
+COPY README LICENSE /
+COPY Dockerfile /Dockerfiles/acmsl-set-square.201611
+COPY copyright-preamble.txt /Dockerfiles/copyright-preamble.txt
+
+# End of copy-metadata template
+

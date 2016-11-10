@@ -1,0 +1,7 @@
+* set-square Docker image
+
+This image runs set-square within a Docker container.
+
+* Usage
+
+# docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${PWD}:/work ${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG} [set-square arguments]

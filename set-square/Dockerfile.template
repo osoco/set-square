@@ -1,0 +1,27 @@
+@include("preamble")
+FROM ${ROOT_IMAGE}
+@include("maintainer")
+
+ENV SERVICE_USER="${SERVICE_USER}" \
+    SERVICE_GROUP="${SERVICE_GROUP}";
+
+@include("common")
+@include("service_user")
+@include("check-version")
+@include("install")
+
+COPY build.sh build.inc.sh ${SERVICE_USER_HOME}/
+ADD .templates ${SERVICE_USER_HOME}/.templates
+
+COPY my_exec /sbin/my_exec
+RUN chmod +x /sbin/my_exec && chown -R ${SERVICE_USER}:${SERVICE_GROUP} ${SERVICE_USER_HOME} && \
+    ${APTGET_INSTALL} --update git docker.io && \
+    ${APTGET_CLEANUP}
+
+VOLUME /work
+ENTRYPOINT ["/sbin/my_exec"]
+CMD ["/sbin/my_init"]
+
+@include("copy-metadata")
+@include("symlinks")
+@include("instructions")

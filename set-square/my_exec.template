@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Splitting executable from arguments
+_cmd="${1}";
+shift
+_cmd="${_cmd} ${@}";
+
+_folder="/work";
+
+_build="${_folder}/.$$-build.sh";
+#_buildInc="${_folder}/.$$-build.inc.sh";
+
+cp /home/${SERVICE_USER}/build.sh "${_build}";
+#cp /home/${SERVICE_USER}/build.inc.sh "${_buildInc}";
+
+chmod +x "${_build}";
+#chmod +x "${_buildInc}";
+
+touch /tmp/.drywit.log;
+chown -R ${SQ_SERVICE_USER}:${SQ_SERVICE_GROUP} /tmp/.drywit.log;
+
+exec /usr/local/bin/run-as.sh -- ${_folder} ${_build} ${_cmd};
+_rescode=$?;
+if [ ${_rescode} -ne 0 ]; then
+  echo "Returning error code ${_rescode}";
+fi
+rm -f "${_build}";
+
+exit ${_rescode}
+# vim: syntax=sh ts=4 sw=4 sts=4 sr noet

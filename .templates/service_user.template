@@ -1,0 +1,2 @@
+RUN (/usr/sbin/groupadd ${SERVICE_GROUP} 2> /dev/null || echo "Group ${SERVICE_GROUP} already exists") && \
+    (/usr/sbin/useradd -m -g ${SERVICE_GROUP} -G ${SERVICE_GROUP} -d ${SERVICE_USER_HOME} -s ${SERVICE_USER_SHELL} -c "${IMAGE} user" ${SERVICE_USER} 2> /dev/null || echo "User ${SERVICE_USER} already exists")

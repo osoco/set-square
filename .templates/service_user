@@ -1,0 +1,2 @@
+RUN (/usr/sbin/groupadd users 2> /dev/null || echo "Group users already exists") && \
+    (/usr/sbin/useradd -m -g users -G users -d /home/setsquare -s /bin/bash -c "set-square user" setsquare 2> /dev/null || echo "User setsquare already exists")

@@ -707,11 +707,20 @@ function update_log_category() {
 function copy_license_file() {
   local _folder="${1}";
   local _repo="${2}";
-  if [ -e "${_repo}/${LICENSE_FILE}" ] || \
-     [ -e "${_folder}/${LICENSE_FILE}" ]; then
-    if [ ! -e "${_repo}/${LICENSE_FILE}" ]; then
-      logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-      cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
+  local _licenseFile="${LICENSE_FILE}";
+
+  checkNotEmpty "folder" "${_folder}" 1;
+  checkNotEmpty "repo" "${_repo}" 2;
+
+  if [ "${_repo}" == "set-square" ]; then
+    _licenseFile="LICENSE.set-square";
+  fi
+
+  if [ -e "${_repo}/${_licenseFile}" ] || \
+     [ -e "${_folder}/${_licenseFile}" ]; then
+    if [ ! -e "${_repo}/LICENSE" ]; then
+      logDebug -n "Using ${_licenseFile} for ${_repo} image";
+      cp "${_folder}/${_licenseFile}" "${_repo}/LICENSE";
       if isTrue $?; then
         logDebugResult SUCCESS "done";
       else
@@ -720,7 +729,7 @@ function copy_license_file() {
       fi
     fi
   else
-    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
+    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${_licenseFile}";
   fi
 }
 
@@ -733,12 +742,21 @@ function copy_license_file() {
 function copy_copyright_preamble_file() {
   local _folder="${1}";
   local _repo="${2}";
+  local _copyrightPreambleFile="${COPYRIGHT_PREAMBLE_FILE}";
 
-  if [ -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ] || \
-     [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
-    if [ ! -e "${_repo}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
-      logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
-      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/${COPYRIGHT_PREAMBLE_FILE}";
+  checkNotEmpty "folder" "${_folder}" 1;
+  checkNotEmpty "repo" "${_repo}" 2;
+
+  if [ "${_repo}" == "set-square" ]; then
+    _copyrightPreambleFile="copyright-preamble.set-square";
+  fi
+
+  if [ -e "${_repo}/${_copyrightPreambleFile}" ] || \
+     [ -e "${_folder}/${_copyrightPreambleFile}" ]; then
+
+    if [ ! -e "${_repo}/copyright-preamble.txt" ]; then
+      logDebug -n "Using ${_copyrightPreambleFile} for ${_repo} image";
+      cp "${_folder}/${_copyrightPreambleFile}" "${_repo}/copyright-preamble.txt";
       if isTrue $?; then
         logDebugResult SUCCESS "done";
       else
@@ -747,7 +765,7 @@ function copy_copyright_preamble_file() {
       fi
     fi
   else
-    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
+    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${_copyrightPreambleFile}";
   fi
 }
 
@@ -828,6 +846,31 @@ function copy_dry_wit_if_needed() {
   return ${_rescode};
 }
 
+## PRIVATE
+## Copies set-square files and folders to its own Docker build folder.
+## -> 1: The repo folder.
+## <- 0/${TRUE} if the files are copied successfully; 1/${FALSE} otherwise.
+## Example:
+##   if _copy_set_square_files_to_repo; then
+##     echo "set-square files copied successfully";
+##   fi
+function _copy_set_square_files_to_repo() {
+  local _repo="${1}";
+  local -i _rescode;
+
+  checkNotEmpty "repo" "${_repo}" 1;
+
+  for f in build.sh build.inc.sh ${INCLUDES_FOLDER}; do
+    cp -r ${f} "${_repo}";
+    _rescode=$?;
+    if isFalse ${_rescode}; then
+      break;
+    fi
+  done
+
+  return ${_rescode};
+}
+
 ## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
@@ -871,7 +914,11 @@ function build_repo() {
   _stackSuffix="${RESULT}";
 
   copy_dry_wit_to_folder "${PWD}/dry-wit" "${INCLUDES_FOLDER}/common-files";
-#  copy_dry_wit_if_needed "${PWD}/dry-wit" "${_repo}";
+  #  copy_dry_wit_if_needed "${PWD}/dry-wit" "${_repo}";
+  if [ "${_repo}" == "set-square" ]; then
+    _copy_set_square_files_to_repo "${_repo}";
+  fi
+
   copy_license_file "${PWD}" "${_repo}";
   copy_copyright_preamble_file "${PWD}" "${_repo}";
 
