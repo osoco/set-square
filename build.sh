@@ -533,17 +533,17 @@ function resolve_includes() {
         fi
         if [ -e "${_includedFile}.template" ]; then
           if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-            _match=0;
+            _match=${TRUE};
           else
-            _match=1;
+            _match=${FALSE};
             logTraceResult FAILURE "failed";
             exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}";
           fi
         else
-          _match=0;
+          _match=${TRUE};
         fi
       else
-        _match=1;
+        _match=${FALSE};
         _errorRef="${_ref}";
         eval "echo ${_ref}" > /dev/null 2>&1;
         if [ $? -eq 0 ]; then
@@ -551,14 +551,15 @@ function resolve_includes() {
         fi
       fi
     fi
-    if [[ ${_match} -eq 0 ]]; then
+    if isTrue ${_match}; then
+#      _debugEcho "Appending ${_includedFile} to ${_output}";
       cat "${_includedFile}" >> "${_output}";
     else
       echo "$line" >> "${_output}";
     fi
   done < "${_input}";
   _rescode=$?;
-  if [ "${_errorRef}" != "" ]; then
+  if [ -n "${_errorRef}" ]; then
     logTraceResult FAILURE "failed";
     exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
   else
@@ -1154,4 +1155,3 @@ function main() {
   cleanup_containers;
   cleanup_images;
 }
-
