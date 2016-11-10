@@ -860,7 +860,7 @@ function _copy_set_square_files_to_repo() {
 
   checkNotEmpty "repo" "${_repo}" 1;
 
-  for f in build.sh build.inc.sh ${INCLUDES_FOLDER}; do
+  for f in build.sh build.inc.sh; do
     cp -r ${f} "${_repo}";
     _rescode=$?;
     if isFalse ${_rescode}; then

@@ -15,7 +15,7 @@ ADD .templates ${SERVICE_USER_HOME}/.templates
 
 COPY my_exec /sbin/my_exec
 RUN chmod +x /sbin/my_exec && chown -R ${SERVICE_USER}:${SERVICE_GROUP} ${SERVICE_USER_HOME} && \
-    ${APTGET_INSTALL} --update git docker.io && \
+    ${APTGET_INSTALL} --update git docker.io rsync && \
     ${APTGET_CLEANUP}
 
 VOLUME /work

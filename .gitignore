@@ -13,11 +13,17 @@ LICENSE
 *.pyg
 set-square/build.inc.sh
 set-square/build.sh
+set-square/check-version-files
 set-square/common-files
 set-square/Dockerfile
+set-square/install-files
 set-square/my_exec
 set-square/README
+set-square/.templates
 *.snm
+.templates/copy-metadata
+.templates/install
 .templates/instructions
+.templates/maintainer
 .templates/preamble
 *.toc

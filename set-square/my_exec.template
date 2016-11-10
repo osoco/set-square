@@ -8,16 +8,18 @@ _cmd="${_cmd} ${@}";
 _folder="/work";
 
 _build="${_folder}/.$$-build.sh";
-#_buildInc="${_folder}/.$$-build.inc.sh";
+_buildInc="${_folder}/.$$-build.inc.sh";
 
 cp /home/${SERVICE_USER}/build.sh "${_build}";
-#cp /home/${SERVICE_USER}/build.inc.sh "${_buildInc}";
+cp /home/${SERVICE_USER}/build.inc.sh "${_buildInc}";
 
 chmod +x "${_build}";
-#chmod +x "${_buildInc}";
+chmod +x "${_buildInc}";
 
 touch /tmp/.drywit.log;
 chown -R ${SQ_SERVICE_USER}:${SQ_SERVICE_GROUP} /tmp/.drywit.log;
+
+# chmod a+rw /var/run/docker.sock 2> /dev/null
 
 exec /usr/local/bin/run-as.sh -- ${_folder} ${_build} ${_cmd};
 _rescode=$?;
@@ -25,6 +27,7 @@ if [ ${_rescode} -ne 0 ]; then
   echo "Returning error code ${_rescode}";
 fi
 rm -f "${_build}";
+rm -f "${_buildInc}";
 
 exit ${_rescode}
 # vim: syntax=sh ts=4 sw=4 sts=4 sr noet

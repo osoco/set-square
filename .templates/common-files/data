@@ -1,0 +1,13 @@
+#!/bin/bash
+
+_volumes="$(grep -e "^VOLUME " /Dockerfiles/Dockerfile* 2> /dev/null | awk '{print $2;}')";
+
+echo "$(hostname) configured as data container. Use --volumes-from $(hostname) to use it."
+if [[ -z ${_volumes} ]]; then
+  echo "Notice this container does not declare any volumes by default."
+else
+  echo "Available volumes (by default):"
+  for v in ${_volumes}; do
+    echo "- ${v}";
+  done
+fi
