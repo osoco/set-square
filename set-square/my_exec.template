@@ -27,10 +27,13 @@ password=${DOCKER_PASSWORD}
 email=${DOCKER_EMAIL}
 EOF
 
-_url="${}";
-_user="${2}";
-_pass="${3}";
-_email="${4}";
+export AUTHOR="rydnr";
+export DOMAIN="acm-sl.org";
+export AUTHOR_EMAIL="github@acm-sl.org";
+export NAMESPACE="acmsl";
+export REGISTRY="nexus.acm-sl.org";
+export DOCKER_BUILD="/usr/local/bin/docker-build.sh";
+
 exec /usr/local/bin/run-as.sh -- ${_folder} ${_build} ${_cmd};
 _rescode=$?;
 if [ ${_rescode} -ne 0 ]; then

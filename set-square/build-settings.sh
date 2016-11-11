@@ -5,3 +5,9 @@ defineEnvVar SERVICE_USER_SHELL 'The shell of ${SERVICE_USER} user' '/bin/bash';
 defineEnvVar DOCKER_USERNAME "The docker account username" '${AUTHOR}';
 defineEnvVar DOCKER_PASSWORD "The docker account password" '${RANDOM_PASSWORD}';
 defineEnvVar DOCKER_EMAIL "The docker account email" '${AUTHOR_EMAIL}';
+defineEnvVar AUTHOR "rydnr";
+defineEnvVar DOMAIN "acm-sl.org";
+defineEnvVar AUTHOR_EMAIL "github@acm-sl.org";
+defineEnvVar NAMESPACE "acmsl";
+defineEnvVar REGISTRY "nexus.acm-sl.org";
+
