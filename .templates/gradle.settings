@@ -1,0 +1,2 @@
+defineEnvVar GRADLE_VERSION "The Gradle version" "${TAG}";
+defineEnvVar DEFAULT_DOCKER_API_VERSION "The docker API version" "1.23";

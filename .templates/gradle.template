@@ -1,0 +1,7 @@
+# gradle:
+#   - requires:
+#     - sdkman
+ENV GRADLE_USER_HOME="/opt/workspace/.gradle" \
+    DOCKER_API_VERSION="${DEFAULT_DOCKER_API_VERSION}"
+
+RUN su - ${SERVICE_USER} 'cd ${SERVICE_USER_HOME} && source ${SERVICE_USER_HOME}/.sdkman/bin/sdkman-init.sh && sdk install gradle ${GRADLE_VERSION}'

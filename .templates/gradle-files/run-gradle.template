@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Splitting executable from arguments
+_cmd="${1}";
+shift
+_cmd="${_cmd} ${@}";
+
+_dockerHost="${DOCKER_HOST:-unix:///run/docker.sock}"
+
+_dockerApiVersion="${DOCKER_API_VERSION:-${DEFAULT_DOCKER_API_VERSION}}"
+if [ -n "${_dockerApiVersion}" ]; then
+  _dockerApiVersion="-DAPI_VERSION=${_dockerApiVersion} -Dapi.version=${_dockerApiVersion} -DDOCKER_API_VERSION=${_dockerApiVersion}"
+fi
+
+_gradleTag="${GRADLE_TAG:-${TAG}}";
+if [ -n "${_gradleTag}" ]; then
+  _gradleTag="-DGRADLE_TAG=\"${_gradleTag}\"";
+fi
+_grailsTag="${GRAILS_TAG:-${TAG}}";
+if [ -n "${_grailsTag}" ]; then
+  _grailsTag="-DGRAILS_TAG=\"${_grailsTag}\"";
+fi
+_nodeJsTag="${NODEJS_TAG:-${TAG}}";
+if [ -n "${_nodeJsTag}" ]; then
+  _nodeJsTag="-DNODEJS_TAG=\"${_nodeJsTag}\"";
+fi
+
+_folder="/opt/workspace";
+
+_projectFolder="${_folder}"
+
+if [ -n "${PROJECT_NAME}" ]; then
+  _projectFolder="${_folder}/${PROJECT_NAME}"
+fi
+
+mkdir -p "${_projectFolder}";
+
+[ ! -e ${_folder}/.gradle ] && mkdir ${_folder}/.gradle > /dev/null 2>&1 && chown ${SERVICE_USER}:${SERVICE_GROUP} ${_folder}/.gradle > /dev/null 2>&1
+
+exec /usr/local/bin/run-as.sh -- ${_projectFolder} gradle -g /opt/workspace/.gradle -DDOCKER_HOST=${_dockerHost} -DHOST_PROJECTDIR=${HOST_PROJECTDIR:-${_folder}} -DHOST_USERHOME=${HOST_USERHOME:-${HOME}} ${_dockerApiVersion} ${_gradleTag} ${_grailsTag} ${_nodeJsTag} ${_cmd};
+_rescode=$?;
+if [ ${_rescode} -ne 0 ]; then
+  echo "Returning error code ${_rescode}";
+fi
+exit ${_rescode}
+# vim: syntax=sh ts=4 sw=4 sts=4 sr noet

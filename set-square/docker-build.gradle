@@ -1,0 +1,248 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.bmuschko:gradle-docker-plugin:3.0.3'
+    classpath "net.saliman:gradle-properties-plugin:1.4.5"
+  }
+}
+
+repositories {
+  maven {
+    url 'https://repo.gradle.org/gradle/libs-releases-local'
+  }
+  mavenCentral()
+}
+
+def lastExitCode = 0
+def failingContainerId
+
+def term = System.getenv('TERM')
+def termcap = System.getenv('TERMCAP')
+
+String dockerHost = System.getProperty('DOCKER_HOST')
+if (!dockerHost) {
+  dockerHost = System.getenv('DOCKER_HOST')
+}
+if (!dockerHost) {
+  dockerHost = 'unix:///var/run/docker.sock'
+}
+
+String dockerApiVersion = System.getProperty('DOCKER_API_VERSION')
+if (!dockerApiVersion) {
+  dockerApiVersion = System.getenv('DOCKER_API_VERSION')
+}
+if (!dockerApiVersion) {
+  dockerApiVersion = '1.23'
+}
+
+apply plugin: net.saliman.gradle.plugin.properties.PropertiesPlugin
+def Properties properties = new Properties()
+properties.load(project.rootProject.file('gradle-local.properties').newDataInputStream())
+def nexusUsername = properties.getProperty('nexusUsername')
+def nexusPassword = properties.getProperty('nexusPassword')
+def nexusEmail = properties.getProperty('nexusEmail')
+
+apply plugin: 'com.bmuschko.docker-remote-api'
+
+import com.bmuschko.gradle.docker.tasks.container.*;
+import com.bmuschko.gradle.docker.tasks.image.*;
+import com.bmuschko.gradle.docker.response.*;
+import java.io.File;
+
+docker {
+  url = "${dockerHost}"
+
+  apiVersion = "${dockerApiVersion}"
+
+  registryCredentials {
+    url = registryUrl
+    username = registryUsername
+    password = registryPassword
+    email = nexusEmail
+  }
+}
+
+class CheckDockerContainer
+  extends DockerInspectContainer {
+
+  boolean exists = false
+  boolean running = false
+
+  public CheckDockerContainer() {
+    setResponseHandler(
+      new ResponseHandler<Void, Object>() {
+        @Override
+        Void handle(Object container) {
+          exists = container?.state
+          running = container?.state?.running
+          if (!tboxbeDbChecked && (container?.name == "${travelboxBackendDbContainerName}")) {
+            tboxbeDbChecked = true
+            tboxbeDbExists = exists
+            tboxbeDbRunning = running
+          } else if (!tboxbeChecked && (container?.name == "${backendContainerName}")) {
+            tboxbeChecked = true
+            tboxbeExists = exists
+            tboxbeRunning = running
+          }
+        }
+      })
+  }
+
+  @Override
+  public void start() {
+    try {
+      super.start()
+    } catch (Throwable error) {
+      if (error.class.name.endsWith("NotFoundException")) {
+        exists = false
+        running = false
+      }
+    }
+  }
+}
+
+class CheckIfDockerImageExists
+  extends DockerInspectImage {
+
+  boolean exists = false
+
+  public CheckIfDockerImageExists() {
+    setResponseHandler(
+      new ResponseHandler<Void, Object>() {
+        @Override
+        Void handle(Object image) {
+          exists = (image != null)
+        }
+      })
+  }
+
+  @Override
+  public void start() {
+    try {
+      super.start()
+    } catch (Throwable error) {
+      if (error.class.name.endsWith("NotFoundException")) {
+        exists = false
+      }
+    }
+  }
+}
+
+public class ConditionallyPullImage
+  extends DockerPullImage {
+
+  boolean unauthorized = false
+
+  @TaskAction
+  @Override
+  public void start() {
+    try {
+      if (!project.dryRun) {
+        super.start()
+      }
+    } catch (Throwable error) {
+      if (error.message?.contains("unauthorized")) {
+        unauthorized = true
+        println "ERROR: Cannot pull images from ${privateRepository}"
+        println "Make sure your Nexus login settings are correct in gradle-local.properties"
+        throw new BuildCancelledException("Please check your Nexus login settings in gradle-local.properties", error)
+      }
+    }
+  }
+}
+
+public class ConditionallyWaitContainer
+extends DockerWaitContainer {
+
+  @TaskAction
+  @Override
+  public void start() {
+    if (!project.dryRun) {
+      super.start()
+    }
+  }
+}
+
+public class ConditionallyRemoveContainer
+extends DockerRemoveContainer {
+
+  @TaskAction
+  @Override
+  public void start() {
+    if (!project.dryRun) {
+      super.start()
+    }
+  }
+}
+
+public class ConditionallyBuildImage
+extends DockerBuildImage {
+
+  @TaskAction
+  @Override
+  public void start() {
+    if (!project.dryRun) {
+      super.start()
+    }
+  }
+}
+
+task stopIfLastContainerFailed(type: DockerLogsContainer) {
+
+  onlyIf {
+    lastExitCode != 0
+  }
+
+  targetContainerId { failingContainerId }
+}
+
+task cleanUpIfLastContainerFailed(type: ConditionallyRemoveContainer) {
+  dependsOn stopIfLastContainerFailed
+
+  onlyIf {
+    lastExitCode != 0
+  }
+
+  targetContainerId { failingContainerId }
+}
+
+task exitIfLastContainerFailed {
+  dependsOn cleanUpIfLastContainerFailed
+
+  onlyIf {
+    lastExitCode != 0
+  }
+
+  doLast {
+    throw new BuildCancelledException("<< Problem launching ${failingContainerId} >>")
+  }
+}
+
+
+task build(type: ConditionallyBuildImage) {
+
+  inputDir = projectDir // It's not hostProjectDir on purpose
+  dockerFile = new File(inputDir, 'Dockerfile')
+  tag = "${travelboxBackendDbImageName}:${travelboxBackendDbTag}"
+  noCache = true
+}
+
+tasks.withType(ConditionallyWaitContainer) { Task task ->
+  task.finalizedBy exitIfLastContainerFailed
+}
+
+def buildDockerCall(Map args) {
+  def env = args.env ?: []
+  def portBindings = args.porBindings ?: []
+  def binds = args.binds ?: new HashMap()
+  def links = args.links ?: []
+  def cmd = args.cmd ?: []
+  def containerName = args.containerName
+  def imageId = args.imageId
+
+  def envNoTerm = env.findAll { v -> !v.startsWith('TERM') }
+
+  return "docker run -d ${(portBindings.collect { p -> "-p ${p}"}).join(' ')} ${(binds.collect { k,v -> "-v ${k}:${v}"}).join(' ')} ${(envNoTerm.collect { e -> "-e ${e}" }).join(' ')} ${(links.collect { l -> "--link ${l}"}).join(' ')} --name ${containerName} ${imageId} ${cmd.join(' ') }"
+}

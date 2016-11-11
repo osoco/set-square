@@ -40,6 +40,7 @@ defineEnvVar HOST_VOLUMES_ROOT_FOLDER "The root folder for host volumes" "/var/l
 defineEnvVar DEVELOPMENT_USER_ID "The user id used when developing code (to match host user id)" "$(id -u)";
 defineEnvVar DOCKER_OPTS "Generic Docker options" "";
 defineEnvVar DOCKER_TAG_OPTS "Docker tag options" "";
+defineEnvVar DOCKER_BUILD "The docker build command" 'docker ${DOCKER_OPTS} build';
 defineEnvVar DOCKER_BUILD_OPTS "Docker build options" "--rm=true";
 defineEnvVar CONTAINER_TERM_WIDTH "The terminal width" "$(tput cols 2> /dev/null)";
 

@@ -26,4 +26,5 @@ set-square/.templates
 .templates/instructions
 .templates/maintainer
 .templates/preamble
+.templates/service_user
 *.toc

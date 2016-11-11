@@ -10,14 +10,21 @@ ENV SERVICE_USER="${SERVICE_USER}" \
 @include("service_user")
 @include("check-version")
 @include("install")
+@include("java")
+@include("sdkman")
+@include("gradle")
 
 COPY build.sh build.inc.sh ${SERVICE_USER_HOME}/
 ADD .templates ${SERVICE_USER_HOME}/.templates
 
 COPY my_exec /sbin/my_exec
+COPY docker-build.sh  /usr/local/bin/docker-build.sh
+COPY docker-build.gradle /usr/local/bin/docker-build.gradle
+
 RUN chmod +x /sbin/my_exec && chown -R ${SERVICE_USER}:${SERVICE_GROUP} ${SERVICE_USER_HOME} && \
     ${APTGET_INSTALL} --update git docker.io rsync && \
-    ${APTGET_CLEANUP}
+    ${APTGET_CLEANUP} && \
+    chmod +x /usr/local/bin/docker-build.sh
 
 VOLUME /work
 ENTRYPOINT ["/sbin/my_exec"]

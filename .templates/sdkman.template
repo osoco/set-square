@@ -1,0 +1,7 @@
+# sdkman:
+#   - requires:
+#     - java
+#     - user_service
+RUN ${APTGET_INSTALL} zip unzip && \
+    ${APTGET_CLEANUP} && \
+    su - ${SERVICE_USER} 'cd ${SERVICE_USER_HOME} && wget -q -O- http://get.sdkman.io | bash && chmod +x ${SERVICE_USER_HOME}/.sdkman/bin/sdkman-init.sh'
