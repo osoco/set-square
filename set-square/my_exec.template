@@ -21,8 +21,16 @@ chown -R ${SQ_SERVICE_USER}:${SQ_SERVICE_GROUP} /tmp/.drywit.log;
 
 # chmod a+rw /var/run/docker.sock 2> /dev/null
 
-export DOCKER_BUILD="/usr/local/bin/docker-build.sh";
+cat > /usr/local/bin/gradle-local.properties <<EOF
+username=${DOCKER_USERNAME}
+password=${DOCKER_PASSWORD}
+email=${DOCKER_EMAIL}
+EOF
 
+_url="${}";
+_user="${2}";
+_pass="${3}";
+_email="${4}";
 exec /usr/local/bin/run-as.sh -- ${_folder} ${_build} ${_cmd};
 _rescode=$?;
 if [ ${_rescode} -ne 0 ]; then
