@@ -1,8 +1,20 @@
 * set-square Docker image
 
-This image runs set-square within a Docker container.
+This image runs set-square within a Docker container. Since set-square relies upon Docker daemon to build images,
+and it doesn't impose any requirement on client and server versions, we need the daemon to be listening on a tcp port.
+
+There're two ways to do it: either the Docker daemon uses the -H flag (e.g: -H tcp://0.0.0.0:2375), or we launch a
+socat container that exports it for us:
+
+  docker run -d --name socat -v /var/run/docker.sock:/var/run/docker.sock sequenceiq/socat
 
 * Usage
 
-# docker run -d --name socat -v /var/run/docker.sock:/var/run/docker.sock sequenceiq/socat
-# docker run -it --rm --link socat:socat -v ${PWD}:/work ${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG} [set-square arguments]
+** Using socat:
+
+  docker run -it --rm --link socat:socat -v ${PWD}:/work ${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG} [set-square arguments]
+
+** Docker daemon listening on port 2375:
+
+  docker run -it --rm -p 2375:2375 -e DOCKER_HOST=tcp://localhost:2375 -v ${PWD}:/work ${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG} [set-square arguments]
+

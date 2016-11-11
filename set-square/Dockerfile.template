@@ -3,7 +3,8 @@ FROM ${ROOT_IMAGE}
 @include("maintainer")
 
 ENV SERVICE_USER="${SERVICE_USER}" \
-    SERVICE_GROUP="${SERVICE_GROUP}";
+    SERVICE_GROUP="${SERVICE_GROUP}" \
+    DOCKER_HOST="tcp://socat:2375"
 
 @include("common")
 @include("service_user")
