@@ -33,6 +33,7 @@ function defineErrors() {
   addError "INVALID_OPTION" "Unrecognized option";
   addError "NO_FOLDER_SPECIFIED" "No folder specified";
   addError "NO_COMMAND_SPECIFIED" "No command specified";
+  addError "NO_RUN_AS_USER_SPECIFIED" "No RUN_AS_USER specified";
   addError "CANNOT_CHANGE_UID" "Cannot change the uid of ";
   addError "CANNOT_CHANGE_GID" 'Cannot change the gid of ';
   addError "CANNOT_RETRIEVE_USER_UID_OF_FOLDER" "Cannot retrieve the user uid of ";
@@ -72,6 +73,11 @@ function checkInput() {
   if isEmpty "${COMMAND}"; then
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_COMMAND_SPECIFIED;
+  fi
+
+  if isEmpty "${RUN_AS_USER}"; then
+      logDebugResult FAILURE "fail";
+      exitWithErrorCode NO_RUN_AS_USER_SPECIFIED;
   else
     logDebugResult SUCCESS "valid";
   fi
