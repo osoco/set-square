@@ -418,7 +418,8 @@ function resolve_included_file() {
   elif isEmpty "${_templatesFolder}"; then
       exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
-  for d in "${_repoFolder}" "." "${_templatesFolder}"; do
+
+  for d in "${_templatesFolder}" "${_repoFolder}" "."; do
     if    [[ -f "${d}/${_file}" ]] \
        || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
       _result="${d}/${_file}";
@@ -428,8 +429,9 @@ function resolve_included_file() {
     fi
   done
   if isFalse ${_rescode}; then
-    _fileAux=$(eval "echo ${_file}" 2>&1);
-    if isTrue $?; then
+    _fileAux=$(eval "echo ${_file}");
+    if    isTrue $? \
+       && isNotEmpty "${_fileAux}"; then
       resolve_included_file "${_fileAux}" "${_repoFolder}" "${_templatesFolder}";
       _rescode=$?;
     fi
