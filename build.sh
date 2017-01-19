@@ -253,9 +253,9 @@ function repo_exists() {
   local _matches=$(echo "${_images}" | grep "${_tag}")
   local _rescode;
   if [ -z "${_matches}" ]; then
-    _rescode=1
+    _rescode=${FALSE}
   else
-    _rescode=0
+    _rescode=${TRUE}
   fi
 
   return ${_rescode};
@@ -289,6 +289,8 @@ function build_repo_if_defined_locally() {
   local _repo="${1}";
   local _tag="${2}";
   local _stack="${3}";
+
+  echo "Checking ${_repo}:${_tag}"
   if [[ -n ${_repo} ]] && \
      [[ -d ${_repo} ]] && \
      ! repo_exists "${_repo#${NAMESPACE}/}" "${_tag}" "${_stack}" ; then
@@ -1176,22 +1178,16 @@ function main() {
 
   resolve_base_image
   for _repo in ${REPOS}; do
-    _buildRepo=1;
+    _buildRepo=${FALSE};
     if force_mode_enabled; then
-      _buildRepo=0;
+      _buildRepo=${TRUE};
     elif ! repo_exists "${_repo}" "${TAG}" "${_stack}"; then
-      _buildRepo=0;
+      _buildRepo=${TRUE};
     else
       logInfo -n "Not building ${NAMESPACE}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
-    if [ ${_buildRepo} -eq 0 ]; then
-      find_parents "${_repo}"
-      _parents="${RESULT}"
-      for _parent in ${_parents}; do
-        build_repo_if_defined_locally "${_parent}" "${TAG}" "" # stack is empty for parent images
-      done
-
+    if isTrue ${_buildRepo}; then
       build_repo "${_repo}" "${TAG}" "${_stack}"
     fi
     if registry_push_enabled; then
