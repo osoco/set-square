@@ -411,6 +411,7 @@ function resolve_included_file() {
   local _templatesFolder="${3}";
   local _result;
   local _rescode=${FALSE};
+  local _proceed=${TRUE};
   local _fileAux;
 
   if isEmpty "${_repoFolder}"; then
@@ -421,21 +422,31 @@ function resolve_included_file() {
       exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
   fi
 
-  for d in "${_templatesFolder}" "${_repoFolder}" "."; do
-    if    [[ -f "${d}/${_file}" ]] \
-       || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
-      _result="${d}/${_file}";
-      export RESULT="${_result}";
-      _rescode=${TRUE};
-      break;
-    fi
-  done
-  if isFalse ${_rescode}; then
-    _fileAux=$(eval "echo ${_file}");
-    if    isTrue $? \
-       && isNotEmpty "${_fileAux}"; then
-      resolve_included_file "${_fileAux}" "${_repoFolder}" "${_templatesFolder}";
-      _rescode=$?;
+  if [ "${_file}" == "user_image" ] && \
+       isEmpty "${USER_IMAGE}"; then
+    _proceed=${FALSE};
+  fi
+  if [ "${_file}" == "entrypoint" ] && \
+       isEmpty "${ENTRYPOINT}"; then
+    _proceed="${FALSE}";
+  fi
+  if isTrue ${_proceed}; then
+    for d in "${_templatesFolder}" "${_repoFolder}" "."; do
+      if    [[ -f "${d}/${_file}" ]] \
+         || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
+        _result="${d}/${_file}";
+        export RESULT="${_result}";
+        _rescode=${TRUE};
+        break;
+      fi
+    done
+    if isFalse ${_rescode}; then
+      _fileAux=$(eval "echo ${_file}");
+      if    isTrue $? \
+         && isNotEmpty "${_fileAux}"; then
+        resolve_included_file "${_fileAux}" "${_repoFolder}" "${_templatesFolder}";
+        _rescode=$?;
+      fi
     fi
   fi
 
