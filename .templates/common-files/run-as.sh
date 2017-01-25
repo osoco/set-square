@@ -76,6 +76,7 @@ function checkInput() {
             logDebugResult FAILURE "failed";
             exitWithErrorCode USER_DOES_NOT_EXIST "${1}";
         fi
+        shift;
         ;;
       -U | --userName)
         shift;
@@ -92,6 +93,7 @@ function checkInput() {
            logDebugResult FAILURE "failed";
            exitWithErrorCode INVALID_USER_NAME "${1}";
         fi
+        shift;
         ;;
       -g | --groupId)
         shift;
@@ -103,6 +105,7 @@ function checkInput() {
             logDebugResult FAILURE "failed";
             exitWithErrorCode GROUP_DOES_NOT_EXIST "${1}";
         fi
+        shift;
         ;;
       -G | --groupName)
         shift;
@@ -119,6 +122,7 @@ function checkInput() {
             logDebugResult FAILURE "failed";
             exitWithErrorCode INVALID_GROUP_NAME "${1}";
         fi
+        shift;
         ;;
       --) shift;
           break;
@@ -302,4 +306,3 @@ function main() {
     update_account "${_uidUser}" "${_uid}" "${_gid}";
   fi
 }
-

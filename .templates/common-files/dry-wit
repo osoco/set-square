@@ -233,16 +233,36 @@ function _debugEcho() {
 ## PUBLIC
 ## Checks whether given value is empty.
 ## -> 1: The value to check.
-## <- 0: if the value is empty; 1 otherwise.
+## <- 0/${TRUE} if the value is empty; 1/${FALSE} otherwise.
 ## Example:
 ##   if isEmpty "${MYVAR}"; then echo "MYVAR is empty"; fi
 function isEmpty() {
-  local _rescode;
+  local -i _rescode;
+
   if [ -z "${1}" ]; then
-    _rescode=${TRUE};
+      _rescode=${TRUE};
   else
     _rescode=${FALSE};
   fi
+
+  return ${_rescode};
+}
+
+## PUBLIC
+## Checks whether given value is not empty.
+## -> 1: The value to check.
+## <- 0/${TRUE} if the value is not empty; 1/${FALSE} otherwise.
+## Example:
+##   if isNotEmpty "${MYVAR}"; then echo "MYVAR is not empty"; fi
+function isNotEmpty() {
+  local -i _rescode;
+
+  if isEmpty "${1}"; then
+      _rescode=${FALSE};
+  else
+    _rescode=${TRUE};
+  fi
+
   return ${_rescode};
 }
 
@@ -452,7 +472,7 @@ function overrideEnvVar() {
 
   toUpper "${_varName}";
   _upcasedVarName="${RESULT}";
-  _addEnvVar "${_upcasedVarName}" "${_varValue}";
+  _addOverridenEnvVar "${_upcasedVarName}" "${_varValue}";
 }
 
 # PRIVATE
@@ -469,8 +489,28 @@ function _addEnvVar() {
     appendEnvVariable ${_varName} ENV_VARIABLES;
   fi
   upvar "${_varName}" "${_varValue}";
-  _debugEcho "${_varName}=${_varValue}";
+
   export "${_varName}"="${_varValue}";
+}
+
+# PRIVATE
+# Annotates given environment variable as overriden.
+# -> 1: The variable name.
+# -> 2: The value.
+function _addOverridenEnvVar() {
+  local _varName="${1}";
+  local _varValue="${2:-}";
+
+  checkNotEmpty "varName" "${_varName}" 1;
+
+  if ! isEnvVarDefined "${_varName}"; then
+      appendEnvVariable ${_varName} OVERRIDEN_ENV_VARIABLES;
+  fi
+  upvar "_overriden_${_varName}" "${_varValue}";
+
+  export "_overriden_${_varName}"="${_varValue}";
+
+  _addEnvVar "${_varName}" "${_varValue}";
 }
 
 # Checks whether giver variable is defined.
@@ -506,10 +546,14 @@ function _evalEnvVar() {
 
   _evalVar "${_varName}_DEFAULT";
   local _defaultValue="${RESULT}";
-  _evalVar "${_varName}";
+  _evalVar "_overriden_${_varName}";
   local _varValue="${RESULT}";
+  if [ -z "${_varValue}" ]; then
+      _evalVar "${_varName}";
+      _varValue="${RESULT}";
+  fi
 
-  if [[ ! -n ${_varValue} ]]; then
+  if [[ -z ${_varValue} ]]; then
     if [[ -n "${DRY_WIT_EVAL_DEFAULTS_FLAG:-}" ]]; then
 #      echo -n "Evaluating ${_varName}_DEFAULT_COMMAND -> ";
       _evalVar "${_varName}_DEFAULT_COMMAND";
@@ -649,21 +693,31 @@ function cleanup() {
     local _oldIFS="${IFS}";
     IFS=$' \t\n';
     for i in ${_CLEANUP_FILES[*]}; do
+      IFS="${_oldIFS}";
       logTrace -n "Deleting $i";
-      rm -rf $i > /dev/null;
-      if [ $? -eq 0 ]; then
-        logTraceResult SUCCESS "${_DW_DONE}";
+      rm -rf $i > /dev/null 2>&1;
+      if isTrue $?; then
+          logTraceResult SUCCESS "${_DW_DONE}";
       else
         logTraceResult FAILURE "${_DW_FAILED}";
       fi
     done
-    IFS="${_oldIFS}";
 
     logDebugResult SUCCESS "${_DW_DONE}";
   fi
 }
 
+## Creates a new temporary file.
+## <- 0/${TRUE} if the file gets created successfully; 1/${FALSE} otherwise.
+## <- RESULT: The name of the temporary file.
+## Example:
+##   if createTempFile; then
+##     echo "Temp file: ${RESULT}";
+##   fi
 function createTempFile() {
+  local -i _rescode;
+  local _result;
+
   local _prefix="$(echo \"${SCRIPT_NAME}\" | awk -F"/" '{print $NF;}' | sed 's/^"//g' | sed 's/"$//g')";
   local _dirname="$(dirname \"${SCRIPT_NAME}\")";
 #  local _prefix="$(echo "${SCRIPT_NAME}" | awk -F"/" '{print $NF;}')";
@@ -673,19 +727,18 @@ function createTempFile() {
   else
     _dirname="$PWD/../${_dirname#\.\.}";
   fi
-  local _result="$(mktemp -p "${_dirname}"  -t ".${_prefix}.XXXXXXXXXX")";
-  local _aux=$?;
-  rm -f ${_result} > /dev/null
-  if isFalse ${_aux} ; then
+  _result="$(mktemp -p "${_dirname}"  -t ".${_prefix}.XXXXXXXXXX")";
+  _rescode=$?;
+  rm -f ${_result} > /dev/null 2>&1
+  if isFalse ${_rescode} ; then
      _result="$(mktemp -t ".${_prefix}.XXXXXXXXXX")";
-     _aux=$?;
-  fi
-  if [ $_aux -ne 0 ]; then
-     exitWithErrorCode $1;
+     _rescode=$?;
   fi
   addFileToCleanup "${_result}";
 
-  export RESULT="${_result}";
+  if isTrue ${_rescode}; then
+      export RESULT="${_result}";
+  fi
 }
 
 ## Checks if given file is writeable
@@ -743,6 +796,10 @@ function appendEnvVariable() {
   fi
 }
 
+## Annotates a file to be removed.
+## -> 1: The file to delete.
+## Example:
+##   addFileToCleanup "/tmp/my-log.txt";
 function addFileToCleanup() {
   local _file="${1}";
   #  logTrace "Appending ${result} to _CLEANUP_FILES";
@@ -753,7 +810,7 @@ function addFileToCleanup() {
   else
     export -a _CLEANUP_FILES=();
     upvars -a1 _CLEANUP_FILES "${_file}";
-    export _CREANUP_FILES;
+    export _CLEANUP_FILES;
   fi
 
 #  local _oldIFS="${IFS}";
@@ -765,42 +822,60 @@ function addFileToCleanup() {
 #  IFS="${_oldIFS}";
 }
 
+## Creates a temporary folder.
+## <- 0/${TRUE} if the folder gets created successfully; 1/${FALSE} otherwise.
+## <- RESULT: the new folder.
+## Example:
+##   if createTempFolder; then
+##     echo "New folder: ${RESULT}";
+##   fi
 function createTempFolder() {
+  local -i _rescode;
+  local _result;
+
   local _prefix="$(echo ${SCRIPT_NAME} | awk -F"/" '{print $NF;}')";
   local _dirname="$(dirname ${SCRIPT_NAME})";
   if [ "${_dirname#\.\.}" == "${_dirname}" ]; then
-    _dirname="$PWD/${_dirname#\.}";
+    _dirname="${PWD}/${_dirname#\.}";
   else
-    _dirname="$PWD/../${_dirname#\.\.}";
+    _dirname="${PWD}/../${_dirname#\.\.}";
   fi
-  local result=$(mktemp -p "${_dirname}" -d -t ".${_prefix}.XXXXXX");
-  local _aux=$?;
-  if isFalse $_aux; then
-    result=$(mktemp -d -t ".${_prefix}.XXXXXX");
-    _aux=$?;
+  _result=$(mktemp -p "${_dirname}" -d -t ".${_prefix}.XXXXXX");
+  _rescode=$?;
+  if isFalse ${_rescode}; then
+      _result=$(mktemp -d -t ".${_prefix}.XXXXXX");
+      _rescode=$?;
   fi
-  if isFalse $_aux; then
-     exitWithErrorCode $1;
+  addFileToCleanup "${_result}";
+  if isTrue ${_rescode}; then
+      export RESULT="${_result}";
   fi
-  addFileToCleanup "${result}";
-
-  export RESULT="${result}";
 }
 
+## Extracts the flags from the arguments.
+## -> *: The arguments to process.
+## <- [STDOUT]: the flags.
+## Example:
+##   local _myFlags=$(extractFlags $*);
 function extractFlags() {
-  local result="";
   echo " $@" \
     | awk -F" -" '{for (i=2; i<=NF; i++){printf("-%s \n", $i);}}' \
     | awk -F" " '{print $1;}'
 }
 
+## Extracts the flag value for the arguments.
+## -> 1: The flag name.
+## -> 2-*: The arguments.
+## <- [STDOUT]: the flag value.
+## Example:
+##   local _Ext=$(extractFlagValue "ext" $*);
 function extractFlagValue() {
-  local flag=$1;
+  local _flag=${1};
   shift;
   echo " $@" \
     | awk -F" -" '{printf("-"); for (i=2; i<=NF; i++){if(i%2 == 1) {printf("-");}; printf("%s \n", $i);}}' \
-    | grep -e "^$flag " \
-    | awk -v f="${flag}" '{printf("echo \"%s\" | sed -e \"s_^%s __g\"\n", $2, f);}' \
+    | grep -e "^${_flag} " \
+    | awk -v f="${_flag}" '{printf("echo \"%s\" | sed -e \"s_^%s __g\"\n", $2, f);}' \
     | sh;
 }
 
@@ -2557,6 +2632,8 @@ function _logInProgress() {
   shift;
 
   local _message="$@";
+  checkNotEmpty "message" "${_message}" 2;
+
   local -i nestedTasks;
   local _category;
   _retrieveLogNamespace;
@@ -3584,13 +3661,13 @@ function retrieveGroupFromGid() {
   return ${_rescode};
 }
 
-## Retrieves the name of the user matching given id.
-## -> 1: The user id.
-## <- RESULT: The user name.
+## Retrieves the id of a given user.
+## -> 1: The user name.
+## <- RESULT: The user id.
 ##
 ## Example:
 ##   retrieveUidFromUser "root";
-##   echo "The name of user root is ${RESULT}";
+##   echo "The id of user root is ${RESULT}";
 function retrieveUidFromUser() {
   local _user="${1}";
   checkNotEmpty "user" "${_user}" 1;
@@ -3610,13 +3687,13 @@ function retrieveUidFromUser() {
   return ${_rescode};
 }
 
-## Retrieves the name of the group matching given id.
-## -> 1: The group id.
-## <- RESULT: The group name.
+## Retrieves the id of a given group.
+## -> 1: The group name.
+## <- RESULT: The group id.
 ##
 ## Example:
 ##   retrieveGidFromGroup "admin";
-##   echo "The name of group admin is ${RESULT}";
+##   echo "The id of group admin is ${RESULT}";
 function retrieveGidFromGroup() {
   local _group="${1}";
   checkNotEmpty "group" "${_group}" 1;
@@ -4103,3 +4180,4 @@ function uncache() {
 source $@;
 _main $@;
 cleanup;
+
