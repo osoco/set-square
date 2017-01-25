@@ -4,7 +4,7 @@
 
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [[-u|--userId=userId] [-g|--groupId=groupId]]? folder command [args]*
+$SCRIPT_NAME [[-u|--userId=userId|-U|--user=userName] [-g|--groupId=groupId]|-G|--group=groupName]? folder command [args]*
 $SCRIPT_NAME [-h|--help]
 (c) 2016-today ACM-SL
     Distributed this under the GNU General Public License v3.
@@ -15,7 +15,9 @@ of the folder parameter.
 
 Where:
   * -u | --userId: The user id. Optional.
+  * -U | --userName: The user name. Optional.
   * -g | --groupId: The group id. Optional.
+  * -G | --groupName: The group name. Optional.
   * folder: the folder where the command will be run.
   * command: anything to run.
   * args: the command arguments.
@@ -38,6 +40,14 @@ function defineErrors() {
   addError "CANNOT_CHANGE_GID" 'Cannot change the gid of ';
   addError "CANNOT_RETRIEVE_USER_UID_OF_FOLDER" "Cannot retrieve the user uid of ";
   addError "CANNOT_RETRIEVE_GROUP_GID_OF_FOLDER" "Cannot retrieve the group gid of ";
+  addError "USER_ID_IS_MANDATORY" "The user id is mandatory if the -u flag is provided";
+  addError "USER_DOES_NOT_EXIST" "The user does not exist";
+  addError "USER_NAME_IS_MANDATORY" "The user name is mandatory if the -U flag is provided";
+  addError "INVALID_USER_NAME" "Invalid user name";
+  addError "GROUP_ID_IS_MANDATORY" "The group id is mandatory if the -g flag is provided";
+  addError "GROUP_NAME_IS_MANDATORY" "The group name is mandatory if the -G flag is provided";
+  addError "GROUP_DOES_NOT_EXIST" "The group does not exist";
+  addError "INVALID_GROUP_NAME" "Invalid group name";
 }
 
 ## Validates the input.
@@ -53,9 +63,63 @@ function checkInput() {
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help | -v | -vv | -q | -u | --userId | -g | --groupId)
+      -h | --help | -v | -vv | -q)
          shift;
          ;;
+      -u | --userId)
+        shift;
+        if isEmpty "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode USER_ID_IS_MANDATORY "${1}";
+        fi
+        if ! uidAlreadyExists "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode USER_DOES_NOT_EXIST "${1}";
+        fi
+        ;;
+      -U | --userName)
+        shift;
+        if isEmpty "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode USER_NAME_IS_MANDATORY "${1}";
+        fi
+        if ! userAlreadyExists "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode USER_DOES_NOT_EXIST "${1}";
+        fi
+        retrieveUidFromUser "${1}";
+        if isEmpty "${RESULT}"; then
+           logDebugResult FAILURE "failed";
+           exitWithErrorCode INVALID_USER_NAME "${1}";
+        fi
+        ;;
+      -g | --groupId)
+        shift;
+        if isEmpty "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode GROUP_ID_IS_MANDATORY "${1}";
+        fi
+        if ! gidAlreadyExists "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode GROUP_DOES_NOT_EXIST "${1}";
+        fi
+        ;;
+      -G | --groupName)
+        shift;
+        if isEmpty "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode GROUP_NAME_IS_MANDATORY "${1}";
+        fi
+        if ! groupAlreadyExists "${1}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode GROUP_DOES_NOT_EXIST "${1}";
+        fi
+        retrieveGidFromGroup "${1}";
+        if isEmpty "${RESULT}"; then
+            logDebugResult FAILURE "failed";
+            exitWithErrorCode INVALID_GROUP_NAME "${1}";
+        fi
+        ;;
       --) shift;
           break;
           ;;
@@ -66,12 +130,12 @@ function checkInput() {
   done
 
   if isEmpty "${FOLDER}"; then
-    logDebugResult FAILURE "fail";
+    logDebugResult FAILURE "failed";
     exitWithErrorCode NO_FOLDER_SPECIFIED;
   fi
 
   if isEmpty "${COMMAND}"; then
-    logDebugResult FAILURE "fail";
+    logDebugResult FAILURE "failed";
     exitWithErrorCode NO_COMMAND_SPECIFIED;
   fi
 
@@ -107,9 +171,21 @@ function parseInput() {
         export USER_ID="${1}";
         shift;
         ;;
+      -U | --userName)
+        shift;
+        retrieveUidFromUser "${1}";
+        export USER_ID="${RESULT}";
+        shift;
+        ;;
       -g | --groupId)
         shift;
         export GROUP_ID="${1}";
+        shift;
+        ;;
+      -G | --groupName)
+        shift;
+        retrieveGidFromGroup "${1}";
+        export GROUP_ID="${RESULT}";
         shift;
         ;;
     esac
