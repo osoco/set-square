@@ -49,5 +49,5 @@ defineEnvVar APTGET_INSTALL \
              '/usr/local/bin/aptget-install.sh -vv ';
 defineEnvVar APTGET_CLEANUP \
              "The cleanup commands after an apt-get so that the resulting image size is optimal" \
-             '/usr/local/bin/aptget-cleanup.sh -v ';
+             '/usr/local/bin/aptget-cleanup.sh -v';
 defineEnvVar SERVICE "The service file inside the repository folder (not in the image)" "service";
