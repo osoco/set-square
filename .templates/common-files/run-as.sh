@@ -54,6 +54,8 @@ function defineErrors() {
 ## dry-wit hook
 function checkInput() {
 
+  local _uidSpecified=${FALSE};
+
   local _flags=$(extractFlags $@);
   local _flagCount;
   local _currentCount;
@@ -77,6 +79,7 @@ function checkInput() {
             exitWithErrorCode USER_DOES_NOT_EXIST "${1}";
         fi
         shift;
+        _uidSpecified=${TRUE};
         ;;
       -U | --userName)
         shift;
@@ -94,6 +97,7 @@ function checkInput() {
            exitWithErrorCode INVALID_USER_NAME "${1}";
         fi
         shift;
+        _uidSpecified=${TRUE};
         ;;
       -g | --groupId)
         shift;
@@ -143,7 +147,7 @@ function checkInput() {
     exitWithErrorCode NO_COMMAND_SPECIFIED;
   fi
 
-  if isEmpty "${RUN_AS_USER}"; then
+  if isFalse ${_uidSpecified} && isEmpty "${RUN_AS_USER}"; then
       logDebugResult FAILURE "fail";
       exitWithErrorCode NO_RUN_AS_USER_SPECIFIED;
   else
