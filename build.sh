@@ -727,15 +727,24 @@ function copy_license_file() {
   checkNotEmpty "folder" "${_folder}" 1;
   checkNotEmpty "repo" "${_repo}" 2;
 
+  local _source;
+
   if [ "${_repo}" == "set-square" ]; then
     _licenseFile="LICENSE.set-square";
   fi
 
-  if [ -e "${_repo}/${_licenseFile}" ] || \
-     [ -e "${_folder}/${_licenseFile}" ]; then
+  if [ -e "${_repo}/${_licenseFile}" ]; then
+      _source="${_repo}/${_licenseFile}";
+  fi
+
+  if [ -e "${_folder}/${_licenseFile}" ]; then
+      _source="${_folder}/${_licenseFile}";
+  fi
+
+  if [ -n "${_source}" ]; then
     if [ ! -e "${_repo}/LICENSE" ]; then
       logDebug -n "Using ${_licenseFile} for ${_repo} image";
-      cp "${_folder}/${_licenseFile}" "${_repo}/LICENSE";
+      cp "${_source}" "${_repo}/LICENSE";
       if isTrue $?; then
         logDebugResult SUCCESS "done";
       else
@@ -762,22 +771,26 @@ function copy_copyright_preamble_file() {
   checkNotEmpty "folder" "${_folder}" 1;
   checkNotEmpty "repo" "${_repo}" 2;
 
+  local _source;
+
   if [ "${_repo}" == "set-square" ]; then
     _copyrightPreambleFile="copyright-preamble.set-square";
   fi
 
-  if [ -e "${_repo}/${_copyrightPreambleFile}" ] || \
-     [ -e "${_folder}/${_copyrightPreambleFile}" ]; then
+  if [ -e "${_repo}/${_copyrightPreambleFile}" ]; then
+      _source="${_repo}/${_copyrightPreambleFile}";
+  elif [ -e "${_folder}/${_copyrightPreambleFile}" ]; then
+      _source="${_folder}/${_copyrightPreambleFile}";
+  fi
 
-    if [ ! -e "${_repo}/copyright-preamble.txt" ]; then
-      logDebug -n "Using ${_copyrightPreambleFile} for ${_repo} image";
-      cp "${_folder}/${_copyrightPreambleFile}" "${_repo}/copyright-preamble.txt";
-      if isTrue $?; then
-        logDebugResult SUCCESS "done";
-      else
-        logDebugResult FAILURE "failed";
-        exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
-      fi
+  if [ -n "${_source}" ]; then
+    logDebug -n "Using ${_copyrightPreambleFile} for ${_repo} image";
+    cp "${_source}" "${_repo}/copyright-preamble.txt";
+    if isTrue $?; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+      exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
     fi
   else
     exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${_copyrightPreambleFile}";
