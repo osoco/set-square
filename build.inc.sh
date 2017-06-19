@@ -8,7 +8,7 @@ defineEnvVar REGISTRY "The registry to push Docker images to" "tutum.co";
 defineEnvVar REGISTRY_NAMESPACE \
              "The namespace under the registry where the image is to be uploaded" \
              '${NAMESPACE}';
-defineEnvVar ROOT_IMAGE_VERSION "The root image version" "0.9.19";
+defineEnvVar ROOT_IMAGE_VERSION "The root image version" "0.9.21";
 defineEnvVar ROOT_IMAGE_64BIT "The default root image for 64 bits" "phusion/baseimage"
 defineEnvVar RANDOM_PASSWORD \
              "A random password" \
