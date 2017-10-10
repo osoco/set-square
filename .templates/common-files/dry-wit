@@ -388,17 +388,9 @@ function isFalse() {
 # <- RESULT: The variable value.
 function _evalVar() {
   local _varName="${1}";
-  local -i _rescode;
-
   checkNotEmpty "varName" "${_varName}" 1;
-
-  local _result="$(set noglob; export DOLLAR='$'; export DQUOTE="\""; echo "echo ${DQUOTE}${DOLLAR}{$(echo "${_varName}")}${DQUOTE}" | sh 2> /dev/null)";
-  _rescode=$?;
-  if isTrue ${_rescode}; then
-      export RESULT="${_result}";
-  fi
-
-  return ${_rescode};
+  local _result="$(set noglob; export DOLLAR='$'; export DQUOTE="\""; echo "echo ${DQUOTE}${DOLLAR}{$(echo "${_varName}")}${DQUOTE}" | sh)";
+  export RESULT="${_result}";
 }
 
 # PUBLIC
@@ -496,7 +488,7 @@ function defineButDoNotOverrideEnvVar() {
   checkNotEmpty "name" "${_varName}" 1;
   checkNotEmpty "description" "${_varDescription}" 2;
 
-  echo "echo \${${_varName}:?no}" | bash 2>&1 > /dev/null;
+  echo "echo \${${_varName}:?no}" | bash > /dev/null 2>&1;
   _rescode=$?;
 
   if isEnvVarDefined ${_rescode}; then
@@ -622,84 +614,48 @@ function isEnvVarDefined() {
   return ${_rescode};
 }
 
-# Removes the ${..} envelope.
-# -> 1: The variable name.
-# <- 0/${TRUE} if the envelope was removed; 1/${FALSE} otherwise.
-# <- RESULT: the variable name, without envelope, if existed. Unset otherwise.
-# Example:
-#  if _removeDollarSquareBrackets '${_bla}'; then
-#    echo "result -> ${RESULT}" # _bla
-#  fi
-function _removeDollarSquareBrackets() {
-  local _varName="${1}";
-  local -i _rescode;
-  local _result;
-
-  if [ "${_varName#$\{}" == "${_varName}" ]; then
-      _rescode=${FALSE};
-  elif [ "${_varName%\}}" == "${_varName}" ]; then
-      _rescode=${FALSE};
-  else
-    _rescode=${TRUE};
-    _result="${_varName#$\{}";
-    _result="${_result%\}}";
-    export RESULT="${_result}";
-  fi
-  return ${_rescode};
-}
-
 # Evaluates given environment variable.
 # -> 1: the variable name.
 function _evalEnvVar() {
   local _varName="${1}";
-  local -i _rescode;
 
   checkNotEmpty "varName" "${_varName}" 1;
 
-  if _removeDollarSquareBrackets "${_varName}"; then
-      _evalEnvVar "${RESULT}";
-  else
-    _evalVarDefault "${_varName}";
-    local _defaultValue="${RESULT}";
-    _evalVar "${_varName}";
-    local _varValue="${RESULT}";
+  _evalVarDefault "${_varName}";
+  local _defaultValue="${RESULT}";
+  _evalVar "${_varName}";
+  local _varValue="${RESULT}";
 
-    if isEmpty "${_varValue}"; then
-        if ! isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}" ; then
-            #      echo -n "Evaluating ${_varName}_DEFAULT_COMMAND -> ";
-            _evalVarCommand "${_varName}";
-            local _defaultCommand="${RESULT}";
-            #      echo "${_defaultCommand}";
-            if ! isEmpty "${_defaultCommand}"; then
-                logTrace -n "Resolving ${_varName}_DEFAULT via ${_varName}_DEFAULT_COMMAND"
-                local _aux="$(set noglob; echo "${_defaultCommand}" | sh)";
-                if ! isEmpty "${_aux}"; then
-                    _defaultValue="${_aux}";
-                    logTraceResult SUCCESS "${_aux}"
-                else
-                  logTraceResult FAILURE "${_DW_FAILED}"
-                fi
-            fi
+  if isEmpty "${_varValue}"; then
+    if ! isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}" ; then
+#      echo -n "Evaluating ${_varName}_DEFAULT_COMMAND -> ";
+      _evalVarCommand "${_varName}";
+      local _defaultCommand="${RESULT}";
+#      echo "${_defaultCommand}";
+      if ! isEmpty "${_defaultCommand}"; then
+        logTrace -n "Resolving ${_varName}_DEFAULT via ${_varName}_DEFAULT_COMMAND"
+        local _aux="$(set noglob; echo "${_defaultCommand}" | sh)";
+        if ! isEmpty "${_aux}"; then
+          _defaultValue="${_aux}";
+          logTraceResult SUCCESS "${_aux}"
+        else
+          logTraceResult FAILURE "${_DW_FAILED}"
         fi
-        _varValue="${_defaultValue}";
+      fi
     fi
-
-    if ! isEmpty ${_varValue} && isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}"; then
-        while [[ "${_varValue}" =~ .*'$'.* ]]; do
-          _varValue="$(set noglob; echo "echo ${_varValue}" | sh)";
-        done
-    fi
-
-    if ! isEmpty "${_varValue}"; then
-        export ${_varName}="${_varValue}";
-        export RESULT="${_varValue}";
-        _rescode=${TRUE};
-    else
-      _rescode=${FALSE};
-    fi
+    _varValue="${_defaultValue}";
   fi
 
-  return ${_rescode};
+  if ! isEmpty ${_varValue} && isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}"; then
+    while [[ "${_varValue}" =~ .*'$'.* ]]; do
+      _varValue="$(set noglob; echo "echo ${_varValue}" | sh)";
+    done
+  fi
+
+  if ! isEmpty "${_varValue}"; then
+    export ${_varName}="${_varValue}";
+  fi
+  export RESULT="${_varValue}";
 }
 
 function evalEnvVars() {
@@ -3554,46 +3510,7 @@ function logDebugFileContents() {
 ## <- RESULT: The absolute path.
 function _retrieveAbsolutePath() {
   local _relativePath="${1}";
-  _readlink -f "${_relativePath}";
-  return $?;
-}
-
-## Checks if the system is a MacOSX.
-## <- 0/${TRUE} if the system is MacOSX; 1/${FALSE} otherwise.
-## Example:
-##   if _isMacOSX; then
-##     echo "I'm running on a MacOSX";
-##   fi
-function _isMacOSX() {
-  local -i _rescode;
-  if [ "$(uname -s)" == "Darwin" ]; then
-    _rescode=${TRUE};
-  else
-    _rescode=${FALSE};
-  fi
-  return ${_rescode};
-}
-
-## Runs readlink (differs in Linux and in MacOSX).
-## -> @: The readlink parameters.
-## <- RESULT: The output of readlink.
-## <- the result code of readlink.
-## Example:
-##   if _readlink -f "/bin/bash"; then
-##     echo "readlink result: ${RESULT}"
-##   fi
-function _readlink() {
-  local -i _rescode;
-  local _result;
-  if _isMacOSX; then
-    _result="$(greadlink $@)";
-    _rescode=$?;
-  else
-    _result="$(readlink $@)";
-    _rescode=$?;
-  fi
-  export RESULT="${_result}";
-  return ${_rescode};
+  export RESULT="$(readlink -f "${_relativePath}")";
 }
 
 function _functionPresent() {
@@ -4214,30 +4131,24 @@ function runCommandAsUidGid() {
   shift
   shift
   local _args="${@}";
-  retrieveUserFromUid "${_uid}";
-  local _user="${RESULT}";
-  retrieveGroupFromGid "${_gid}";
-  local _group="${RESULT}";
   local _exports="$(export)";
 
   createTempFile
   local _runme="${RESULT}";
 
-  cat << EOF > "${_runme}"
+  cat << EOF > ${_runme}
 #!/bin/bash
 
 ${_exports}
-declare -x HOME="$(eval echo ~${_user})"
+declare -x HOME="/home/${_user}"
 cd ${_folder}
 ${_command} ${_args}
 EOF
-  chmod a+r "${_runme}"
-  chmod a+x "${_runme}"
+  chmod +x ${_runme}
 
-  logDebug "Running ${_command} ${_args} as ${_user}:${_group}";
-  chown ${_user}:${_group} "${_runme}"
+  logDebug "Running ${_command} ${_args} as ${SERVICE_USER}:${SERVICE_GROUP}";
   exec 2>&1
-  chpst -u ${_user}:${_group} "${_runme}"
+  chpst -u :${_uid}:${_gid} -U :${_uid}:${_gid} ${_runme}
 }
 
 ## Updates the uid of the user.
