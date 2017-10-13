@@ -97,7 +97,7 @@ function main() {
   fi
 
   logDebug -n "Checking ${PACKAGE} local version";
-  _result="$(apt-cache madison ${_package} | grep 'Packages' | head -n 1 | awk '{print $3;}')";
+  _result="$(apt-get update > /dev/null; apt-cache madison ${_package} | grep 'Packages' | head -n 1 | awk '{print $3;}'; /usr/local/bin/aptget-cleanup.sh > /dev/null)";
   _rescode=$?;
   if ! isTrue ${_rescode}; then
     logDebugResult FAILURE "${_result}";
