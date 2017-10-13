@@ -388,9 +388,17 @@ function isFalse() {
 # <- RESULT: The variable value.
 function _evalVar() {
   local _varName="${1}";
+  local -i _rescode;
+
   checkNotEmpty "varName" "${_varName}" 1;
-  local _result="$(set noglob; export DOLLAR='$'; export DQUOTE="\""; echo "echo ${DQUOTE}${DOLLAR}{$(echo "${_varName}")}${DQUOTE}" | sh)";
-  export RESULT="${_result}";
+
+  local _result="$(set noglob; export DOLLAR='$'; export DQUOTE="\""; echo "echo ${DQUOTE}${DOLLAR}{$(echo "${_varName}")}${DQUOTE}" | sh 2> /dev/null)";
+  _rescode=$?;
+  if isTrue ${_rescode}; then
+      export RESULT="${_result}";
+  fi
+
+  return ${_rescode};
 }
 
 # PUBLIC
@@ -459,7 +467,6 @@ function overrideEnvVar() {
   toUpper "${_varName}";
   _upcasedVarName="${RESULT}";
   _addOverriddenEnvVar "${_upcasedVarName}" "${_varValue}";
-
 
   if ! isEmpty "${_varValue}"; then
       _addEnvVar "${_upcasedVarName}" "${_varValue}";
@@ -614,48 +621,84 @@ function isEnvVarDefined() {
   return ${_rescode};
 }
 
+# Removes the ${..} envelope.
+# -> 1: The variable name.
+# <- 0/${TRUE} if the envelope was removed; 1/${FALSE} otherwise.
+# <- RESULT: the variable name, without envelope, if existed. Unset otherwise.
+# Example:
+#  if _removeDollarSquareBrackets '${_bla}'; then
+#    echo "result -> ${RESULT}" # _bla
+#  fi
+function _removeDollarSquareBrackets() {
+  local _varName="${1}";
+  local -i _rescode;
+  local _result;
+
+  if [ "${_varName#$\{}" == "${_varName}" ]; then
+      _rescode=${FALSE};
+  elif [ "${_varName%\}}" == "${_varName}" ]; then
+      _rescode=${FALSE};
+  else
+    _rescode=${TRUE};
+    _result="${_varName#$\{}";
+    _result="${_result%\}}";
+    export RESULT="${_result}";
+  fi
+  return ${_rescode};
+}
+
 # Evaluates given environment variable.
 # -> 1: the variable name.
 function _evalEnvVar() {
   local _varName="${1}";
+  local -i _rescode;
 
   checkNotEmpty "varName" "${_varName}" 1;
 
-  _evalVarDefault "${_varName}";
-  local _defaultValue="${RESULT}";
-  _evalVar "${_varName}";
-  local _varValue="${RESULT}";
+  if _removeDollarSquareBrackets "${_varName}"; then
+      _evalEnvVar "${RESULT}";
+  else
+    _evalVarDefault "${_varName}";
+    local _defaultValue="${RESULT}";
+    _evalVar "${_varName}";
+    local _varValue="${RESULT}";
 
-  if isEmpty "${_varValue}"; then
-    if ! isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}" ; then
-#      echo -n "Evaluating ${_varName}_DEFAULT_COMMAND -> ";
-      _evalVarCommand "${_varName}";
-      local _defaultCommand="${RESULT}";
-#      echo "${_defaultCommand}";
-      if ! isEmpty "${_defaultCommand}"; then
-        logTrace -n "Resolving ${_varName}_DEFAULT via ${_varName}_DEFAULT_COMMAND"
-        local _aux="$(set noglob; echo "${_defaultCommand}" | sh)";
-        if ! isEmpty "${_aux}"; then
-          _defaultValue="${_aux}";
-          logTraceResult SUCCESS "${_aux}"
-        else
-          logTraceResult FAILURE "${_DW_FAILED}"
+    if isEmpty "${_varValue}"; then
+        if ! isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}" ; then
+            #      echo -n "Evaluating ${_varName}_DEFAULT_COMMAND -> ";
+            _evalVarCommand "${_varName}";
+            local _defaultCommand="${RESULT}";
+            #      echo "${_defaultCommand}";
+            if ! isEmpty "${_defaultCommand}"; then
+                logTrace -n "Resolving ${_varName}_DEFAULT via ${_varName}_DEFAULT_COMMAND"
+                local _aux="$(set noglob; echo "${_defaultCommand}" | sh)";
+                if ! isEmpty "${_aux}"; then
+                    _defaultValue="${_aux}";
+                    logTraceResult SUCCESS "${_aux}"
+                else
+                  logTraceResult FAILURE "${_DW_FAILED}"
+                fi
+            fi
         fi
-      fi
+        _varValue="${_defaultValue}";
     fi
-    _varValue="${_defaultValue}";
+
+    if ! isEmpty ${_varValue} && isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}"; then
+        while [[ "${_varValue}" =~ .*'$'.* ]]; do
+          _varValue="$(set noglob; echo "echo ${_varValue}" | sh)";
+        done
+    fi
+
+    if ! isEmpty "${_varValue}"; then
+        export ${_varName}="${_varValue}";
+        export RESULT="${_varValue}";
+        _rescode=${TRUE};
+    else
+      _rescode=${FALSE};
+    fi
   fi
 
-  if ! isEmpty ${_varValue} && isEmpty "${DRY_WIT_EVAL_DEFAULTS_FLAG}"; then
-    while [[ "${_varValue}" =~ .*'$'.* ]]; do
-      _varValue="$(set noglob; echo "echo ${_varValue}" | sh)";
-    done
-  fi
-
-  if ! isEmpty "${_varValue}"; then
-    export ${_varName}="${_varValue}";
-  fi
-  export RESULT="${_varValue}";
+  return ${_rescode};
 }
 
 function evalEnvVars() {
@@ -897,6 +940,66 @@ function cleanup() {
   fi
 }
 
+## Runs mktemp variants in Linux and MacOSX, for creating a temporary file.
+## 1 -> the base folder.
+## 2 -> The file format.
+## <- RESULT: The file name.
+## <- 0/${TRUE} if the file is created correctly; 1/${FALSE} otherwise.
+## Example:
+##   if _mktempFile /tmp .removeme.XXXX; then
+##     echo "Temp file: ${RESULT}";
+##   fi
+function _mktempFile() {
+  local _baseFolder="${1}";
+  local _format="${2}"
+  local -i _rescode;
+  local _result;
+
+  checkNotEmpty "baseFolder" "${_baseFolder}" 1;
+  checkNotEmpty "format" "${_format}" 2;
+
+  if _isMacOSX; then
+    _result="$(TMPDIR="${_baseFolder}" mktemp -t ${_format})"
+    _rescode=$?;
+  else
+    _result="$(mktemp -p ${_baseFolder} -t ${_format})"
+    _rescode=$?;
+  fi
+
+  export RESULT="${_result}";
+  return ${_rescode};
+}
+
+## Runs mktemp variants in Linux and MacOSX, for creating a temporary folder.
+## 1 -> the base folder.
+## 2 -> The file format.
+## <- RESULT: The file name.
+## <- 0/${TRUE} if the file is created correctly; 1/${FALSE} otherwise.
+## Example:
+##   if _mktempFolder /tmp .removeme.XXXX; then
+##     echo "Temp folder: ${RESULT}";
+##   fi
+function _mktempFolder() {
+  local _baseFolder="${1}";
+  local _format="${2}"
+  local -i _rescode;
+  local _result;
+
+  checkNotEmpty "baseFolder" "${_baseFolder}" 1;
+  checkNotEmpty "format" "${_format}" 2;
+
+  if _isMacOSX; then
+    _result="$(TMPDIR="${_baseFolder}" mktemp -d -t ${_format})"
+    _rescode=$?;
+  else
+    _result="$(mktemp -p ${_baseFolder} -d -t ${_format})"
+    _rescode=$?;
+  fi
+
+  export RESULT="${_result}";
+  return ${_rescode};
+}
+
 ## Creates a new temporary file, without managing its cleanup.
 ## <- 0/${TRUE} if the file gets created successfully; 1/${FALSE} otherwise.
 ## <- RESULT: The name of the temporary file.
@@ -917,17 +1020,16 @@ function createTempFileNoCleanup() {
   else
     _dirname="$PWD/../${_dirname#\.\.}";
   fi
-  _result="$(mktemp -p "${_dirname}"  -t ".${_prefix}.XXXXXXXXXX")";
+  _mktempFile "${_dirname}" ".${_prefix}.XXXXXXXXXX";
   _rescode=$?;
 
   if isFalse ${_rescode} ; then
-     _result="$(mktemp -t ".${_prefix}.XXXXXXXXXX")";
+     _mktempFile "${PWD}" ".${_prefix}.XXXXXXXXXX";
      _rescode=$?;
   fi
 
-  if isTrue ${_rescode}; then
-      export RESULT="${_result}";
-  else
+  if isFalse ${_rescode}; then
+    export RESULT="";
     rm -f "${_result}" > /dev/null 2>&1;
   fi
 
@@ -1056,16 +1158,18 @@ function createTempFolder() {
   else
     _dirname="${PWD}/../${_dirname#\.\.}";
   fi
-  _result=$(mktemp -p "${_dirname}" -d -t ".${_prefix}.XXXXXX");
+  _mktempFolder "${_dirname}" ".${_prefix}.XXXXXX";
   _rescode=$?;
   if isFalse ${_rescode}; then
-      _result=$(mktemp -d -t ".${_prefix}.XXXXXX");
+      _mktempFolder "${PWD}" ".${_prefix}.XXXXXX";
       _rescode=$?;
   fi
   addFileToCleanup "${_result}";
-  if isTrue ${_rescode}; then
-      export RESULT="${_result}";
+  if isFalse ${_rescode}; then
+      export RESULT="";
   fi
+
+  return ${_rescode};
 }
 
 ## Extracts the flags from the arguments.
@@ -1896,9 +2000,14 @@ function logTrace() {
 # Logs given text as a log result, under the "trace" level.
 # -> 1: The result message to log.
 function logTraceResult() {
+  local _outcome="${1}";
+  shift;
+  local _message="${@}";
+
   if isTraceEnabled; then
-      checkNotEmpty "message" "${1}" 1;
-      _logStuffResult TRACE "$@";
+      checkNotEmpty "outcome" "${_outcome}" 1;
+      checkNotEmpty "message" "${_message}" 2;
+      _logStuffResult TRACE "${_outcome}" "${_message}";
   fi
 }
 
@@ -1952,9 +2061,14 @@ function logDebug() {
 # Logs given outcome under the "debug" level.
 # -> 1: The outcome to log.
 function logDebugResult() {
+  local _outcome="${1}";
+  shift;
+  local _message="${@}";
+
   if isDebugEnabled; then
-      checkNotEmpty "outcome" "${1}" 1;
-      _logStuffResult DEBUG "$@";
+      checkNotEmpty "outcome" "${_outcome}" 1;
+      checkNotEmpty "message" "${_message}" 2;
+      _logStuffResult DEBUG "${_outcome}" "${_message}";
   fi
 }
 
@@ -1997,9 +2111,14 @@ function logInfo() {
 }
 
 function logInfoResult() {
+  local _outcome="${1}";
+  shift;
+  local _message="${@}";
+
   if isInfoEnabled; then
-      checkNotEmpty "outcome" "${1}" 1;
-      _logStuffResult INFO "$@";
+      checkNotEmpty "outcome" "${_outcome}" 1;
+      checkNotEmpty "message" "${_message}" 2;
+      _logStuffResult INFO "${_outcome}" "${_message}";
   fi
 }
 
@@ -2013,8 +2132,11 @@ function log() {
 }
 
 function logResult() {
-  checkNotEmpty "outcome" "${1}" 1;
-  _logInfoResult "$@";
+  local _outcome="${1}";
+  shift;
+  local _message="${@}";
+
+  logInfoResult "${_outcome}" "${_message}";
 }
 
 function logFile() {
@@ -2040,11 +2162,15 @@ function _logStuff() {
 
 function _logStuffResult() {
   local _level="${1}";
+  local _outcome="${2}";
 
   checkNotEmpty "level" "${_level}" 1;
   shift;
 
-  checkNotEmpty "text" "${1}" 2;
+  checkNotEmpty "outcome" "${_outcome}" 2;
+  shift;
+
+  checkNotEmpty "text" "${@}" 3;
 
   local -i _nestedTasks;
   _numberOfNestedInProgressTasks;
@@ -2052,7 +2178,7 @@ function _logStuffResult() {
   if [ ${_nestedTasks} -eq 0 ]; then
     exitWithErrorCode UNACCEPTABLE_API_CALL "No ongoing process to print the outcome for. Review ${FUNCNAME[2]}";
   fi
-  _logCompleted "${_level}" "$@";
+  _logCompleted "${_level}" "${_outcome}" "$@";
 }
 
 ## PRIVATE
@@ -3510,7 +3636,46 @@ function logDebugFileContents() {
 ## <- RESULT: The absolute path.
 function _retrieveAbsolutePath() {
   local _relativePath="${1}";
-  export RESULT="$(readlink -f "${_relativePath}")";
+  _readlink -f "${_relativePath}";
+  return $?;
+}
+
+## Checks if the system is a MacOSX.
+## <- 0/${TRUE} if the system is MacOSX; 1/${FALSE} otherwise.
+## Example:
+##   if _isMacOSX; then
+##     echo "I'm running on a MacOSX";
+##   fi
+function _isMacOSX() {
+  local -i _rescode;
+  if [ "$(uname -s)" == "Darwin" ]; then
+    _rescode=${TRUE};
+  else
+    _rescode=${FALSE};
+  fi
+  return ${_rescode};
+}
+
+## Runs readlink (differs in Linux and in MacOSX).
+## -> @: The readlink parameters.
+## <- RESULT: The output of readlink.
+## <- the result code of readlink.
+## Example:
+##   if _readlink -f "/bin/bash"; then
+##     echo "readlink result: ${RESULT}"
+##   fi
+function _readlink() {
+  local -i _rescode;
+  local _result;
+  if _isMacOSX; then
+    _result="$(greadlink $@)";
+    _rescode=$?;
+  else
+    _result="$(readlink $@)";
+    _rescode=$?;
+  fi
+  export RESULT="${_result}";
+  return ${_rescode};
 }
 
 function _functionPresent() {
@@ -4131,24 +4296,30 @@ function runCommandAsUidGid() {
   shift
   shift
   local _args="${@}";
+  retrieveUserFromUid "${_uid}";
+  local _user="${RESULT}";
+  retrieveGroupFromGid "${_gid}";
+  local _group="${RESULT}";
   local _exports="$(export)";
 
   createTempFile
   local _runme="${RESULT}";
 
-  cat << EOF > ${_runme}
+  cat << EOF > "${_runme}"
 #!/bin/bash
 
 ${_exports}
-declare -x HOME="/home/${_user}"
+declare -x HOME="$(eval echo ~${_user})"
 cd ${_folder}
 ${_command} ${_args}
 EOF
-  chmod +x ${_runme}
+  chmod a+r "${_runme}"
+  chmod a+x "${_runme}"
 
-  logDebug "Running ${_command} ${_args} as ${SERVICE_USER}:${SERVICE_GROUP}";
+  logDebug "Running ${_command} ${_args} as ${_user}:${_group}";
+  chown ${_user}:${_group} "${_runme}"
   exec 2>&1
-  chpst -u :${_uid}:${_gid} -U :${_uid}:${_gid} ${_runme}
+  chpst -u ${_user}:${_group} "${_runme}"
 }
 
 ## Updates the uid of the user.
