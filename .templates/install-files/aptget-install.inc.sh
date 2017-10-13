@@ -13,3 +13,6 @@ defineEnvVar INSTALLED_PACKAGES_FILE \
 defineEnvVar HOLD_PACKAGE \
              "The command to hold/pin a package so that it doesn't get removed" \
              "apt-mark hold";
+defineEnvVar APT_CACHE_FOLDER \
+             "The Ubuntu cache folder" \
+             "/var/lib/apt/lists";

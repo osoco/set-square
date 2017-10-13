@@ -194,11 +194,36 @@ function pin_package() {
   fi
 }
 
+## Checks whether the Ubuntu APT cache is missing.
+## <- 0/${TRUE} if the cache is missing; 1/${FALSE} otherwise.
+## Example:
+##   if isUbuntuAptCacheMissing; then
+##     echo "Ubuntu APT cache is missing"
+##   fi
+function isUbuntuAptCacheMissing() {
+  local -i _rescode;
+  local _cacheFolder="${APT_CACHE_FOLDER}";
+  local -i _aux;
+
+  if [ -e ${_cacheFolder} ]; then
+      _aux=$(ls ${_cacheFolder} > /dev/null | wc -l);
+      if [ $(_aux) -eq 0 ]; then
+          _rescode=${TRUE};
+      else
+        _rescode=${FALSE};
+      fi
+  else
+    _rescode=${TRUE};
+  fi
+
+  return ${_rescode};
+}
+
 ## Main logic
 ## dry-wit hook
 function main() {
   local _package;
-  if isTrue ${UPDATE}; then
+  if isTrue ${UPDATE} || isUbuntuAptCacheMissing; then
     update_system;
   fi
 
