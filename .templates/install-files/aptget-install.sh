@@ -207,7 +207,7 @@ function isUbuntuAptCacheMissing() {
 
   if [ -e ${_cacheFolder} ]; then
       _aux=$(ls ${_cacheFolder} > /dev/null | wc -l);
-      if [ $(_aux) -eq 0 ]; then
+      if [ ${_aux} -eq 0 ]; then
           _rescode=${TRUE};
       else
         _rescode=${FALSE};
