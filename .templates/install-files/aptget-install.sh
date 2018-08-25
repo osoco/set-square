@@ -129,12 +129,12 @@ function update_system() {
   return ${_rescode};
 }
 
-## Checks the ${INSTALLED_PACKAGES_FILE} is writeable
+## Checks the ${INSTALLED_PACKAGES_FILE} is writable.
 ## Example:
-##   check_packages_file_writeable
-function check_packages_file_writeable() {
-  logDebug -n "Checking if ${INSTALLED_PACKAGES_FILE} is writeable";
-  if fileIsWriteable "${INSTALLED_PACKAGES_FILE}"; then
+##   check_packages_file_writable
+function check_packages_file_writable() {
+  logDebug -n "Checking if ${INSTALLED_PACKAGES_FILE} is writable";
+  if fileIsWritable "${INSTALLED_PACKAGES_FILE}"; then
     logDebugResult SUCCESS "true";
   else
     logDebugResult FAILURE "false";
@@ -227,7 +227,7 @@ function main() {
     update_system;
   fi
 
-  check_packages_file_writeable;
+  check_packages_file_writable;
 
   for _package in ${PACKAGES}; do
     install_package "${_package}";
