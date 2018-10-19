@@ -2,11 +2,9 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-#set -o xtrace
-
 function usage() {
 cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [-ci|--cleanup-images] [-cc|--cleanup-containers] [repo]+
+$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [-ci|--cleanup-images] [-cc|--cleanup-containers] [-rt|--registry-tag] [repo]+
 $SCRIPT_NAME [-h|--help]
 (c) 2014-today Automated Computing Machinery S.L.
     Distributed under the terms of the GNU General Public License v3
@@ -22,6 +20,7 @@ Where:
   * reduce-image: whether to reduce the size of the resulting image.
   * cleanup-images: Whether to try to cleanup images.
   * cleanup-containers: Whether to try to cleanup containers.
+  * registry-tag: Whether to tag also for pushing to a registry later (implicit if -p is enabled).
 Common flags:
     * -h | --help: Display this message.
     * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
@@ -34,41 +33,40 @@ EOF
 DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
 # Requirements
-function defineRequirements() {
-  checkReq $(basename ${DOCKER:-docker});
-  checkReq date;
-  checkReq realpath;
-  checkReq envsubst;
-  checkReq head;
-  checkReq grep;
-  checkReq awk;
+function checkRequirements() {
+  checkReq docker DOCKER_NOT_INSTALLED;
+  checkReq date DATE_NOT_INSTALLED;
+  checkReq realpath REALPATH_NOT_INSTALLED;
+  checkReq envsubst ENVSUBST_NOT_INSTALLED;
+  checkReq head HEAD_NOT_INSTALLED;
+  checkReq grep GREP_NOT_INSTALLED;
+  checkReq awk AWK_NOT_INSTALLED;
 }
 
 # Error messages
 function defineErrors() {
-  addError "INVALID_OPTION" "Unknown option";
-  addError "DOCKER_NOT_INSTALLED" "docker is not installed";
-  addError "DATE_NOT_INSTALLED" "date is not installed";
-  addError "REALPATH_NOT_INSTALLED" "realpath is not installed";
-  addError "ENVSUBST_NOT_INSTALLED" "envsubst is not installed";
-  addError "HEAD_NOT_INSTALLED" "head is not installed";
-  addError "GREP_NOT_INSTALLED" "grep is not installed";
-  addError "AWK_NOT_INSTALLED" "awk is not installed";
-  addError "DOCKER_SQUASH_NOT_INSTALLED" "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
-  addError "NO_REPOSITORIES_FOUND" "no repositories found";
-  addError "REPO_DOES_NOT_EXIST" "Repository does not exist";
-  addError "REPO_IS_NOT_A_FOLDER" "Repository is not a folder";
-  addError "REPO_IS_NOT_STACKED" "Repository is not stacked (it should end with -stack)";
-  addError "CANNOT_PROCESS_TEMPLATE" "Cannot process template";
-  addError "INCLUDED_FILE_NOT_FOUND" "The included file is missing";
-  addError "ERROR_BUILDING_REPO" "Error building repository";
-  addError "ERROR_TAGGING_IMAGE" "Error tagging image";
-  addError "ERROR_PUSHING_IMAGE" "Error pushing image to ${REGISTRY}";
-  addError "ERROR_REDUCING_IMAGE" "Error reducing the image size";
-  addError "CANNOT_COPY_LICENSE_FILE" "Cannot copy the license file ${LICENSE_FILE}";
-  addError "LICENSE_FILE_DOES_NOT_EXIST" "The specified license ${LICENSE_FILE} does not exist";
-  addError "CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE" "Cannot copy the copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE}";
-  addError "COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST" "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
+  addError INVALID_OPTION "Unrecognized option";
+  addError DOCKER_NOT_INSTALLED "docker is not installed";
+  addError DATE_NOT_INSTALLED "date is not installed";
+  addError REALPATH_NOT_INSTALLED "realpath is not installed";
+  addError ENVSUBST_NOT_INSTALLED "envsubst is not installed";
+  addError HEAD_NOT_INSTALLED "head is not installed";
+  addError GREP_NOT_INSTALLED "grep is not installed";
+  addError AWK_NOT_INSTALLED "awk is not installed";
+  addError DOCKER_SQUASH_NOT_INSTALLED "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
+  addError NO_REPOSITORIES_FOUND "no repositories found";
+  addError INVALID_URL "Invalid url";
+  addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
+  addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
+  addError ERROR_BUILDING_REPO "Error building repository";
+  addError ERROR_TAGGING_IMAGE "Error tagging image";
+  addError ERROR_PUSHING_IMAGE "Error pushing image to ${REGISTRY}";
+  addError ERROR_REDUCING_IMAGE "Error reducing the image size";
+  addError CANNOT_COPY_LICENSE_FILE "Cannot copy the license file ${LICENSE_FILE}";
+  addError LICENSE_FILE_DOES_NOT_EXIST "The specified license ${LICENSE_FILE} does not exist";
+  addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
+  addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
+  addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
 }
 
 ## Parses the input
@@ -76,64 +74,55 @@ function defineErrors() {
 function parseInput() {
 
   local _flags=$(extractFlags $@);
-  local _flagCount=0;
+  local _flagCount;
   local _currentCount;
-  local _help=${FALSE};
 
   # Flags
   for _flag in ${_flags}; do
     _flagCount=$((_flagCount+1));
     case ${_flag} in
-      -h | --help)
-        _help=${TRUE};
-        shift;
-        ;;
-      -v | -vv | -q | -X:e | --X:eval-defaults)
-        shift;
-        ;;
+      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
+         shift;
+         ;;
       -t | --tag)
-        shift;
-	      export TAG="${1}";
-        shift;
-	      ;;
+         shift;
+         export TAG="${1}";
+         shift;
+         ;;
       -p | --registry)
-        shift;
-	      export REGISTRY_PUSH=TRUE;
-	      ;;
+         shift;
+         export REGISTRY_TAG=TRUE;
+	       export REGISTRY_PUSH=TRUE;
+	       ;;
       -f | --force)
-        shift;
-        export FORCE_MODE=TRUE;
-        ;;
+          shift;
+          export FORCE_MODE=TRUE;
+          ;;
       -o | --overwrite-latest)
-        shift;
-        export OVERWRITE_LATEST=TRUE;
-        ;;
+          shift;
+          export OVERWRITE_LATEST=TRUE;
+          ;;
       -r | --reduce-image)
-        shift;
-        export REDUCE_IMAGE=TRUE;
-        ;;
-      -s | --stack)
-        shift;
-        export STACK="${1}";
-        shift;
-        ;;
+          shift;
+          export REDUCE_IMAGE=TRUE;
+          ;;
       -ci | --cleanup-images)
-        shift;
-        export CLEAUP_IMAGES=TRUE;
-        ;;
+          shift;
+          export CLEAUP_IMAGES=TRUE;
+          ;;
       -cc | --cleanup-containers)
         shift;
         export CLEAUP_CONTAINERS=TRUE;
         ;;
-      --)
+      -rt | --registry-tag)
         shift;
-        break;
+        export REGISTRY_TAG=TRUE;
         ;;
     esac
   done
 
   if isEmpty "${TAG}"; then
-    TAG="${DATE:-$(date '+%Y%m')}";
+    TAG="${DATE}";
   fi
 
   # Parameters
@@ -146,9 +135,9 @@ function parseInput() {
     REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
   fi
 
-  if ! isTrue ${_help} && ! isEmpty ${REPOS}; then
-    loadRepoEnvironmentVariables "${REPOS}";
-    evalEnvVars;
+  if ! isEmpty "${REPOS}"; then
+      loadRepoEnvironmentVariables "${REPOS}";
+      evalEnvVars;
   fi
 }
 
@@ -159,7 +148,6 @@ function checkInput() {
   local _flags=$(extractFlags $@);
   local _flagCount;
   local _currentCount;
-  local _oldIfs;
 
   logDebug -n "Checking input";
 
@@ -169,10 +157,9 @@ function checkInput() {
     case ${_flag} in
       -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -o | --overwrite-latest)
         ;;
-      -t | --tag | -p | --registry | -f | --force | -r | --reduce-image | -s | --stack)
+      -t | --tag | -p | --registry | -f | --force | -r | --reduce-image)
 	      ;;
-      --)
-        break;
+      -rt | --registry-tag)
         ;;
       *) logDebugResult FAILURE "fail";
          exitWithErrorCode INVALID_OPTION ${_flag};
@@ -184,126 +171,62 @@ function checkInput() {
     logDebugResult FAILURE "fail";
     exitWithErrorCode NO_REPOSITORIES_FOUND;
   else
-    _oldIfs="${IFS}";
-    IFS=$'\t\n';
-    for _repo in ${REPOS}; do
-      IFS="${_oldIfs}";
-      if [ ! -e "${_repo}" ]; then
-          logDebugResult FAILURE "fail";
-          exitWithErrorCode REPO_DOES_NOT_EXIST "${_repo}";
-      elif [ ! -d "${_repo}" ]; then
-        logDebugResult FAILURE "fail";
-        exitWithErrorCode REPO_IS_NOT_A_DIRECTORY "${_repo}";
-      fi
-    done
-
-    if stack_image_enabled; then
-      IFS=$'\t\n';
-      for _repo in ${REPOS}; do
-        IFS="${_oldIfs}";
-        if ! is_stacked_repo "${_repo}"; then
-          logDebugResult FAILURE "fail";
-          exitWithErrorCode REPO_IS_NOT_STACKED;
-        fi
-      done
-    fi
+    logDebugResult SUCCESS "valid";
   fi
-
-#  if isEmpty "${INCLUDES_FOLDER}"; then
-#    logDebugResult FAILURE "fail";
-#    exitWithErrorCode INCLUDES_FOLDER_IS_NOT_DEFINED;
-#  elif [ ! -e "${INCLUDES_FOLDER}" ]; then
-#    logDebugResult FAILURE "fail";
-#    exitWithErrorCode INCLUDES_FOLDER_DOES_NOT_EXIST "${INCLUDES_FOLDER}";
-#  fi
-
-  logDebugResult SUCCESS "valid";
-}
-
-## Checks whether the repository is part of a stack.
-## Example:
-##   if is_stacked_repo ${REPO}; then [..]; fi
-function is_stacked_repo() {
-  local _repo="${1}";
-  local _result;
-  if [ "x${_repo%%-stack}" == "x${_repo}" ]; then
-      _result=1;
-  else
-      _result=0;
-  fi
-  return ${_result};
 }
 
 ## Does "${NAMESPACE}/${REPO}:${TAG}" exist?
 ## -> 1: the repository.
 ## -> 2: the tag.
-## -> 3: the stack (optional)
 ## <- 0 if it exists, 1 otherwise
 ## Example:
 ##   if repo_exists "myImage" "latest"; then [..]; fi
 function repo_exists() {
   local _repo="${1}";
   local _tag="${2}";
-  local _stack="${3}";
-  local _stackSuffix;
-  retrieve_stack_suffix "${_stack}";
-  _stackSuffix="${RESULT}";
 
-  local _images=$(${DOCKER} ${DOCKER_OPTS} images "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}")
+  checkNotEmpty "repository" "${_repo}" 1;
+  checkNotEmpty "tag" "${_tag}" 2;
+
+  if _evalEnvVar "${_tag}"; then
+      _tag="${RESULT}";
+  fi
+
+  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}")
   local _matches=$(echo "${_images}" | grep "${_tag}")
-  local _rescode;
-  if [ -z "${_matches}" ]; then
-    _rescode=${FALSE}
+  local -i _rescode;
+
+  if isEmpty "${_matches}"; then
+      _rescode=${FALSE};
   else
-    _rescode=${TRUE}
+    _rescode=${TRUE};
   fi
 
   return ${_rescode};
 }
 
-## Returns the suffix to use should the image is part of
-## a stack, and leaving it empty if not.
-## -> 1: stack (optional).
-## <- RESULT: "_${stack}" if stack is not empty, the empty string otherwise.
-## Example:
-##   retrieve_stack_suffix "examplecom"
-##   stackSuffix="${RESULT}"
-function retrieve_stack_suffix() {
-  local _stack="${1}";
-  local _result;
-  if [[ -n ${_stack} ]]; then
-    _result="-${_stack}"
-  else
-    _result=""
-  fi
-  export RESULT="${_result}";
-}
-
 ## Builds the image if it's defined locally.
 ## -> 1: the repository.
-## -> 2: the tag.
-## -> 3: the stack (optional).
 ## Example:
-##   build_repo_if_defined_locally "myImage" "latest";
+##   build_repo_if_defined_locally "myImage:latest";
 function build_repo_if_defined_locally() {
   local _repo="${1}";
-  local _tag="${2}";
-  local _stack="${3}";
+  local _name="${_repo%:*}";
+  local _tag="${_repo#*:}";
 
-  echo "Checking ${_repo}:${_tag}"
-  if [[ -n ${_repo} ]] && \
-     [[ -d ${_repo} ]] && \
-     ! repo_exists "${_repo#${NAMESPACE}/}" "${_tag}" "${_stack}" ; then
-    build_repo "${_repo}" "${_tag}" "${_stack}"
+  if ! isEmpty "${_name}" && \
+     [[ -d ${_name} ]] && \
+     ! repo_exists "${_name#${NAMESPACE}/}" "${_tag}"; then
+      build_repo "${_name}" "${_tag}"
   fi
 }
 
 ## Squashes the image with docker-squash [1]
 ## [1] https://github.com/jwilder/docker-squash
-## -> 1: the current tag
-## -> 2: the new tag for the squashed image
-## -> 3: the namespace
-## -> 4: the repo name
+## -> 1: the namespace.
+## -> 2: the repo name.
+## -> 3: the current tag.
+## -> 4: the new tag for the squashed image.
 ## Example:
 ##   reduce_image_size "namespace" "myimage" "201508-raw" "201508"
 function reduce_image_size() {
@@ -312,9 +235,15 @@ function reduce_image_size() {
   local _currentTag="${3}";
   local _tag="${4}";
   checkReq docker-squash DOCKER_SQUASH_NOT_INSTALLED;
+
+  checkNotEmpty "namespace" "${_namespace}" 1;
+  checkNotEmpty "repository" "${_repo}" 2;
+  checkNotEmpty "currentTag" "${_currentTag}" 3;
+  checkNotEmpty "tag" "${_tag}" 4;
+
   logInfo -n "Squashing ${_image} as ${_namespace}/${_repo}:${_tag}"
-  ${DOCKER} ${DOCKER_OPTS} save "${_namespace}/${_repo}:${_currentTag}" | sudo docker-squash -t "${_namespace}/${_repo}:${_tag}" | ${DOCKER} ${DOCKER_OPTS} load
-  if [ $? -eq 0 ]; then
+  ${DOCKER} save "${_namespace}/${_repo}:${_currentTag}" | sudo docker-squash -t "${_namespace}/${_repo}:${_tag}" | ${DOCKER} load
+  if isTrue $?; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
@@ -331,7 +260,6 @@ function reduce_image_size() {
 ## -> 6: the root image.
 ## -> 7: the namespace.
 ## -> 8: the tag.
-## -> 9: the stack suffix.
 ## -> 10: the backup host's SSH port (optional).
 ## <- 0: if the file is processed correctly; 1 otherwise.
 ## Example:
@@ -347,48 +275,55 @@ function process_file() {
   local _rootImage="${6}";
   local _namespace="${7}";
   local _tag="${8}";
-  local _stackSuffix="${9}";
   local _backupHostSshPort="${10:-22}";
-  local _rescode=1;
-  createTempFile;
-  local _temp1="${RESULT}";
-  createTempFile;
-  local _temp2="${RESULT}";
+  local _rescode=${FALSE};
 
-  if isEmpty "${_file}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'file' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_output}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'output' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repoFolder}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_templateFolder}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repo}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_rootImage}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'rootImage' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_namespace}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'namespace' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_tag}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
+  local _temp1;
+  local _temp2;
+
+  checkNotEmpty "file" "${_file}" 1;
+  checkNotEmpty "output" "${_output}" 2;
+  checkNotEmpty "repoFolder" "${_repoFolder}" 3;
+  checkNotEmpty "templateFolder" "${_templateFolder}" 4;
+  checkNotEmpty "repository" "${_repo}" 5;
+  checkNotEmpty "rootImage" "${_rootImage}" 6;
+  checkNotEmpty "namespace" "${_namespace}" 7;
+  checkNotEmpty "tag" "${_tag}" 8;
+
+  local _settingsFile="$(dirname ${_file})/$(basename ${_file} .template).settings";
+
+  if createTempFile; then
+      _temp1="${RESULT}";
   fi
 
-  if resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-    logTrace -n "Resolving @include_env in ${_file}";
-    if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-      logTraceResult SUCCESS "done";
-      logTrace -n "Resolving placeholders in ${_file}";
-      if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-        _rescode=${TRUE};
-        logTraceResult SUCCESS "done"
+  if createTempFile; then
+      _temp2="${RESULT}";
+  fi
+
+  if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
+     resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}"; then
+      logTrace -n "Resolving @include_env in ${_file}";
+      _debugEcho "Resolving @include_env in ${_file}";
+      if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}"; then
+          logTraceResult SUCCESS "done";
+          if [ -e "${_settingsFile}" ]; then
+              process_settings_file "${_settingsFile}";
+          fi
+          logTrace -n "Resolving placeholders in ${_file}";
+          _debugEcho "Resolving placeholders in ${_temp2}";
+          if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}"; then
+              _rescode=${TRUE};
+              _debugEcho "Resolving placeholders in ${_file} succeeded -> ${_output}";
+              logTraceResult SUCCESS "done"
+          else
+            _rescode=${FALSE};
+            _debugEcho "Resolving placeholders in ${_file} failed";
+            logTraceResult FAILURE "failed";
+          fi
       else
         _rescode=${FALSE};
         logTraceResult FAILURE "failed";
       fi
-    else
-      _rescode=${FALSE};
-      logTraceResult FAILURE "failed";
-    fi
   else
     _rescode=${FALSE};
   fi
@@ -398,9 +333,9 @@ function process_file() {
 
 ## Resolves given included file.
 ## -> 1: The file name.
-## -> 2: The repository's own folder.
-## -> 3: The templates folder.
-## <- 0/${TRUE}: if the file is found; 1/${FALSE} otherwise.
+## -> 2: The templates folder.
+## -> 3: The repository's own folder.
+## <- 0: if the file is found; 1 otherwise.
 ## Example:
 ##   if ! resolve_included_file "footer" "my-image-folder" ".templates"; then
 ##     echo "'footer' not found";
@@ -411,44 +346,32 @@ function resolve_included_file() {
   local _templatesFolder="${3}";
   local _result;
   local _rescode=${FALSE};
-  local _proceed=${TRUE};
-  local _fileAux;
 
-  if isEmpty "${_repoFolder}"; then
-      exitWithErrorCode UNACCEPTABLE_API_CALL "'file' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repoFolder}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_templatesFolder}"; then
-      exitWithErrorCode UNACCEPTABLE_API_CALL "'templatesFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  fi
+  checkNotEmpty "file" "${_file}" 1;
+  checkNotEmpty "repoFolder" "${_repoFolder}" 2;
+  checkNotEmpty "templatesFolder" "${_templatesFolder}" 3;
 
-  if [ "${_file}" == "user_image" ] && \
-       isEmpty "${USER_IMAGE}"; then
-    _proceed=${FALSE};
-  fi
-  if [ "${_file}" == "entrypoint" ] && \
-       isEmpty "${ENTRYPOINT}"; then
-    _proceed="${FALSE}";
-  fi
-  if isTrue ${_proceed}; then
-    for d in "${_templatesFolder}" "${_repoFolder}" "."; do
-      if    [[ -f "${d}/${_file}" ]] \
-         || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
-        _result="${d}/${_file}";
-        export RESULT="${_result}";
-        _rescode=${TRUE};
-        break;
-      fi
-    done
-    if isFalse ${_rescode}; then
-      _fileAux=$(eval "echo ${_file}");
-      if    isTrue $? \
-         && isNotEmpty "${_fileAux}"; then
-        resolve_included_file "${_fileAux}" "${_repoFolder}" "${_templatesFolder}";
-        _rescode=$?;
-      fi
+  for d in "${_templatesFolder}"; do
+    _debugEcho "Checking ${d}/${_file}";
+    if    [[ -f "${d}/${_file}" ]] \
+       || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
+      _debugEcho "${d}/${_file} found!";
+      _result="${d}/${_file}";
+      export RESULT="${_result}";
+      _rescode=${TRUE};
+      break;
+    fi
+  done
+
+  if isFalse ${_rescode}; then
+    eval "echo ${_file}" > /dev/null 2>&1;
+    if isTrue $?; then
+      resolve_included_file "$(eval "echo ${_file}")" "${_repoFolder}" "${_templatesFolder}";
+      _rescode=$?;
     fi
   fi
+
+  _debugEcho "${_file} resolved -> ${_rescode}";
 
   return ${_rescode};
 }
@@ -462,7 +385,6 @@ function resolve_included_file() {
 ## -> 6: the root image.
 ## -> 7: the namespace.
 ## -> 8: the tag.
-## -> 9: the stack suffix.
 ## -> 10: the backup host's SSH port for this image (optional).
 ## <- 0: if the @include()s are resolved successfully; 1 otherwise.
 ## Example:
@@ -476,114 +398,114 @@ function resolve_includes() {
   local _rootImage="${6}";
   local _namespace="${7}";
   local _tag="${8}";
-  local _stackSuffix="${9}";
   local _backupHostSshPort="${10:-22}";
   local _rescode;
   local _match;
   local _includedFile;
-  local _includedFolder;
-  local _includedFileBundle;
-  local _includedFileBundleName;
-  local _includedFileBundleSettings;
   local line;
 
-  if isEmpty "${_input}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'input' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif [ ! -e "${_input}" ]; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'input' \"${_input}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_output}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'output' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repoFolder}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif [ ! -e "${_repoFolder}" ]; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repoFolder' \"${_repoFolder}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_templateFolder}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif [ ! -e "${_templateFolder}" ]; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'templateFolder' \"${_templateFolder}\" does not exist, and it's mandatory for ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repo}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_rootImage}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'rootImage' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_namespace}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'namespace' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_tag}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  fi
+  checkNotEmpty "input" "${_input}" 1;
+  checkNotEmpty "output" "${_output}" 2;
+  checkNotEmpty "repoFolder" "${_repoFolder}" 3;
+  checkNotEmpty "templateFolder" "${_templateFolder}" 4;
+  checkNotEmpty "repository" "${_repo}" 5;
+  checkNotEmpty "rootImage" "${_rootImage}" 6;
+  checkNotEmpty "namespace" "${_namespace}" 7;
+  checkNotEmpty "tag" "${_tag}" 8;
 
   logTrace -n "Resolving @include()s in ${_input}";
 
   echo -n '' > "${_output}";
 
   while IFS='' read -r line; do
-    _match=1;
+    _match=${FALSE};
     _includedFile="";
     if    [[ "${line#@include(\"}" != "$line" ]] \
        && [[ "${line%\")}" != "$line" ]]; then
       _ref="$(echo "$line" | sed 's/@include(\"\(.*\)\")/\1/g')";
       if resolve_included_file "${_ref}" "${_repoFolder}" "${_templateFolder}"; then
-        _includedFile="${RESULT}";
-        _includedFolder="$(dirname ${_includedFile})";
-        _includedFileBundleSettings="${_includedFolder}/$(basename ${_includedFile} .template).settings";
-        if [ -e "${_includedFileBundleSettings}" ]; then
-          source "${_includedFileBundleSettings}";
-        fi
-        _includedFileBundleName="$(basename ${_includedFile} .template)-files";
-        _includedFileBundle="${_includedFolder}/${_includedFileBundleName}";
-        if [ -e "${_includedFileBundleSettings}" ]; then
-          source "${_includedFileBundleSettings}";
-        fi
-        if [ -d "${_includedFileBundle}" ]; then
-          if [ -d "${_repoFolder}/${_includedFileBundleName}" ]; then
-            rsync -az "${_includedFileBundle}/" "${_repoFolder}/${_includedFileBundleName}/";
-          else
-            cp -r "${_includedFileBundle}" "${_repoFolder}";
+          _includedFile="${RESULT}";
+          if [ -d "${_templateFolder}/$(basename ${_includedFile})-files" ]; then
+              mkdir "${_repoFolder}/$(basename ${_includedFile})-files" 2> /dev/null;
+              rsync -az "${PWD}/${_templateFolder#\./}/$(basename ${_includedFile})-files/" "${_repoFolder}/$(basename ${_includedFile})-files/"
+              _debugEcho "Processing ${_repoFolder}/$(basename ${_includedFile})-files"
+              shopt -s nullglob dotglob;
+              _files=(${_repoFolder}/$(basename ${_includedFile})-files/*.template);
+              shopt -u nullglob dotglob;
+              if [ ${#_files[@]} -gt 0 ]; then
+                for p in ${_repoFolder}/$(basename ${_includedFile})-files/*.template; do
+                  _debugEcho "Processing ${p}";
+                  process_file "${p}" "$(dirname ${p})/$(basename ${p} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}";
+                done
+              fi
           fi
-          for f in $(find ${_repoFolder}/${_includedFileBundleName}/ -name '*.template'); do
-            if [ -e ${f} ]; then
-#              _debugEcho "process_file ${f} ${_repoFolder}/${_includedFileBundleName}/$(basename ${f} .template) ${_repoFolder} ${_templateFolder} ${_repo} ${_rootImage} ${_namespace} ${_tag} ${_stackSuffix} ${_backupHostSshPort}";
-              process_file "${f}" "${_repoFolder}/${_includedFileBundleName}/$(basename ${f} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}";
-            fi
-          done
-        fi
-        if [ -e "${_includedFile}.template" ]; then
-          if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
+          if [ -e "${_includedFile}.template" ]; then
+              if process_file "${_includedFile}.template" "${_includedFile}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}"; then
+                  _match=${TRUE};
+              else
+                _match=${FALSE};
+                logTraceResult FAILURE "failed";
+                exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}";
+              fi
+          elif [ -e "${_includedFile}.settings" ]; then
+              if process_settings_file "${_includedFile}.settings"; then
+                  _match=${TRUE};
+              else
+                _match=${FALSE};
+                logTraceResult FAILURE "failed";
+                exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}.settings";
+              fi
+          else
             _match=${TRUE};
-          else
-            _match=${FALSE};
-            logTraceResult FAILURE "failed";
-            exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_includedFile}";
           fi
-        else
-          _match=${TRUE};
-        fi
       else
         _match=${FALSE};
         _errorRef="${_ref}";
         eval "echo ${_ref}" > /dev/null 2>&1;
-        if [ $? -eq 0 ]; then
+        if isTrue $?; then
           _errorRef="${_input} contains ${_ref} with evaluates to $(eval "echo ${_ref}" 2> /dev/null), and it's not found in any of the expected paths: ${_repoFolder}, ${_templateFolder}";
         fi
       fi
     fi
     if isTrue ${_match}; then
-#      _debugEcho "Appending ${_includedFile} to ${_output}";
-      cat "${_includedFile}" >> "${_output}";
+        cat "${_includedFile}" >> "${_output}";
     else
       echo "$line" >> "${_output}";
     fi
   done < "${_input}";
   _rescode=$?;
-  if [ -n "${_errorRef}" ]; then
-    logTraceResult FAILURE "failed";
-    exitWithErrorCode INCLUDED_FILE_NOT_FOUND "${_errorRef}";
-  else
-    if [ ${_rescode} -eq 0 ]; then
+  if isEmpty "${_errorRef}" && isTrue ${_rescode}; then
       logTraceResult SUCCESS "done";
-    else
-      logTraceResult FAILURE "failed";
-    fi
+  else
+    logTraceResult FAILURE "failed";
   fi
+
+  return ${_rescode};
+}
+
+## Processes a settings file for a template.
+## -> 1: The settings file.
+## <- 0/${TRUE} if the settings file was processed successfully; 1/${FALSE} otherwise.
+## Example:
+##   if process_settings_file "my.settings"; then
+##     echo "my.settings processed successfully";
+##   fi
+function process_settings_file() {
+  local _file="${1}";
+  local -i _rescode=${FALSE};
+
+  checkNotEmpty "file" "${_file}" 1;
+
+  logInfo -n "Reading ${_file}";
+  source "${_file}";
+  _rescode=$?;
+  if isTrue ${_rescode}; then
+      logInfoResult SUCCESS "done";
+  else
+    logInfoResult FAILURE "failed";
+    exit 1;
+  fi
+
   return ${_rescode};
 }
 
@@ -594,7 +516,6 @@ function resolve_includes() {
 ## -> 4: the root image.
 ## -> 5: the namespace.
 ## -> 6: the tag.
-## -> 7: the stack suffix.
 ## -> 8: the backup host's SSH port (optional).
 ## <- 0 if the file was processed successfully; 1 otherwise.
 ## Example:
@@ -608,18 +529,26 @@ function process_placeholders() {
   local _rootImage="${4}";
   local _namespace="${5}";
   local _tag="${6}";
-  local _stackSuffix="${7}";
-  local _backupHostSshPort="${8:-22}";
+  local _backupHostSshPort="${7:-22}";
   local _rescode;
+
+  checkNotEmpty "file" "${_file}" 1;
+  checkNotEmpty "output" "${_output}" 2;
+  checkNotEmpty "repository" "${_repo}" 3;
+  checkNotEmpty "rootImage" "${_rootImage}" 4;
+  checkNotEmpty "namespace" "${_namespace}" 5;
+  checkNotEmpty "tag" "${_tag}" 6;
+
   local _env="$( \
     for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
       echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
-    done;) TAG=\"${_tag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" STACK_SUFFIX=\"${_stackSuffix}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR='$' ";
+    done;) TAG=\"${_tag}\" DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{TAG} $"; echo -n "{DATE} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{STACK_SUFFIX} $"; echo -n "{NAMESPACE} $"; echo -n "{BACKUP_HOST_SSH_PORT} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{_tag} $"; echo -n "{DATE} $"; echo -n "{TIME} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{NAMESPACE} $"; echo -n "{BACKUP_HOST_SSH_PORT} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
   _rescode=$?;
+
   return ${_rescode};
 }
 
@@ -630,7 +559,6 @@ function process_placeholders() {
 ## -> 4: the root image.
 ## -> 5: the namespace.
 ## -> 6: the tag.
-## -> 7: the stack suffix.
 ## -> 8: the backup host's SSH port (optional).
 ## <- 0: if the @include_env is resolved successfully; 1 otherwise.
 ## Example:
@@ -638,12 +566,11 @@ function process_placeholders() {
 function resolve_include_env() {
   local _input="${1}";
   local _output="${2}";
-  export IMAGE="${3}";
-  export ROOT_IMAGE="${4}";
-  export NAMESPACE="${5}";
-  export TAG="${6}";
-  export STACK_SUFFIX="${7}";
-  export BACKUP_HOST_SSH_PORT="${8:-22}";
+  local _image="${3}";
+  local _rootImage="${4}";
+  local _namespace="${5}";
+  local _tag="${6}";
+  local _backupHostSshPort="${7:-22}";
   local _includedFile;
   local _rescode;
   local _envVar;
@@ -693,7 +620,7 @@ function resolve_include_env() {
     fi
   done < "${_input}";
   _rescode=$?;
-  if [ ${_rescode} -eq 0 ]; then
+  if isTrue ${_rescode}; then
     logTraceResult SUCCESS "done";
   else
     logTraceResult FAILURE "failed";
@@ -715,85 +642,47 @@ function update_log_category() {
 
 ## PUBLIC
 ## Copies the license file from specified folder to the repository folder.
-## -> 1: the folder where the license file is included.
-## -> 2: the repository.
+## -> 1: the repository.
+## -> 2: the folder where the license file is included.
 ## Example:
-##   copy_license_file "${PWD}" "myImage"
+##   copy_license_file "myImage" ${PWD}
 function copy_license_file() {
-  local _folder="${1}";
-  local _repo="${2}";
-  local _licenseFile="${LICENSE_FILE}";
-
-  checkNotEmpty "folder" "${_folder}" 1;
-  checkNotEmpty "repo" "${_repo}" 2;
-
-  local _source;
-
-  if [ "${_repo}" == "set-square" ]; then
-    _licenseFile="LICENSE.set-square";
-  fi
-
-  if [ -e "${_repo}/${_licenseFile}" ]; then
-      _source="${_repo}/${_licenseFile}";
-  fi
-
-  if [ -e "${_folder}/${_licenseFile}" ]; then
-      _source="${_folder}/${_licenseFile}";
-  fi
-
-  if [ -n "${_source}" ]; then
-    if [ ! -e "${_repo}/LICENSE" ]; then
-      logDebug -n "Using ${_licenseFile} for ${_repo} image";
-      cp "${_source}" "${_repo}/LICENSE";
-      if isTrue $?; then
-        logDebugResult SUCCESS "done";
-      else
-        logDebugResult FAILURE "failed";
-        exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
-      fi
+  local _repo="${1}";
+  local _folder="${2}";
+  if [ -e "${_folder}/${LICENSE_FILE}" ]; then
+    logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
+    cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
+    if isTrue $?; then
+      logDebugResult SUCCESS "done";
+    else
+      logDebugResult FAILURE "failed";
+      exitWithErrorCode CANNOT_COPY_LICENSE_FILE;
     fi
   else
-    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${_licenseFile}";
+    exitWithErrorCode LICENSE_FILE_DOES_NOT_EXIST "${_folder}/${LICENSE_FILE}";
   fi
 }
 
 ## PUBLIC
 ## Copies the copyright-preamble file from specified folder to the repository folder.
-## -> 1: the folder where the copyright preamble file is included.
-## -> 2: the repository.
+## -> 1: the repository.
+## -> 2: the folder where the copyright preamble file is included.
 ## Example:
-##   copy_copyright_preamble_file "${PWD}" "myImage";
+##   copy_copyright_preamble_file "myImage" ${PWD}
 function copy_copyright_preamble_file() {
-  local _folder="${1}";
-  local _repo="${2}";
-  local _copyrightPreambleFile="${COPYRIGHT_PREAMBLE_FILE}";
-
-  checkNotEmpty "folder" "${_folder}" 1;
-  checkNotEmpty "repo" "${_repo}" 2;
-
-  local _source;
-
-  if [ "${_repo}" == "set-square" ]; then
-    _copyrightPreambleFile="copyright-preamble.set-square";
-  fi
-
-  if [ -e "${_repo}/${_copyrightPreambleFile}" ]; then
-      _source="${_repo}/${_copyrightPreambleFile}";
-  elif [ -e "${_folder}/${_copyrightPreambleFile}" ]; then
-      _source="${_folder}/${_copyrightPreambleFile}";
-  fi
-
-  if [ -n "${_source}" ]; then
-    logDebug -n "Using ${_copyrightPreambleFile} for ${_repo} image";
-    cp "${_source}" "${_repo}/copyright-preamble.txt";
-    if isTrue $?; then
-      logDebugResult SUCCESS "done";
-    else
-      logDebugResult FAILURE "failed";
-      exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
-    fi
+  local _repo="${1}";
+  local _folder="${2}";
+  if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+      logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
+      cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/copyright-preamble.txt";
+      if [ $? -eq 0 ]; then
+          logDebugResult SUCCESS "done";
+      else
+        logDebugResult FAILURE "failed";
+        exitWithErrorCode CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE;
+      fi
   else
-    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${_copyrightPreambleFile}";
+    exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "${_folder}/${COPYRIGHT_PREAMBLE_FILE}";
   fi
 }
 
@@ -808,128 +697,36 @@ function retrieve_backup_host_ssh_port() {
   local _repo="${1}";
   local _result;
   if [ -e "${SSHPORTS_FILE}" ]; then
-    _result="$(echo -n ''; (grep -e ${_repo} ${SSHPORTS_FILE} || echo ${_repo} 22) | awk '{print $2;}')";
+      logDebug -n "Retrieving the ssh port of the backup host for ${_repo}";
+      _result="$(echo -n ''; (grep -e ${_repo} ${SSHPORTS_FILE} || echo ${_repo} 22) | awk '{print $2;}' | head -n 1)";
+      if isTrue $?; then
+          logDebugResult SUCCESS "${_result}";
+          export RESULT="${_result}";
+      else
+        logDebugResult FAILURE "not-found";
+      fi
   else
     _result="";
   fi
-  export RESULT="${_result}";
-}
-
-## PUBLIC
-## Copies dry-wit to given folder.
-## -> 1: dry-wit location.
-## -> 2: The destination folder.
-## <- 0/${TRUE}: if dry-wit is copied correctly; 1/${FALSE} otherwise.
-## Example:
-##   copy_dry_wit_to_folder "${PWD}/dry-wit" ".templates/common-files"
-function copy_dry_wit_to_folder() {
-  local _dryWit="${1}";
-  local _folder="${2}";
-  local -i _rescode=${TRUE};
-
-  if isEmpty "${_dryWit}"; then
-      exitWithErrorCode UNACCEPTABLE_API_CALL "'dryWit' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_folder}"; then
-      exitWithErrorCode UNACCEPTABLE_API_CALL "'folder' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  fi
-
-  logTrace -n "Copying dry-wit to ${_folder}";
-  cp "${_dryWit}" "${_folder}"/
-  _rescode=$?;
-  if isTrue ${_rescode}; then
-    logTraceResult SUCCESS "done";
-  else
-    logTraceResult FAILURE "failed";
-  fi
-
-  return ${_rescode};
-}
-
-## PUBLIC
-## Copies dry-wit to the repository folder if it's used.
-## The rationale is to make sure dry-wit inside the repository is up to date.
-## Docker does not allow using symlinks for files to be copied inside the container.
-## -> 1: The location of the dry-wit file.
-## -> 2: The repository.
-## <- 0/${TRUE}: if dry-wit is not used, or if it is copied successfully;
-##    1/${FALSE}: if it was meant to be copied but it failed for some reason.
-## Example:
-##   copy_dry_wit_if_needed "${PWD}/dry-wit" "base"
-function copy_dry_wit_if_needed() {
-  local _dryWit="${1}";
-  local _repo="${2}";
-  local -i _rescode=${TRUE};
-
-  if isEmpty "${_dryWit}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'dryWit' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_repo}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repo' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  fi
-
-  if    [ -e "${_repo}/dry-wit" ] \
-     || [ "x${_repo}" == "xbase" ]; then
-    copy_dry_wit_to_folder "${_dryWit}" "${_repo}";
-  fi
-
-  return ${_rescode};
-}
-
-## PRIVATE
-## Copies set-square files and folders to its own Docker build folder.
-## -> 1: The repo folder.
-## <- 0/${TRUE} if the files are copied successfully; 1/${FALSE} otherwise.
-## Example:
-##   if _copy_set_square_files_to_repo; then
-##     echo "set-square files copied successfully";
-##   fi
-function _copy_set_square_files_to_repo() {
-  local _repo="${1}";
-  local -i _rescode;
-
-  checkNotEmpty "repo" "${_repo}" 1;
-
-  for f in build.sh build.inc.sh; do
-    cp -r ${f} "${_repo}";
-    _rescode=$?;
-    if isFalse ${_rescode}; then
-      break;
-    fi
-  done
-
-  return ${_rescode};
 }
 
 ## PUBLIC
 ## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
 ## -> 1: the repository.
 ## -> 2: the tag.
-## -> 3: the stack (optional).
 ## Example:
 ##  build_repo "myImage" "latest" "";
 function build_repo() {
   local _repo="${1}";
   local _canonicalTag="${2}";
-
-  if isEmpty "${_repo}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'repository' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${_canonicalTag}"; then
-    exitWithErrorCode UNACCEPTABLE_API_CALL "'tag' cannot be empty when calling ${FUNCNAME[0]}. Review ${FUNCNAME[1]}";
-  elif isEmpty "${INCLUDES_FOLDER}"; then
-    exitWithErrorCode UNACCEPTABLE_ENVIRONMENT_VARIABLE "'INCLUDES_FOLDER' cannot be empty";
-  fi
-
-  local _stack="${3}";
-
   if reduce_image_enabled; then
-      _rawTag="${2}-raw";
-      _tag="${_rawTag}";
+    _rawTag="${2}-raw";
+    _tag="${_rawTag}";
   else
     _tag="${_canonicalTag}";
   fi
-
-  local _stackSuffix;
   local _cmdResult;
-  local _rootImage=;
+  local _rootImage;
   retrieve_backup_host_ssh_port "${_repo}";
   local _backupHostSshPort="${RESULT:-22}";
   if is_32bit; then
@@ -938,85 +735,107 @@ function build_repo() {
     _rootImage="${ROOT_IMAGE_64BIT}:${ROOT_IMAGE_VERSION}";
   fi
   update_log_category "${_repo}";
-  retrieve_stack_suffix "${STACK}";
-  _stackSuffix="${RESULT}";
 
-  copy_dry_wit_to_folder "${PWD}/dry-wit" "${INCLUDES_FOLDER}/common-files";
-  #  copy_dry_wit_if_needed "${PWD}/dry-wit" "${_repo}";
-  if [ "${_repo}" == "set-square" ]; then
-    _copy_set_square_files_to_repo "${_repo}";
-  fi
+  defineEnvVar IMAGE "The image to build" "${_repo}";
 
-  copy_license_file "${PWD}" "${_repo}";
-  copy_copyright_preamble_file "${PWD}" "${_repo}";
+  copy_license_file "${_repo}" "${PWD}";
+  copy_copyright_preamble_file "${_repo}" "${PWD}";
 
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
-    for f in ${_repo}/*.template; do
-      if ! process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_stackSuffix}" "${_backupHostSshPort}"; then
-        exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
+      for f in ${_repo}/*.template; do
+        logDebug -n "Processing ${f}";
+        if process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_backupHostSshPort}"; then
+            logDebugResult SUCCESS "done";
+        else
+          logDebugResult FAILURE "failed";
+          exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${f}";
       fi
     done
   fi
 
-  logInfo "Building ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}"
-#  echo ${DOCKER} ${DOCKER_OPTS} build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}" ${DOCKER_BUILD_OPTS} "${_repo}"
-  runCommandLongOutput "${DOCKER_BUILD} ${BUILD_OPTS} -t ${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag} ${DOCKER_BUILD_OPTS} ${_repo}";
+  logInfo "Building ${NAMESPACE}/${_repo}:${_tag}"
+#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
-  logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
+  logInfo -n "${NAMESPACE}/${_repo}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
     logInfoResult SUCCESS "built"
   else
-    logInfo -n "${NAMESPACE}/${_repo%%-stack}${_stack}:${_tag}";
+    logInfo -n "${NAMESPACE}/${_repo}:${_tag}";
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
   if reduce_image_enabled; then
-    reduce_image_size "${NAMESPACE}" "${_repo%%-stack}${_stack}" "${_tag}" "${_canonicalTag}";
+    reduce_image_size "${NAMESPACE}" "${_repo}" "${_tag}" "${_canonicalTag}";
   fi
   if overwrite_latest_enabled; then
-    logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag} as ${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-    ${DOCKER} ${DOCKER_OPTS} tag ${DOCKER_TAG_OPTS} "${NAMESPACE}/${_repo%%-stack}${_stack}:${_canonicalTag}" "${NAMESPACE}/${_repo%%-stack}${_stack}:latest"
-    if [ $? -eq 0 ]; then
-      logInfoResult SUCCESS "${NAMESPACE}/${_repo%%-stack}${_stack}:latest";
+    logInfo -n "Tagging ${NAMESPACE}/${_repo}:${_canonicalTag} as ${NAMESPACE}/${_repo}:latest"
+    docker tag "${NAMESPACE}/${_repo}:${_canonicalTag}" "${NAMESPACE}/${_repo}:latest"
+    if isTrue $?; then
+      logInfoResult SUCCESS "${NAMESPACE}/${_repo}:latest";
     else
       logInfoResult FAILURE "failed"
-      exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo%%-stack}${_stack}";
+      exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
     fi
+  fi
+}
+
+## Tags the image anticipating it will be pushed to a Docker registry later.
+## -> 1: the repository.
+## -> 2: the tag.
+## Example:
+##   registry_tag "myImage" "latest"
+function registry_tag() {
+  local _repo="${1}";
+  local _tag="${2}";
+
+  checkNotEmpty "repository" "${_repo}" 1;
+  checkNotEmpty "tag" "${_tag}" 2;
+
+  local _remoteTag="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+  if isTrue ${PUSH_TO_DOCKERHUB}; then
+    _remoteTag="${REGISTRY}/${_repo}:${_tag}";
+  fi
+
+  update_log_category "${_repo}";
+  logInfo -n "Tagging ${NAMESPACE}/${_repo}:${_tag} as ${_remoteTag}";
+  docker tag ${DOCKER_TAG_OPTIONS} "${NAMESPACE}/${_repo}:${_tag}" "${_remoteTag}";
+  if isTrue $?; then
+    logInfoResult SUCCESS "done"
+  else
+    logInfoResult FAILURE "failed"
+    exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
   fi
 }
 
 ## Pushes the image to a Docker registry.
 ## -> 1: the repository.
 ## -> 2: the tag.
-## -> 3: the stack (optional).
 ## Example:
 ##   registry_push "myImage" "latest"
 function registry_push() {
   local _repo="${1}";
   local _tag="${2}";
-  local _stack="${3}";
-  local _stackSuffix;
-  local _pushResult;
+
+  checkNotEmpty "repository" "${_repo}" 1;
+  checkNotEmpty "tag" "${_tag}" 2;
+
+  local _remoteTag="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+  if isTrue ${PUSH_TO_DOCKERHUB}; then
+    _remoteTag="${REGISTRY}/${_repo}:${_tag}";
+  fi
+
+  local -i _pushResult;
   update_log_category "${_repo}";
-  retrieve_stack_suffix "${_stack}";
-  _stackSuffix="${RESULT}";
-  logInfo -n "Tagging ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} for uploading to ${REGISTRY}";
-  ${DOCKER} ${DOCKER_OPTS} tag ${DOCKER_TAG_OPTS} "${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}" "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}";
-  if [ $? -eq 0 ]; then
+
+  logInfo -n "Pushing ${_remoteTag}";
+  docker push "${_remoteTag}"
+  _pushResult=$?;
+  if isTrue ${_pushResult}; then
     logInfoResult SUCCESS "done"
   else
     logInfoResult FAILURE "failed"
-    exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
-  fi
-  logInfo "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
-  ${DOCKER} ${DOCKER_OPTS} push "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
-  _pushResult=$?;
-  logInfo -n "Pushing ${NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag} to ${REGISTRY}";
-  if [ ${_pushResult} -eq 0 ]; then
-    logInfoResult SUCCESS "done";
-  else
-    logInfoResult FAILURE "failed";
-    exitWithErrorCode ERROR_PUSHING_IMAGE "${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo%%-stack}${_stackSuffix}:${_tag}"
+    exitWithErrorCode ERROR_PUSHING_IMAGE "${_remoteTag}"
   fi
 }
 
@@ -1030,24 +849,24 @@ function is_32bit() {
 
 ## Finds the parent image for a given repo.
 ## -> 1: the repository.
-## <- RESULT: the parent, if any.
+## <- RESULT: the parent, if any, with the format name:tag.
 ## Example:
 ##   find_parent_repo "myImage"
 ##   parent="${RESULT}"
 function find_parent_repo() {
   local _repo="${1}"
-  local _result=$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}' | awk -F':' '{print $1;}')
-  if [[ -n ${_result} ]] && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
+  local _result="$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}')";
+  if isNotEmpty ${_result} && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
     # parent under our namespace
     _result="${_result#\$\{NAMESPACE\}/}"
   fi
-  if [[ -n ${_result} ]] && [[ ! -n ${_result#\$\{BASE_IMAGE\}} ]]; then
+  if isNotEmpty "${_result}" && isEmpty "${_result#\$\{BASE_IMAGE\}}"; then
     _result=$(echo ${BASE_IMAGE} | awk -F'/' '{print $2;}')
   fi
-  if [[ -n ${_result} ]] && [[ ! -n ${_result#\$\{ROOT_IMAGE\}} ]]; then
-    _result=${ROOT_IMAGE}
+  if isNotEmpty "${_result}" && isEmpty "${_result#\$\{ROOT_IMAGE\}}"; then
+    _result="${ROOT_IMAGE}";
   fi
-   export RESULT="${_result}"
+  export RESULT="${_result}";
 }
 
 ## Recursively finds all parents for a given repo.
@@ -1061,9 +880,9 @@ function find_parents() {
   local _repo="${1}"
   local _result=();
   declare -a _result;
-  find_parent_repo "${_repo}"
+  find_parent_repo "${_repo}";
   local _parent="${RESULT}"
-  while [[ -n ${_parent} ]] && [[ "${_parent#.*/}" == "${_parent}" ]]; do
+  while ! isEmpty "${_parent}" && [[ "${_parent#.*/}" == "${_parent}" ]]; do
     _result[${#_result[@]}]="${_parent}"
     find_parent_repo "${_parent}"
     _parent="${RESULT}"
@@ -1095,13 +914,36 @@ function resolve_base_image() {
 ##   echo "MY_VAR is ${MY_VAR}"
 function loadRepoEnvironmentVariables() {
   local _repos="${1}";
+  local _repoSettings;
+  local _privateSettings;
+
+  checkNotEmpty "repositories" "${_repos}" 1;
 
   for _repo in ${_repos}; do
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
-             "./${_repo}/build-settings.sh" \
-             "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
-             "./${_repo}/.build-settings.sh"; do
-      sourceFileIfExists "${f}";
+                 "./${_repo}/build-settings.sh"; do
+      if [ -e "${f}" ]; then
+          _repoSettings="${f}";
+      fi
+    done
+
+    for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
+                 "./${_repo}/.build-settings.sh"; do
+      if [ -e "${f}" ]; then
+          _privateSettings="${f}";
+      fi
+    done
+
+    for f in "${_repoSettings}" "${_privateSettings}"; do
+      if [ -e "${f}" ]; then
+          logTrace -n "Sourcing ${f}";
+          source "${f}";
+          if isTrue $?; then
+              logTraceResult SUCCESS "done";
+          else
+            logTraceResult FAILURE "failed";
+          fi
+      fi
     done
   done
 }
@@ -1110,42 +952,42 @@ function loadRepoEnvironmentVariables() {
 ## Example:
 ##   if force_mode_enabled; then [..]; fi
 function force_mode_enabled() {
-  _flagEnabled FORCE_MODE;
+  flagEnabled FORCE_MODE;
 }
 
 ## Checks whether the -o flag is enabled
 ## Example:
 ##   if overwrite_latest_enabled; then [..]; fi
 function overwrite_latest_enabled() {
-  _flagEnabled OVERWRITE_LATEST;
+  flagEnabled OVERWRITE_LATEST;
 }
 
 ## Checks whether the -p flag is enabled
 ## Example:
 ##   if registry_push_enabled; then [..]; fi
 function registry_push_enabled() {
-  _flagEnabled REGISTRY_PUSH;
+  flagEnabled REGISTRY_PUSH;
+}
+
+## Checks whether the -rt flag is enabled
+## Example:
+##   if registry_tag_enabled; then [..]; fi
+function registry_tag_enabled() {
+  flagEnabled REGISTRY_TAG;
 }
 
 ## Checks whether the -r flag is enabled
 ## Example:
 ##   if reduce_image_enabled; then [..]; fi
 function reduce_image_enabled() {
-  _flagEnabled REDUCE_IMAGE;
-}
-
-## Checks whether the -s flag is enabled
-## Example:
-##   if stack_image_enabled; then [..]; fi
-function stack_image_enabled() {
-  _flagEnabled STACK;
+  flagEnabled REDUCE_IMAGE;
 }
 
 ## Checks whether the -cc flag is enabled.
 ## Example:
 ##   if cleanup_containers_enabled; then [..]; fi
 function cleanup_containers_enabled() {
-  _flagEnabled CLEANUP_CONTAINERS;
+  flagEnabled CLEANUP_CONTAINERS;
 }
 
 ## Cleans up the docker containers
@@ -1154,11 +996,11 @@ function cleanup_containers_enabled() {
 function cleanup_containers() {
 
   if cleanup_containers_enabled; then
-    local _count="$(${DOCKER} ${DOCKER_OPTS} ps -a -q | xargs -n 1 -I {} | wc -l)";
+    local _count="$(${DOCKER} ps -a -q | xargs -n 1 -I {} | wc -l)";
     #  _count=$((_count-1));
     if [ ${_count} -gt 0 ]; then
       logInfo -n "Cleaning up ${_count} stale container(s)";
-      ${DOCKER} ${DOCKER_OPTS} ps -a -q | xargs -n 1 -I {} sudo ${DOCKER} ${DOCKER_OPTS} rm -v {} > /dev/null;
+      ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
       if [ $? -eq 0 ]; then
         logInfoResult SUCCESS "done";
       else
@@ -1172,7 +1014,7 @@ function cleanup_containers() {
 ## Example:
 ##   if cleanup_images_enabled; then [..]; fi
 function cleanup_images_enabled() {
-  _flagEnabled CLEANUP_IMAGES;
+  flagEnabled CLEANUP_IMAGES;
 }
 
 ## Cleans up unused docker images.
@@ -1180,10 +1022,10 @@ function cleanup_images_enabled() {
 ##   cleanup_images
 function cleanup_images() {
   if cleanup_images_enabled; then
-    local _count="$(${DOCKER} ${DOCKER_OPTS} images | grep '<none>' | wc -l)";
+    local _count="$(${DOCKER} images | grep '<none>' | wc -l)";
     if [ ${_count} -gt 0 ]; then
       logInfo -n "Trying to delete up to ${_count} unnamed image(s)";
-      ${DOCKER} ${DOCKER_OPTS} images | grep '<none>' | awk '{printf("${DOCKER} ${DOCKER_OPTS} rmi -f %s\n", $3);}' | sh > /dev/null
+      ${DOCKER} images | grep '<none>' | awk '{printf("docker rmi -f %s\n", $3);}' | sh > /dev/null
       if [ $? -eq 0 ]; then
         logInfoResult SUCCESS "done";
       else
@@ -1197,27 +1039,37 @@ function cleanup_images() {
 function main() {
   local _repo;
   local _parents;
-  local _stack="${STACK}";
-  local _buildRepo=${FALSE};
-
+  local _buildRepo;
   resolve_base_image
   for _repo in ${REPOS}; do
     _buildRepo=${FALSE};
     if force_mode_enabled; then
       _buildRepo=${TRUE};
-    elif ! repo_exists "${_repo}" "${TAG}" "${_stack}"; then
+    elif ! repo_exists "${_repo}" "${TAG}"; then
       _buildRepo=${TRUE};
     else
       logInfo -n "Not building ${NAMESPACE}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
     if isTrue ${_buildRepo}; then
-      build_repo "${_repo}" "${TAG}" "${_stack}"
+      find_parents "${_repo}"
+      _parents="${RESULT}"
+      for _parent in ${_parents}; do
+        build_repo_if_defined_locally "${_parent}";
+      done
+
+      build_repo "${_repo}" "${TAG}"
+    fi
+    if registry_tag_enabled; then
+        registry_tag "${_repo}" "${TAG}";
+        if overwrite_latest_enabled; then
+            registry_tag "${_repo}" "latest";
+        fi
     fi
     if registry_push_enabled; then
-      registry_push "${_repo}" "${TAG}" "${_stack}"
+      registry_push "${_repo}" "${TAG}";
       if overwrite_latest_enabled; then
-        registry_push "${_repo}" "latest" "${_stack}"
+        registry_push "${_repo}" "latest";
       fi
     fi
   done
