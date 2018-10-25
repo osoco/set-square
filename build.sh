@@ -175,6 +175,23 @@ function checkInput() {
   fi
 }
 
+## Retrieve the namespace.
+## - 0/${TRUE} if the namespace gets built successfully; 1/${FALSE} otherwise.
+## Example:
+##   if retrieveNamespace "bla"; then
+##     echo "Namespace for bla";
+##   fi
+function retrieveNamespace() {
+  local _flavor="";
+
+  if ! isEmpty "${SETSQUARE_FLAVOR}"; then
+    _flavor="-${SETSQUARE_FLAVOR}";
+  fi
+
+  export RESULT="${NAMESPACE}${_flavor}";
+  return ${TRUE};
+}
+
 ## Does "${NAMESPACE}/${REPO}:${TAG}" exist?
 ## -> 1: the repository.
 ## -> 2: the tag.
@@ -192,7 +209,9 @@ function repo_exists() {
       _tag="${RESULT}";
   fi
 
-  local _images=$(${DOCKER} images "${NAMESPACE}/${_repo}")
+  retrieveNamespace;
+  local _namespace="${RESULT}";
+  local _images=$(${DOCKER} images "${_namespace}/${_repo}")
   local _matches=$(echo "${_images}" | grep "${_tag}")
   local -i _rescode;
 
@@ -213,10 +232,12 @@ function build_repo_if_defined_locally() {
   local _repo="${1}";
   local _name="${_repo%:*}";
   local _tag="${_repo#*:}";
+  retrieveNamespace;
+  local _namespace;
 
   if ! isEmpty "${_name}" && \
      [[ -d ${_name} ]] && \
-     ! repo_exists "${_name#${NAMESPACE}/}" "${_tag}"; then
+     ! repo_exists "${_name#${_namespace}/}" "${_tag}"; then
       build_repo "${_name}" "${_tag}"
   fi
 }
@@ -729,6 +750,9 @@ function build_repo() {
   fi
   local _cmdResult;
   local _rootImage;
+  retrieveNamespace;
+  local _namespace="${RESULT}";
+
   retrieve_backup_host_ssh_port "${_repo}";
   local _backupHostSshPort="${RESULT:-22}";
   if is_32bit; then
@@ -746,7 +770,7 @@ function build_repo() {
   if [ $(ls ${_repo} | grep -e '\.template$' | wc -l) -gt 0 ]; then
       for f in ${_repo}/*.template; do
         logDebug -n "Processing ${f}";
-        if process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${NAMESPACE}" "${_tag}" "${_backupHostSshPort}"; then
+        if process_file "${f}" "${_repo}/$(basename ${f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${_namespace}" "${_tag}" "${_backupHostSshPort}"; then
             logDebugResult SUCCESS "done";
         else
           logDebugResult FAILURE "failed";
@@ -755,26 +779,26 @@ function build_repo() {
     done
   fi
 
-  logInfo "Building ${NAMESPACE}/${_repo}:${_tag}"
-#  echo docker build ${BUILD_OPTS} -t "${NAMESPACE}/${_repo}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${NAMESPACE}/${_repo}:${_tag} --rm=true ${_repo}";
+  logInfo "Building ${_namespace}/${_repo}:${_tag}"
+#  echo docker build ${BUILD_OPTS} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
-  logInfo -n "${NAMESPACE}/${_repo}:${_tag}";
+  logInfo -n "${_namespace}/${_repo}:${_tag}";
   if [ ${_cmdResult} -eq 0 ]; then
     logInfoResult SUCCESS "built"
   else
-    logInfo -n "${NAMESPACE}/${_repo}:${_tag}";
+    logInfo -n "${_namespace}/${_repo}:${_tag}";
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
   fi
   if reduce_image_enabled; then
-    reduce_image_size "${NAMESPACE}" "${_repo}" "${_tag}" "${_canonicalTag}";
+    reduce_image_size "${_namespace}" "${_repo}" "${_tag}" "${_canonicalTag}";
   fi
   if overwrite_latest_enabled; then
-    logInfo -n "Tagging ${NAMESPACE}/${_repo}:${_canonicalTag} as ${NAMESPACE}/${_repo}:latest"
-    docker tag "${NAMESPACE}/${_repo}:${_canonicalTag}" "${NAMESPACE}/${_repo}:latest"
+    logInfo -n "Tagging ${_namespace}/${_repo}:${_canonicalTag} as ${_namespace}/${_repo}:latest"
+    docker tag "${_namespace}/${_repo}:${_canonicalTag}" "${_namespace}/${_repo}:latest"
     if isTrue $?; then
-      logInfoResult SUCCESS "${NAMESPACE}/${_repo}:latest";
+      logInfoResult SUCCESS "${_namespace}/${_repo}:latest";
     else
       logInfoResult FAILURE "failed"
       exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
@@ -794,14 +818,16 @@ function registry_tag() {
   checkNotEmpty "repository" "${_repo}" 1;
   checkNotEmpty "tag" "${_tag}" 2;
 
+  retrieveNamespace;
+  local _namespace="${RESULT}";
   local _remoteTag="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
   if isTrue ${PUSH_TO_DOCKERHUB}; then
     _remoteTag="${REGISTRY}/${_repo}:${_tag}";
   fi
 
   update_log_category "${_repo}";
-  logInfo -n "Tagging ${NAMESPACE}/${_repo}:${_tag} as ${_remoteTag}";
-  docker tag ${DOCKER_TAG_OPTIONS} "${NAMESPACE}/${_repo}:${_tag}" "${_remoteTag}";
+  logInfo -n "Tagging ${_namespace}/${_repo}:${_tag} as ${_remoteTag}";
+  docker tag ${DOCKER_TAG_OPTIONS} "${_namespace}/${_repo}:${_tag}" "${_remoteTag}";
   if isTrue $?; then
     logInfoResult SUCCESS "done"
   else
@@ -858,9 +884,12 @@ function is_32bit() {
 function find_parent_repo() {
   local _repo="${1}"
   local _result="$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}')";
-  if isNotEmpty ${_result} && [[ "${_result#\$\{NAMESPACE\}/}" != "${_result}" ]]; then
+
+  retrieveNamespace;
+  local _namespace;
+  if isNotEmpty ${_result} && [[ "${_result#\$\{_namespace\}/}" != "${_result}" ]]; then
     # parent under our namespace
-    _result="${_result#\$\{NAMESPACE\}/}"
+   _result="${_result#\$\{_namespace\}${_flavor}/}";
   fi
   if isNotEmpty "${_result}" && isEmpty "${_result#\$\{BASE_IMAGE\}}"; then
     _result=$(echo ${BASE_IMAGE} | awk -F'/' '{print $2;}')
@@ -923,21 +952,21 @@ function loadRepoEnvironmentVariables() {
 
   for _repo in ${_repos}; do
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
-                 "./${_repo}/build-settings.sh"; do
+             "./${_repo}/build-settings.sh"; do
       if [ -e "${f}" ]; then
           _repoSettings="${f}";
       fi
     done
 
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
-                 "./${_repo}/.build-settings.sh"; do
-      if [ -e "${f}" ]; then
+             "./${_repo}/.build-settings.sh"; do
+      if fileExists "${f}"; then
           _privateSettings="${f}";
       fi
     done
 
     for f in "${_repoSettings}" "${_privateSettings}"; do
-      if [ -e "${f}" ]; then
+      if fileExists "${f}"; then
           logTrace -n "Sourcing ${f}";
           source "${f}";
           if isTrue $?; then
@@ -1050,7 +1079,9 @@ function main() {
     elif ! repo_exists "${_repo}" "${TAG}"; then
       _buildRepo=${TRUE};
     else
-      logInfo -n "Not building ${NAMESPACE}/${_repo}:${TAG} since it's already built";
+      retrieveNamespace;
+      local _namespace="${RESULT}";
+       logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
     if isTrue ${_buildRepo}; then
