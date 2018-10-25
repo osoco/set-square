@@ -1,3 +1,4 @@
+# v symlinks
 RUN (chmod +x /usr/local/bin/* > /dev/null 2>&1 || true) && \
     (chmod -x /usr/local/bin/*.inc.sh > /dev/null 2>&1 || true) && \
     (chmod +x /etc/my_init.d/* > /dev/null 2>&1 || true) && \
@@ -15,3 +16,4 @@ RUN (chmod +x /usr/local/bin/* > /dev/null 2>&1 || true) && \
       if [ "${p%.inc.sh}" == "${p}" ]; then ln -sf $p $(dirname $p)/$(basename $p .sh); fi; \
     done && \
     ln -sf /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG} /Dockerfiles/Dockerfile
+  # ^ symlinks

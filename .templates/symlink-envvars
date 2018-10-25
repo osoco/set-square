@@ -1,3 +1,5 @@
+# v symlink-envvars
 RUN for e in $(set | grep -e '^SQ_' | cut -d'=' -f 1); do \
       ln -sf /usr/local/bin/envvar.sh /usr/local/bin/${e#SQ_}; \
     done
+# ^ symlink-envvars

@@ -1,5 +1,4 @@
-# instructions template
-
+# v instructions
 # For instructions on how to use this image, please run
 # docker run -it ${NAMESPACE}/${IMAGE}:${TAG} help
 
@@ -7,6 +6,4 @@
 @include_env
 
 @include("symlink-envvars")
-
-# End of instructions template
-
+# ^ instructions
