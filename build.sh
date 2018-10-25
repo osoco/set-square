@@ -364,8 +364,7 @@ function resolve_included_file() {
   done
 
   if isFalse ${_rescode}; then
-    eval "echo ${_file}" > /dev/null 2>&1;
-    if isTrue $?; then
+    if [[ $(eval "echo ${_file}") != "${_file}" ]]; then
       resolve_included_file "$(eval "echo ${_file}")" "${_repoFolder}" "${_templatesFolder}";
       _rescode=$?;
     fi
@@ -458,6 +457,9 @@ function resolve_includes() {
           else
             _match=${TRUE};
           fi
+      elif [ ! -e "${_ref}.template" ]; then
+          logTraceResult FAILURE "failed";
+          exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_ref}";
       else
         _match=${FALSE};
         _errorRef="${_ref}";
