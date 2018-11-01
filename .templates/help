@@ -1,0 +1,18 @@
+# v help
+COPY help-files/help.base.sh \
+     help-files/show \
+     help-files/display-dockerfile.sh \
+     help-files/display-file.sh \
+     /usr/local/bin/
+
+COPY help-files/my_exec.d /etc/my_exec.d/help
+
+RUN chmod +x -- /usr/local/bin/help.base.sh && \
+    for f in "help" "-h" "--help"; do \
+      ln -s -- /usr/local/bin/help.base.sh /usr/local/bin/"${f}"; \
+    done && \
+    chmod +x -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/show && \
+    for f in "show" "Dockerfile" "dockerfile" "-d" "--dockerfile"; do \
+      ln -s -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/"${f}"; \
+    done
+# ^ help
