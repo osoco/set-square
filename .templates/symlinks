@@ -7,13 +7,13 @@ RUN (chmod +x /usr/local/bin/* > /dev/null 2>&1 || true) && \
     (chmod +x /etc/cron.daily/* > /dev/null 2>&1 || true) && \
     (chmod +x /etc/cron.weekly/* > /dev/null 2>&1 || true) && \
     (chmod +x /etc/cron.monthly/* > /dev/null 2>&1 || true) && \
-    for s in /etc/service/*; do \
-      if [ ! -e "${s}/.disabled" ]; then \
-        chmod +x "${s}/run" > /dev/null 2>&1; \
-      fi; \
-    done && \
     for p in /usr/local/bin/*.sh; do \
       if [ "${p%.inc.sh}" == "${p}" ]; then ln -sf $p $(dirname $p)/$(basename $p .sh); fi; \
     done && \
-    ln -sf /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG} /Dockerfiles/Dockerfile
-  # ^ symlinks
+    ln -sf /Dockerfiles/${NAMESPACE}-${IMAGE}.${TAG} /Dockerfiles/Dockerfile && \
+    ([[ -e /etc/service ]] && for s in /etc/service/*; do \
+      if [ ! -e "${s}/.disabled" ]; then \
+        chmod +x "${s}/run" > /dev/null 2>&1; \
+      fi; \
+    done || echo -n '')
+# ^ symlinks
