@@ -756,8 +756,8 @@ function build_repo() {
   copy_license_file "${_repo}" "${PWD}";
   copy_copyright_preamble_file "${_repo}" "${PWD}";
 
-  if [ $(ls ${_repo} | grep -e 'Dockerfile\.template$' | wc -l) -gt 0 ]; then
-    for _f in $(ls ${_repo} | grep -e 'Dockerfile\.template$'); do
+  if [ $(ls ${_repo}/*.template | grep -e '\.template$' | grep -v -e 'Dockerfile\.template$' | wc -l) -gt 0 ]; then
+    for _f in $(ls ${_repo} | grep -e '\.template$' | grep -v -e 'Dockerfile\.template$'); do
       logDebug -n "Processing ${_repo}/${_f}";
       if process_file "${_repo}/${_f}" "${_repo}/$(basename ${_f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
         logDebugResult SUCCESS "done";
