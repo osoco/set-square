@@ -2,181 +2,51 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-function usage() {
-cat <<EOF
-$SCRIPT_NAME [-t|--tag tagName] [-f|--force] [-o|--overwrite-latest] [-p|--registry] [-r|--reduce-image] [-ci|--cleanup-images] [-cc|--cleanup-containers] [-rt|--registry-tag] [repo]+
-$SCRIPT_NAME [-h|--help]
-(c) 2014-today Automated Computing Machinery S.L.
-    Distributed under the terms of the GNU General Public License v3
+# Main logic. Gets called by dry-wit.
+function main() {
+  local _repo;
+  local _parents;
+  local _buildRepo;
+  resolve_base_image
+  for _repo in ${REPOS}; do
+    _buildRepo=${FALSE};
+    if force_mode_enabled; then
+      _buildRepo=${TRUE};
+    elif ! repo_exists "${_repo}" "${TAG}"; then
+      _buildRepo=${TRUE};
+    else
+      retrieveNamespace;
+      local _namespace="${RESULT}";
+       logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
+      logInfoResult SUCCESS "skipped";
+    fi
+    if isTrue ${_buildRepo}; then
+      find_parents "${_repo}"
+      _parents="${RESULT}"
+    for _parent in ${_parents}; do
+        build_repo_if_defined_locally "${_parent}";
+      done
 
-Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.
-
-Where:
-  * repo: the repository to build (a folder with a Dockerfile template).
-  * tag: the tag to use once the image is built successfully.
-  * force: whether to build the image even if it's already built.
-  * overwrite-latest: whether to overwrite the "latest" tag with the new one (default: false).
-  * registry: optionally, the registry to push the image to.
-  * reduce-image: whether to reduce the size of the resulting image.
-  * cleanup-images: Whether to try to cleanup images.
-  * cleanup-containers: Whether to try to cleanup containers.
-  * registry-tag: Whether to tag also for pushing to a registry later (implicit if -p is enabled).
-Common flags:
-    * -h | --help: Display this message.
-    * -X:e | --X:eval-defaults: whether to eval all default values, which potentially slows down the script unnecessarily.
-    * -v: Increase the verbosity.
-    * -vv: Increase the verbosity further.
-    * -q | --quiet: Be silent.
-EOF
-}
-
-DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
-
-# Requirements
-function checkRequirements() {
-  checkReq docker DOCKER_NOT_INSTALLED;
-  checkReq date DATE_NOT_INSTALLED;
-  checkReq realpath REALPATH_NOT_INSTALLED;
-  checkReq envsubst ENVSUBST_NOT_INSTALLED;
-  checkReq head HEAD_NOT_INSTALLED;
-  checkReq grep GREP_NOT_INSTALLED;
-  checkReq awk AWK_NOT_INSTALLED;
-}
-
-# Error messages
-function defineErrors() {
-  addError INVALID_OPTION "Unrecognized option";
-  addError DOCKER_NOT_INSTALLED "docker is not installed";
-  addError DATE_NOT_INSTALLED "date is not installed";
-  addError REALPATH_NOT_INSTALLED "realpath is not installed";
-  addError ENVSUBST_NOT_INSTALLED "envsubst is not installed";
-  addError HEAD_NOT_INSTALLED "head is not installed";
-  addError GREP_NOT_INSTALLED "grep is not installed";
-  addError AWK_NOT_INSTALLED "awk is not installed";
-  addError DOCKER_SQUASH_NOT_INSTALLED "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
-  addError NO_REPOSITORIES_FOUND "no repositories found";
-  addError INVALID_URL "Invalid url";
-  addError TAG_IS_MANDATORY "Tag is mandatory";
-  addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
-  addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
-  addError ERROR_BUILDING_REPO "Error building repository";
-  addError ERROR_TAGGING_IMAGE "Error tagging image";
-  addError ERROR_PUSHING_IMAGE "Error pushing image to ${REGISTRY}";
-  addError ERROR_REDUCING_IMAGE "Error reducing the image size";
-  addError CANNOT_COPY_LICENSE_FILE "Cannot copy the license file ${LICENSE_FILE}";
-  addError LICENSE_FILE_DOES_NOT_EXIST "The specified license ${LICENSE_FILE} does not exist";
-  addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
-  addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
-  addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
-}
-
-## Parses the input
-## dry-wit hook
-function parseInput() {
-
-  local _flags=$(extractFlags $@);
-  local _flagCount;
-  local _currentCount;
-
-  # Flags
-  for _flag in ${_flags}; do
-    _flagCount=$((_flagCount+1));
-    case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults)
-         shift;
-         ;;
-      -t | --tag)
-         shift;
-         export TAG="${1}";
-         shift;
-         ;;
-      -p | --registry)
-         shift;
-         export REGISTRY_TAG=TRUE;
-	       export REGISTRY_PUSH=TRUE;
-	       ;;
-      -f | --force)
-          shift;
-          export FORCE_MODE=TRUE;
-          ;;
-      -o | --overwrite-latest)
-          shift;
-          export OVERWRITE_LATEST=TRUE;
-          ;;
-      -r | --reduce-image)
-          shift;
-          export REDUCE_IMAGE=TRUE;
-          ;;
-      -ci | --cleanup-images)
-          shift;
-          export CLEAUP_IMAGES=TRUE;
-          ;;
-      -cc | --cleanup-containers)
-        shift;
-        export CLEAUP_CONTAINERS=TRUE;
-        ;;
-      -rt | --registry-tag)
-        shift;
-        export REGISTRY_TAG=TRUE;
-        ;;
-    esac
+      build_repo "${_repo}";
+    fi
+    if registry_tag_enabled; then
+        registry_tag "${_repo}" "${TAG}";
+        if overwrite_latest_enabled; then
+            registry_tag "${_repo}" "latest";
+        fi
+    fi
+    if registry_push_enabled; then
+      registry_push "${_repo}" "${TAG}";
+      if overwrite_latest_enabled; then
+        registry_push "${_repo}" "latest";
+      fi
+    fi
   done
-
-  if isEmpty "${TAG}"; then
-    TAG="${DATE}";
-  fi
-
-  # Parameters
-  if isEmpty "${REPOS}"; then
-    REPOS="$@";
-    shift;
-  fi
-
-  if isEmpty "${REPOS}"; then
-    REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
-  fi
+  cleanup_containers;
+  cleanup_images;
 }
 
-## Checking input
-## dry-wit hook
-function checkInput() {
-
-  local _flags=$(extractFlags $@);
-  local _flagCount;
-  local _currentCount;
-
-  logDebug -n "Checking input";
-
-  # Flags
-  for _flag in ${_flags}; do
-    _flagCount=$((_flagCount+1));
-    case ${_flag} in
-      -h | --help | -v | -vv | -q | -X:e | --X:eval-defaults | -o | --overwrite-latest)
-        ;;
-      -t | --tag | -p | --registry | -f | --force | -r | --reduce-image)
-	      ;;
-      -rt | --registry-tag)
-        ;;
-      *) logDebugResult FAILURE "fail";
-         exitWithErrorCode INVALID_OPTION ${_flag};
-         ;;
-    esac
-  done
-
-  if isEmpty "${REPOS}"; then
-    logDebugResult FAILURE "fail";
-    exitWithErrorCode NO_REPOSITORIES_FOUND;
-  fi
-
-  if isEmpty "${TAG}"; then
-    logDebugResult FAILURE "fail";
-    exitWithErrorCode TAG_IS_MANDATORY;
-  else
-    logDebugResult SUCCESS "valid";
-  fi
-}
-
-## Retrieve the namespace.
+## Retrieves the namespace.
 ## - 0/${TRUE} if the namespace gets built successfully; 1/${FALSE} otherwise.
 ## Example:
 ##   if retrieveNamespace "bla"; then
@@ -1071,46 +941,95 @@ function cleanup_images() {
   fi
 }
 
-# Main logic
-function main() {
-  local _repo;
-  local _parents;
-  local _buildRepo;
-  resolve_base_image
-  for _repo in ${REPOS}; do
-    _buildRepo=${FALSE};
-    if force_mode_enabled; then
-      _buildRepo=${TRUE};
-    elif ! repo_exists "${_repo}" "${TAG}"; then
-      _buildRepo=${TRUE};
-    else
-      retrieveNamespace;
-      local _namespace="${RESULT}";
-       logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
-      logInfoResult SUCCESS "skipped";
-    fi
-    if isTrue ${_buildRepo}; then
-      find_parents "${_repo}"
-      _parents="${RESULT}"
-    for _parent in ${_parents}; do
-        build_repo_if_defined_locally "${_parent}";
-      done
+## Script metadata and CLI settings.
 
-      build_repo "${_repo}";
-    fi
-    if registry_tag_enabled; then
-        registry_tag "${_repo}" "${TAG}";
-        if overwrite_latest_enabled; then
-            registry_tag "${_repo}" "latest";
-        fi
-    fi
-    if registry_push_enabled; then
-      registry_push "${_repo}" "${TAG}";
-      if overwrite_latest_enabled; then
-        registry_push "${_repo}" "latest";
-      fi
-    fi
-  done
-  cleanup_containers;
-  cleanup_images;
+setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.";
+addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully." OPTIONAL EXPECTS_ARGUMENT;
+addCommandLineFlag "force" "f" "Whether to build the image even if it's already built." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to." OPTIONAL EXPECTS_ARGUMENT;
+addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "X:eval-defaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
+addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
+
+DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
+
+addError INVALID_OPTION "Unrecognized option";
+addError DOCKER_NOT_INSTALLED "docker is not installed";
+checkReq docker DOCKER_NOT_INSTALLED;
+addError DATE_NOT_INSTALLED "date is not installed";
+checkReq date DATE_NOT_INSTALLED;
+addError REALPATH_NOT_INSTALLED "realpath is not installed";
+checkReq realpath REALPATH_NOT_INSTALLED;
+addError ENVSUBST_NOT_INSTALLED "envsubst is not installed";
+checkReq envsubst ENVSUBST_NOT_INSTALLED;
+addError HEAD_NOT_INSTALLED "head is not installed";
+checkReq head HEAD_NOT_INSTALLED;
+addError GREP_NOT_INSTALLED "grep is not installed";
+checkReq grep GREP_NOT_INSTALLED;
+addError AWK_NOT_INSTALLED "awk is not installed";
+checkReq awk AWK_NOT_INSTALLED;
+addError DOCKER_SQUASH_NOT_INSTALLED "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
+
+addError NO_REPOSITORIES_FOUND "no repositories found";
+addError INVALID_URL "Invalid url";
+addError TAG_IS_MANDATORY "Tag is mandatory";
+addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
+addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
+addError ERROR_BUILDING_REPO "Error building repository";
+addError ERROR_TAGGING_IMAGE "Error tagging image";
+addError ERROR_PUSHING_IMAGE "Error pushing image to ${REGISTRY}";
+addError ERROR_REDUCING_IMAGE "Error reducing the image size";
+addError CANNOT_COPY_LICENSE_FILE "Cannot copy the license file ${LICENSE_FILE}";
+addError LICENSE_FILE_DOES_NOT_EXIST "The specified license ${LICENSE_FILE} does not exist";
+addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
+addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
+addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
+
+function dw_parse_tag_cli_flag() {
+  export TAG="${1}";
+}
+
+function dw_parse_registry_cli_flag() {
+  export REGISTRY_TAG=TRUE;
+	export REGISTRY_PUSH=TRUE;
+}
+
+function dw_parse_force_cli_flag() {
+  export FORCE_MODE=TRUE;
+}
+
+function dw_parse_overwrite_latest_cli_flag() {
+  export OVERWRITE_LATEST=TRUE;
+}
+
+function dw_parse_reduce_image_cli_flag() {
+  export REDUCE_IMAGE=TRUE;
+}
+
+function dw_parse_cleanup_images_cli_flag() {
+  export CLEAUP_IMAGES=TRUE;
+}
+
+function dw_parse_registry_tag_cli_flag() {
+  export REGISTRY_TAG=TRUE;
+}
+
+function dw_parse_tag_cli_envvar() {
+  if isEmpty "${TAG}"; then
+    export TAG="${DATE}";
+  fi
+}
+
+function dw_parse_repos_cli_parameter() {
+  if isEmpty "${REPOS}"; then
+    export REPOS="$@";
+  fi
+
+  if isEmpty "${REPOS}"; then
+    export REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
+  fi
 }
