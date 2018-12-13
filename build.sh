@@ -2,13 +2,20 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
+import command;
+import envvar;
+
 # Main logic. Gets called by dry-wit.
 function main() {
   local _repo;
   local _parents;
   local _buildRepo;
+  local _oldIFS="${IFS}";
+
   resolve_base_image
-  for _repo in ${REPOS}; do
+  IFS="${DWIFS}";
+  for _repo in ${REPOSITORIES}; do
+    IFS="${_oldIFS}";
     _buildRepo=${FALSE};
     if force_mode_enabled; then
       _buildRepo=${TRUE};
@@ -23,9 +30,12 @@ function main() {
     if isTrue ${_buildRepo}; then
       find_parents "${_repo}"
       _parents="${RESULT}"
-    for _parent in ${_parents}; do
+      IFS="${DWIFS}";
+      for _parent in ${_parents}; do
+        IFS="${_oldIFS}";
         build_repo_if_defined_locally "${_parent}";
       done
+      IFS="${_oldIFS}";
 
       build_repo "${_repo}";
     fi
@@ -42,6 +52,7 @@ function main() {
       fi
     fi
   done
+  IFS="${_oldIFS}";
   cleanup_containers;
   cleanup_images;
 }
@@ -197,21 +208,16 @@ function process_file() {
   if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
      resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
       logTrace -n "Resolving @include_env in ${_file}";
-      _debugEcho "Resolving @include_env in ${_file}";
       if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
           logTraceResult SUCCESS "done";
           if [ -e "${_settingsFile}" ]; then
               process_settings_file "${_settingsFile}";
           fi
-          logTrace -n "Resolving placeholders in ${_file}";
-          _debugEcho "Resolving placeholders in ${_temp2}";
           if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
               _rescode=${TRUE};
-              _debugEcho "Resolving placeholders in ${_file} succeeded -> ${_output}";
               logTraceResult SUCCESS "done"
           else
             _rescode=${FALSE};
-            _debugEcho "Resolving placeholders in ${_file} failed";
             logTraceResult FAILURE "failed";
           fi
       else
@@ -240,22 +246,25 @@ function resolve_included_file() {
   local _templatesFolder="${3}";
   local _result;
   local _rescode=${FALSE};
+  local d;
+  local _oldIFS="${IFS}";
 
   checkNotEmpty "file" "${_file}" 1;
   checkNotEmpty "repoFolder" "${_repoFolder}" 2;
   checkNotEmpty "templatesFolder" "${_templatesFolder}" 3;
 
+  IFS=$' \t\n';
   for d in "${_templatesFolder}"; do
-    _debugEcho "Checking ${d}/${_file}";
+    IFS="${_oldIFS}";
     if    [[ -f "${d}/${_file}" ]] \
        || [[ -f "${d}/$(basename ${_file} .template).template" ]]; then
-      _debugEcho "${d}/${_file} found!";
       _result="${d}/${_file}";
       export RESULT="${_result}";
       _rescode=${TRUE};
       break;
     fi
   done
+  IFS="${_oldIFS}";
 
   if isFalse ${_rescode}; then
     if [[ $(eval "echo ${_file}") != "${_file}" ]]; then
@@ -263,8 +272,6 @@ function resolve_included_file() {
       _rescode=$?;
     fi
   fi
-
-  _debugEcho "${_file} resolved -> ${_rescode}";
 
   return ${_rescode};
 }
@@ -318,13 +325,12 @@ function resolve_includes() {
           if [ -d "${_templateFolder}/$(basename ${_includedFile})-files" ]; then
               mkdir "${_repoFolder}/$(basename ${_includedFile})-files" 2> /dev/null;
               rsync -az "${PWD}/${_templateFolder#\./}/$(basename ${_includedFile})-files/" "${_repoFolder}/$(basename ${_includedFile})-files/"
-              _debugEcho "Processing ${_repoFolder}/$(basename ${_includedFile})-files"
               shopt -s nullglob dotglob;
               _files=(${_repoFolder}/$(basename ${_includedFile})-files/*.template);
               shopt -u nullglob dotglob;
               if [ ${#_files[@]} -gt 0 ]; then
                 for p in ${_repoFolder}/$(basename ${_includedFile})-files/*.template; do
-                  _debugEcho "Processing ${p}";
+                  IFS="${_oldIFS}";
                   process_file "${p}" "$(dirname ${p})/$(basename ${p} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}";
                 done
               fi
@@ -422,6 +428,7 @@ function process_placeholders() {
   local _namespace="${5}";
   local _backupHostSshPort="${6:-22}";
   local _rescode;
+  local i;
 
   checkNotEmpty "file" "${_file}" 1;
   checkNotEmpty "output" "${_output}" 2;
@@ -430,11 +437,13 @@ function process_placeholders() {
   checkNotEmpty "namespace" "${_namespace}" 5;
 
   local _env="$( \
-    for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
-      echo ${ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
+    for ((i = 0; i < ${#__DW_ENVVAR_ENV_VARIABLES[*]}; i++)); do \
+      if [ \"${__DW_ENVVAR_ENV_VARIABLES[$i]}\" != \"\" ]; then
+        echo ${__DW_ENVVAR_ENV_VARIABLES[$i]} | awk -v dollar="$" -v quote="\"" '{printf("echo  %s=\\\"%s%s{%s}%s\\\"", $0, quote, dollar, $0, quote);}' | sh; \
+      fi \
     done;) DATE=\"${DATE}\" TIME=\"${TIME}\" MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" STACK=\"${STACK}\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" BASE_IMAGE=\"${BASE_IMAGE}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR='$' ";
 
-  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{_tag} $"; echo -n "{DATE} $"; echo -n "{TIME} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{NAMESPACE} $"; echo -n "{BACKUP_HOST_SSH_PORT} $"; echo -n "{DOLLAR}"; echo ${ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
+  local _envsubstDecl=$(echo -n "'"; echo -n "$"; echo -n "{_tag} $"; echo -n "{DATE} $"; echo -n "{TIME} $"; echo -n "{MAINTAINER} $"; echo -n "{STACK} $"; echo -n "{REPO} $"; echo -n "{IMAGE} $"; echo -n "{ROOT_IMAGE} $"; echo -n "{BASE_IMAGE} $"; echo -n "{NAMESPACE} $"; echo -n "{BACKUP_HOST_SSH_PORT} $"; echo -n "{DOLLAR}"; echo ${__DW_ENVVAR_ENV_VARIABLES[*]} | tr ' ' '\n' | awk '{printf("${%s} ", $0);}'; echo -n "'";);
 
   echo "${_env} envsubst ${_envsubstDecl} < ${_file}" | sh > "${_output}";
   _rescode=$?;
@@ -464,8 +473,11 @@ function resolve_include_env() {
   local _envVar;
   local line;
   local -a _envVars=();
-  for ((i = 0; i < ${#ENV_VARIABLES[*]}; i++)); do \
-    _envVars[${i}]="${ENV_VARIABLES[${i}]}";
+  local -i i;
+  local _oldIFS="${IFS}";
+
+  for ((i = 0; i < ${#__DW_ENVVAR_ENV_VARIABLES[*]}; i++)); do \
+    _envVars[${i}]="${__DW_ENVVAR_ENV_VARIABLES[${i}]}";
   done
   _envVars[${#_envVars[*]}]="IMAGE";
   _envVars[${#_envVars[*]}]="DATE";
@@ -485,6 +497,7 @@ function resolve_include_env() {
   echo -n '' > "${_output}";
 
   while IFS='' read -r line; do
+    IFS="${_oldIFS}";
     _includedFile="";
     if [[ "${line#@include_env}" != "$line" ]]; then
       echo -n "ENV " >> "${_output}";
@@ -536,7 +549,11 @@ function update_log_category() {
 function copy_license_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ -e "${_folder}/${LICENSE_FILE}" ]; then
+
+  checkNotEmpty "repo" "${_repo}" 1;
+  checkNotEmpty "folder" "${_folder}" 2;
+
+  if fileExists "${_folder}/${LICENSE_FILE}"; then
     logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
     cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
     if isTrue $?; then
@@ -559,10 +576,14 @@ function copy_license_file() {
 function copy_copyright_preamble_file() {
   local _repo="${1}";
   local _folder="${2}";
-  if [ -e "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" ]; then
+
+  checkNotEmpty "repo" "${_repo}" 1;
+  checkNotEmpty "folder" "${_folder}" 2;
+
+  if fileExists "${_folder}/${COPYRIGHT_PREAMBLE_FILE}"; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
       cp "${_folder}/${COPYRIGHT_PREAMBLE_FILE}" "${_repo}/${COPYRIGHT_PREAMBLE_FILE}";
-      if [ $? -eq 0 ]; then
+      if isTrue $?; then
           logDebugResult SUCCESS "done";
       else
         logDebugResult FAILURE "failed";
@@ -583,7 +604,10 @@ function copy_copyright_preamble_file() {
 function retrieve_backup_host_ssh_port() {
   local _repo="${1}";
   local _result;
-  if [ -e "${SSHPORTS_FILE}" ]; then
+
+  checkNotEmpty "repo" "${_repo}" 1;
+
+  if fileExists "${SSHPORTS_FILE}"; then
       logDebug -n "Retrieving the ssh port of the backup host for ${_repo}";
       _result="$(echo -n ''; (grep -e ${_repo} ${SSHPORTS_FILE} || echo ${_repo} 22) | awk '{print $2;}' | head -n 1)";
       if isTrue $?; then
@@ -611,6 +635,9 @@ function build_repo() {
   local _f;
   retrieveNamespace;
   local _namespace="${RESULT}";
+  local _oldIFS="${IFS}";
+
+  checkNotEmpty "repo" "${_repo}" 1;
 
   retrieve_backup_host_ssh_port "${_repo}";
   local _backupHostSshPort="${RESULT:-22}";
@@ -621,13 +648,15 @@ function build_repo() {
   fi
   update_log_category "${_repo}";
 
-  defineEnvVar IMAGE "The image to build" "${_repo}";
+  defineEnvVar IMAGE MANDATORY "The image to build" "${_repo}";
 
   copy_license_file "${_repo}" "${PWD}";
   copy_copyright_preamble_file "${_repo}" "${PWD}";
 
   if [ $(ls ${_repo}/*.template | grep -e '\.template$' | grep -v -e 'Dockerfile\.template$' | wc -l) -gt 0 ]; then
+    IFS="${DWIFS}";
     for _f in $(ls ${_repo} | grep -e '\.template$' | grep -v -e 'Dockerfile\.template$'); do
+      IFS="${_oldIFS}";
       logDebug -n "Processing ${_repo}/${_f}";
       if process_file "${_repo}/${_f}" "${_repo}/$(basename ${_f} .template)" "${_repo}" "${INCLUDES_FOLDER}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
         logDebugResult SUCCESS "done";
@@ -636,6 +665,7 @@ function build_repo() {
         exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_repo}/${_f}";
       fi
     done
+    IFS="${_oldIFS}";
   fi
 
   loadRepoEnvironmentVariables "${_repo}";
@@ -654,17 +684,16 @@ function build_repo() {
     exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_f}";
   fi
 
-  logInfo "Building ${_namespace}/${_repo}:${_tag}"
+  logInfo "Building ${_namespace}/${_repo}:${_tag}";
 #  echo docker build ${BUILD_OPTS} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
   runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${_namespace}/${_repo}:${_tag}";
-  if [ ${_cmdResult} -eq 0 ]; then
+  if isTrue ${_cmdResult}; then
     logInfoResult SUCCESS "built"
   else
-    logInfo -n "${_namespace}/${_repo}:${_tag}";
     logInfoResult FAILURE "not built"
-    exitWithErrorCode ERROR_BUILDING_REPO "${_repo}";
+    exitWithErrorCode ERROR_BUILDING_REPOSITORY "${_repo}";
   fi
   if reduce_image_enabled; then
     reduce_image_size "${_namespace}" "${_repo}" "${_tag}" "${_canonicalTag}";
@@ -803,11 +832,10 @@ function find_parents() {
 ##   echo "the base image is ${BASE_IMAGE}"
 function resolve_base_image() {
   if is_32bit; then
-    BASE_IMAGE=${BASE_IMAGE_32BIT}
+    export BASE_IMAGE="${BASE_IMAGE_32BIT}";
   else
-    BASE_IMAGE=${BASE_IMAGE_64BIT}
+    export BASE_IMAGE="${BASE_IMAGE_64BIT}";
   fi
-  export BASE_IMAGE
 }
 
 ## Loads image-specific environment variables,
@@ -822,36 +850,45 @@ function loadRepoEnvironmentVariables() {
   local _repos="${1}";
   local _repoSettings;
   local _privateSettings;
+  local _oldIFS="${IFS}";
 
   checkNotEmpty "repositories" "${_repos}" 1;
 
+  IFS="${DWIFS}";
   for _repo in ${_repos}; do
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/build-settings.sh" \
              "./${_repo}/build-settings.sh"; do
+      IFS="${_oldIFS}";
       if [ -e "${f}" ]; then
           _repoSettings="${f}";
       fi
     done
 
+    IFS="${DWIFS}";
     for f in "${DRY_WIT_SCRIPT_FOLDER}/${_repo}/.build-settings.sh" \
              "./${_repo}/.build-settings.sh"; do
+      IFS="${_oldIFS}";
       if fileExists "${f}"; then
           _privateSettings="${f}";
       fi
     done
 
+    IFS="${DWIFS}";
     for f in "${_repoSettings}" "${_privateSettings}"; do
+      IFS="${_oldIFS}";
       if fileExists "${f}"; then
           logTrace -n "Sourcing ${f}";
           source "${f}";
           if isTrue $?; then
-              logTraceResult SUCCESS "done";
+            logTraceResult SUCCESS "done";
           else
             logTraceResult FAILURE "failed";
           fi
       fi
     done
+    IFS="${_oldIFS}";
   done
+  IFS="${_oldIFS}";
 }
 
 ## Checks whether the -f flag is enabled
@@ -907,7 +944,7 @@ function cleanup_containers() {
     if [ ${_count} -gt 0 ]; then
       logInfo -n "Cleaning up ${_count} stale container(s)";
       ${DOCKER} ps -a -q | xargs -n 1 -I {} sudo docker rm -v {} > /dev/null;
-      if [ $? -eq 0 ]; then
+      if isTrue $?; then
         logInfoResult SUCCESS "done";
       else
         logInfoResult FAILED "failed";
@@ -943,14 +980,14 @@ function cleanup_images() {
 
 ## Script metadata and CLI settings.
 
-setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.";
-addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully." OPTIONAL EXPECTS_ARGUMENT;
-addCommandLineFlag "force" "f" "Whether to build the image even if it's already built." OPTIONAL NO_ARGUMENT;
-addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)." OPTIONAL NO_ARGUMENT;
+setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
+addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully" OPTIONAL EXPECTS_ARGUMENT "latest";
+addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to." OPTIONAL EXPECTS_ARGUMENT;
-addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image." OPTIONAL NO_ARGUMENT;
-addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images." OPTIONAL NO_ARGUMENT;
-addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images." OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)." OPTIONAL NO_ARGUMENT;
 addCommandLineFlag "X:eval-defaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
 addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
@@ -979,7 +1016,7 @@ addError INVALID_URL "Invalid url";
 addError TAG_IS_MANDATORY "Tag is mandatory";
 addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
 addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
-addError ERROR_BUILDING_REPO "Error building repository";
+addError ERROR_BUILDING_REPOSITORY "Error building repository";
 addError ERROR_TAGGING_IMAGE "Error tagging image";
 addError ERROR_PUSHING_IMAGE "Error pushing image to ${REGISTRY}";
 addError ERROR_REDUCING_IMAGE "Error reducing the image size";
@@ -1024,12 +1061,12 @@ function dw_parse_tag_cli_envvar() {
   fi
 }
 
-function dw_parse_repos_cli_parameter() {
-  if isEmpty "${REPOS}"; then
-    export REPOS="$@";
+function dw_parse_repositories_cli_parameter() {
+  if isEmpty "${REPOSITORIES}"; then
+    export REPOSITORIES="$@";
   fi
 
-  if isEmpty "${REPOS}"; then
-    export REPOS="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
+  if isEmpty "${REPOSITORIES}"; then
+    export REPOSITORIES="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
   fi
 }

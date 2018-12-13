@@ -1,15 +1,16 @@
 # install template
 ENV DEBIAN_FRONTEND="noninteractive"
-COPY install-files/aptget-install.sh \
-     install-files/aptget-install.inc.sh \
-     install-files/aptget-cleanup.sh \
-     install-files/aptget-cleanup.inc.sh \
+COPY install-files/pkg-install.sh \
+     install-files/pkg-install.inc.sh \
+     install-files/system-cleanup.sh \
+     install-files/system-cleanup.inc.sh \
      /usr/local/bin/
 
-RUN chmod +x ${APTGET_INSTALL} ${APTGET_CLEANUP} && \
+RUN chmod +x ${PKG_INSTALL} ${PKG_CLEANUP} && \
     mkdir -p /var/local/ && \
     touch /var/local/docker-installed-packages.txt && \
-    ${APTGET_INSTALL} --update wget gettext sudo && \
-    ${APTGET_CLEANUP}
+    ${SYSTEM_UPDATE} && \
+    ${PKG_INSTALL} wget gettext sudo && \
+    ${SYSTEM_CLEANUP}
 
 # End of install template
