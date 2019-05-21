@@ -457,7 +457,7 @@ function process_placeholders() {
 ## -> 3: the image.
 ## -> 4: the root image.
 ## -> 5: the namespace.
-## -> 6: the backup host's SSH port (optional).
+## -> 6: the backup host SSH port (optional).
 ## <- 0/${TRUE}: if the @include_env is resolved successfully; 1/${FALSE} otherwise.
 ## Example:
 ##  resolve_include_env "my.template" "my"
@@ -980,7 +980,7 @@ function cleanup_images() {
 
 ## Script metadata and CLI settings.
 
-setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
+setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.";
 addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully" OPTIONAL EXPECTS_ARGUMENT "latest";
 addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
