@@ -2,8 +2,8 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-import command;
-import envvar;
+DW.import command;
+DW.import envvar;
 
 # Main logic. Gets called by dry-wit.
 function main() {
@@ -324,7 +324,7 @@ function resolve_includes() {
           _includedFile="${RESULT}";
           if [ -d "${_templateFolder}/$(basename ${_includedFile})-files" ]; then
               mkdir "${_repoFolder}/$(basename ${_includedFile})-files" 2> /dev/null;
-              rsync -az "${PWD}/${_templateFolder#\./}/$(basename ${_includedFile})-files/" "${_repoFolder}/$(basename ${_includedFile})-files/"
+              rsync -azI "${PWD}/${_templateFolder#\./}/$(basename ${_includedFile})-files/" "${_repoFolder}/$(basename ${_includedFile})-files/"
               shopt -s nullglob dotglob;
               _files=(${_repoFolder}/$(basename ${_includedFile})-files/*.template);
               shopt -u nullglob dotglob;
@@ -988,7 +988,7 @@ addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to
 addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images." OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)." OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)." OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "X:eval-defaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
 addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
 

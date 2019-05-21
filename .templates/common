@@ -10,11 +10,11 @@ COPY common-files/dry-wit \
      common-files/run-as.inc.sh \
      common-files/restart.sh \
      common-files/envvar.sh \
-     /usr/local/bin/
+     /usr/local/sbin/
 
 RUN mkdir -p /etc/my_exec.d && \
     mkdir -p /etc/service/.template/log; \
-    chmod +x /usr/local/bin/*.sh /etc/my_init.d/*.sh && \
+    chmod +x /usr/local/sbin/*.sh /etc/my_init.d/*.sh && \
     mkdir /Dockerfiles && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
 
@@ -22,5 +22,4 @@ COPY common-files/logger /etc/service/.template/log/run
 RUN chmod +x /etc/service/.template/log/run
 
 COPY common-files/my_exec /sbin/my_exec
-
 # ^ common

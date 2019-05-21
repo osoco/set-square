@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ ! -e /README ]; then
+    echo "Error: This image should include a README file."
+    exit 1
+fi
+
+if [ "${1}" == "bash" ]; then
+    shift;
+    bash $*;
+else
+  for s in /etc/my_exec.d/*; do
+    source $s
+  done
+
+  trap 'run_help' ERR
+
+  $*
+fi

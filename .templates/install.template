@@ -1,16 +1,19 @@
-# install template
+# v install
 ENV DEBIAN_FRONTEND="noninteractive"
 COPY install-files/pkg-install.sh \
      install-files/pkg-install.inc.sh \
+     install-files/pkg-cleanup.sh \
+     install-files/pkg-cleanup.inc.sh \
+     install-files/system-update.sh \
+     install-files/system-update.inc.sh \
      install-files/system-cleanup.sh \
      install-files/system-cleanup.inc.sh \
      /usr/local/bin/
 
-RUN chmod +x ${PKG_INSTALL} ${PKG_CLEANUP} && \
+RUN chmod +x /usr/local/bin/pkg-install.sh /usr/local/bin/pkg-cleanup.sh /usr/local/bin/system-update.sh /usr/local/bin/system-cleanup.sh && \
     mkdir -p /var/local/ && \
     touch /var/local/docker-installed-packages.txt && \
-    ${SYSTEM_UPDATE} && \
-    ${PKG_INSTALL} wget gettext sudo && \
-    ${SYSTEM_CLEANUP}
-
-# End of install template
+    /usr/local/bin/system-update.sh -vv && \
+    /usr/local/bin/pkg-install.sh -vv wget gettext sudo && \
+    /usr/local/bin/system-cleanup.sh -vv
+# ^ install
