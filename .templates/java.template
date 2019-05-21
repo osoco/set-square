@@ -1,4 +1,4 @@
-# java template
+# v java
 
 COPY java-files/logstash /etc/service/.template/log/run
 COPY java-files/logstash-cron.sh /etc/service/cron/log/run
@@ -15,9 +15,11 @@ RUN wget -qO - https://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-ke
     echo "deb http://packages.elastic.co/logstash/${LOGSTASH_VERSION}/debian stable main" | tee -a /etc/apt/sources.list && \
     yes | add-apt-repository ppa:webupd8team/java && \
     echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections && \
-    ${APTGET_INSTALL} --update logstash python-software-properties && \
-   (${APTGET_INSTALL} oracle-java${JAVA_VERSION}-installer oracle-java8-set-default || \
-    ${APTGET_INSTALL} oracle-java${JAVA_VERSION}-installer oracle-java8-set-default ) && \
+    ${SYSTEM_UPDATE} && \
+    ${PKG_INSTALL} logstash python-software-properties && \
+   (${PKG_INSTALL} oracle-java${JAVA_VERSION}-installer oracle-java8-set-default || \
+    ${PKG_INSTALL} oracle-java${JAVA_VERSION}-installer oracle-java8-set-default ) && \
+    ${SYSTEM_CLEANUP} && \
     wget -nv --no-check-certificate --no-cookies --header "Cookie: ${JCE_POLICY_EULA_COOKIE}" ${JCE_POLICY_DOWNLOAD_URL} -O /opt/${JCE_POLICY_ARTIFACT} && \
     cd /opt && jar xvf ${JCE_POLICY_ARTIFACT} && cp ${JCE_POLICY_FOLDER}/*.jar /usr/lib/jvm/java-${JAVA_VERSION}-oracle/jre/lib/security/ && \
     rm -rf /opt/${JCE_POLICY_FOLDER} /opt/${JCE_ARTIFACT} && \
@@ -27,12 +29,10 @@ RUN wget -qO - https://packages.elasticsearch.org/GPG-KEY-elasticsearch | apt-ke
     chmod +x /etc/service/.template/log/run && \
     chmod +x /etc/service/cron/log/run && \
     ln -s /usr/local/bin/create_ssl_certificate.inc.sh /usr/local/bin/create_ssl_certificate_keytool.inc.sh && \
-    chmod +x /usr/local/bin/create_ssl_certificate_keytool.sh && \
-    ${APTGET_CLEANUP}
+    chmod +x /usr/local/bin/create_ssl_certificate_keytool.sh
 
 COPY java-files/my_exec.logstash /etc/my_exec.d/logstash
 COPY java-files/logstash-cron.conf /etc/logstash/conf.d/cron.conf
 COPY java-files/logstash-default.conf /etc/logstash/conf.d/default.conf
-
-# End of java template
+# ^ java
 
