@@ -3,14 +3,12 @@ ENV TERM="linux" \
     PATH="${PATH}:/usr/local/bin"
 
 RUN mkdir -p /etc/my_exec.d && \
-    mkdir -p /etc/service/.template/log; \
-    chmod +x /usr/local/sbin/*.sh /etc/my_init.d/*.sh && \
-    mkdir -p /root/.dry-wit/src
+    mkdir -p /etc/service/.template/log && \
+    mkdir -p /root/.dry-wit/src && \
     mkdir /Dockerfiles && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
 
-ADDY common-files/dry-wit/
-     /root/.dry-wit/
+ADD common-files/dry-wit/ /root/.dry-wit/
 
 COPY common-files/process-file.sh \
      common-files/data \
@@ -22,7 +20,7 @@ COPY common-files/process-file.sh \
      /usr/local/sbin/
 
 COPY common-files/logger /etc/service/.template/log/run
-RUN chmod +x /etc/service/.template/log/run
+RUN chmod +x /etc/service/.template/log/run /usr/local/sbin/*.sh /etc/my_init.d/*.sh
 
 COPY common-files/my_exec /sbin/my_exec
 # ^ common

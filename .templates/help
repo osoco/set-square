@@ -12,7 +12,7 @@ RUN chmod +x -- /usr/local/bin/help.base.sh && \
       ln -s -- /usr/local/bin/help.base.sh /usr/local/bin/"${f}"; \
     done && \
     chmod +x -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/show && \
-    for f in "show" "Dockerfile" "dockerfile" "-d" "--dockerfile"; do \
+    for f in "Dockerfile" "dockerfile" "-d" "--dockerfile"; do \
       ln -s -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/"${f}"; \
     done
 # ^ help
