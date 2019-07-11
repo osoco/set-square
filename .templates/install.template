@@ -3,7 +3,6 @@ ENV DEBIAN_FRONTEND="noninteractive"
 COPY install-files/pkg-install.sh \
      install-files/pkg-install.inc.sh \
      install-files/pkg-cleanup.sh \
-     install-files/pkg-cleanup.inc.sh \
      install-files/system-update.sh \
      install-files/system-update.inc.sh \
      install-files/system-cleanup.sh \

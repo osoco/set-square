@@ -3,7 +3,7 @@ ENV TERM="linux" \
     PATH="${PATH}:/usr/local/bin:/root/.dry-wit/src"
 
 RUN mkdir -p /etc/my_exec.d && \
-    mkdir -p /etc/service/.template/log; \
+    mkdir -p /etc/service/.template/log && \
     mkdir -p /root/.dry-wit/src && \
     mkdir /Dockerfiles && \
     cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
@@ -24,4 +24,3 @@ RUN chmod +x /etc/service/.template/log/run /usr/local/sbin/*.sh /etc/my_init.d/
 
 COPY common-files/my_exec /sbin/my_exec
 # ^ common
-

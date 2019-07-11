@@ -301,6 +301,8 @@ function resolve_includes() {
   local _match;
   local _includedFile;
   local line;
+  local _folder;
+  local _files;
 
   checkNotEmpty "input" "${_input}" 1;
   checkNotEmpty "output" "${_output}" 2;
@@ -325,14 +327,18 @@ function resolve_includes() {
           if [ -d "${_templateFolder}/$(basename ${_includedFile})-files" ]; then
               mkdir "${_repoFolder}/$(basename ${_includedFile})-files" 2> /dev/null;
               rsync -azI "${PWD}/${_templateFolder#\./}/$(basename ${_includedFile})-files/" "${_repoFolder}/$(basename ${_includedFile})-files/"
-              shopt -s nullglob dotglob;
-              _files=(${_repoFolder}/$(basename ${_includedFile})-files/*.template);
-              shopt -u nullglob dotglob;
-              if [ ${#_files[@]} -gt 0 ]; then
-                for p in ${_repoFolder}/$(basename ${_includedFile})-files/*.template; do
-                  IFS="${_oldIFS}";
-                  process_file "${p}" "$(dirname ${p})/$(basename ${p} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}";
-                done
+              _folder="${_repoFolder}/$(basename ${_includedFile})-files";
+              if folderExists "${_folder}"; then
+#                  shopt -s nullglob dotglob;
+                  _files=($(find "${_folder}" -type f -name '*.template' 2> /dev/null));
+#                  shopt -u nullglob dotglob;
+                  if [ ${#_files[@]} -gt 0 ]; then
+                      for p in ${_files}; do
+                          IFS="${_oldIFS}";
+                          process_file "${p}" "$(dirname ${p})/$(basename ${p} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}";
+                      done
+                      IFS="${_oldIFS}";
+                  fi
               fi
           fi
           if [ -e "${_includedFile}.template" ]; then
@@ -553,6 +559,10 @@ function copy_license_file() {
   checkNotEmpty "repo" "${_repo}" 1;
   checkNotEmpty "folder" "${_folder}" 2;
 
+  if isEmpty "${LICENSE_FILE}"; then
+      exitWithErrorCode LICENSE_FILE_IS_MANDATORY;
+  fi
+
   if fileExists "${_folder}/${LICENSE_FILE}"; then
     logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
     cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
@@ -579,6 +589,10 @@ function copy_copyright_preamble_file() {
 
   checkNotEmpty "repo" "${_repo}" 1;
   checkNotEmpty "folder" "${_folder}" 2;
+
+  if isEmpty "${COPYRIGHT_PREAMBLE_FILE}"; then
+      exitWithErrorCode COPYRIGHT_PREAMBLE_FILE_IS_MANDATORY;
+  fi
 
   if fileExists "${_folder}/${COPYRIGHT_PREAMBLE_FILE}"; then
       logDebug -n "Using ${COPYRIGHT_PREAMBLE_FILE} for ${_repo} image";
@@ -1020,8 +1034,10 @@ addError ERROR_BUILDING_REPOSITORY "Error building repository";
 addError ERROR_TAGGING_IMAGE "Error tagging image";
 addError ERROR_PUSHING_IMAGE "Error pushing image to ${REGISTRY}";
 addError ERROR_REDUCING_IMAGE "Error reducing the image size";
+addError LICENSE_FILE_IS_MANDATORY "LICENSE_FILE needs to be defined. Review build.inc.sh or .build.inc.sh";
 addError CANNOT_COPY_LICENSE_FILE "Cannot copy the license file ${LICENSE_FILE}";
 addError LICENSE_FILE_DOES_NOT_EXIST "The specified license ${LICENSE_FILE} does not exist";
+addError COPYRIGHT_PREAMBLE_FILE_IS_MANDATORY "COPYRIGHT_PREAMBLE_FILE needs to be defined. Review build.inc.sh or .build.inc.sh";
 addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
 addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
