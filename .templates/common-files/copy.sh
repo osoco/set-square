@@ -2,174 +2,24 @@
 # Copyright 2015-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-function usage() {
-cat <<EOF
-$SCRIPT_NAME [-v[v] | -q]? origin destination
-$SCRIPT_NAME [-h|--help]
-(c) 2016-today Automated Computing Machinery S.L.
-    Distributed under the terms of the GNU General Public License v3
+DW.import user;
 
-A simple "copy" tool to copy files/folders from containers to host-mounted volumes,
-ensuring the permissions are kept after copying.
-
-Common flags:
-    * -h | --help: Display this message.
-    * -v: Increase the verbosity.
-    * -vv: Increase the verbosity further.
-    * -q | --quiet: Be silent.
-EOF
-}
-
-## Defines the errors
-## dry-wit hook
-function defineErrors() {
-  export INVALID_OPTION="Unrecognized option";
-  export ORIGIN_IS_MANDATORY="origin is mandatory";
-  export DESTINATION_IS_MANDATORY="destination is mandatory";
-  export ORIGIN_DOES_NOT_EXIST="origin does not exist";
-  export DESTINATION_DOES_NOT_EXIST="destination does not exist";
-  export ORIGIN_IS_NOT_READABLE="No permissions to read from ";
-  export CANNOT_WRITE_TO_DESTINATION="Cannot write to ";
-
-  ERROR_MESSAGES=(\
-    INVALID_OPTION \
-    ORIGIN_IS_MANDATORY \
-    DESTINATION_IS_MANDATORY \
-    ORIGIN_DOES_NOT_EXIST \
-    DESTINATION_DOES_NOT_EXIST \
-    ORIGIN_IS_NOT_READABLE \
-    CANNOT_WRITE_TO_DESTINATION \
-  );
-
-  export ERROR_MESSAGES;
-}
-
-## Validates the input.
-## dry-wit hook
-function checkInput() {
-
-  local _flags=$(extractFlags $@);
-  local _flagCount;
-  local _currentCount;
-  logDebug -n "Checking input";
-
-  # Flags
-  for _flag in ${_flags}; do
-    _flagCount=$((_flagCount+1));
-    case ${_flag} in
-      -h | --help | -v | -vv | -q)
-         shift;
-         ;;
-      *) logDebugResult FAILURE "failed";
-         exitWithErrorCode INVALID_OPTION;
-         ;;
-    esac
-  done
-
-  if [ -z "${ORIGIN}" ]; then
-    ORIGIN="${1}";
-  fi
-
-  if [ -z "${ORIGIN}" ]; then
-    exitWithErrorCode ORIGIN_IS_MANDATORY;
-  fi
-
-  if [ ! -e "${ORIGIN}" ]; then
-    exitWithErrorCode ORIGIN_DOES_NOT_EXIST "${ORIGIN}";
-  fi
-
-  if [ ! -r "${ORIGIN}" ]; then
-    exitWithErrorCode ORIGIN_IS_NOT_READABLE "${ORIGIN}";
-  fi
-
-  if [ -z "${DESTINATION}" ]; then
-    DESTINATION="${1}";
-  fi
-
-  if [ -z "${DESTINATION}" ]; then
-    exitWithErrorCode DESTINATION_IS_MANDATORY;
-  fi
-
-  if [ ! -e "${DESTINATION}" ]; then
-    exitWithErrorCode DESTINATION_DOES_NOT_EXIST "${DESTINATION}";
-  fi
-
-  if [ ! -w "${DESTINATION}" ]; then
-    exitWithErrorCode CANNOT_WRITE_TO_DESTINATION "${DESTINATION}";
-  fi
-
-  logDebugResult SUCCESS "valid";
-}
-
-## Parses the input
-## dry-wit hook
-function parseInput() {
-
-  local _flags=$(extractFlags $@);
-  local _flagCount;
-  local _currentCount;
-
-  # Flags
-  for _flag in ${_flags}; do
-    _flagCount=$((_flagCount+1));
-    case ${_flag} in
-      -h | --help | -v | -vv | -q)
-         shift;
-         ;;
-    esac
-  done
-
-  if [ -z "${ORIGIN}" ]; then
-    ORIGIN="${1}";
-    shift;
-  fi
-
-  if [ -z "${DESTINATION}" ]; then
-    DESTINATION="${1}";
-    shift;
-  fi
-
-  logDebugResult SUCCESS "valid";
-}
-
-## Retrieves the user id who owns given file or folder.
-## -> 1: The file or folder.
-## <- RESULT: The user id.
-## Example:
-##   retrieve_user_id /tmp;
-##   echo "/tmp is owned by ${RESULT}";
-function retrieve_user_id() {
-  local _fileOrFolder="${1}";
-  local _result=$(stat -c '%u' "${_fileOrFolder}");
-  export RESULT="${_result}";
-}
-
-## Retrieves the group id which owns given file or folder.
-## -> 1: The file or folder.
-## <- RESULT: The group id.
-## Example:
-##   retrieve_group_id /tmp
-##   echo "/tmp belongs to group ${RESULT}";
-function retrieve_group_id() {
-  local _fileOrFolder="${1}";
-  local _result=$(stat -c '%d' "${_fileOrFolder}");
-  export RESULT="${_result}";
-}
-
-## Copies the contents of a folder into another.
-## -> 1: The origin folder.
-## -> 2: The destination folder.
-## Example:
-##   copy_folder mysql mysql /var/local/mysql/conf.d /tmp/conf.d
+# fun: copy_folder
+# api: public
+# txt: Copies the contents of a folder into another.
+# opt: origin: The origin folder.
+# opt: destination: The destination folder.
+# txt: Returns 0/TRUE if the contents were copied successfully; 1/FALSE otherwise.
+# use: if copy_folder /var/local/mysql/conf.d /tmp/conf.d; then echo "/var/local/mysql/conf.d contents copied to /tmp/conf.d successfully"; fi
 function copy_folder() {
   local _origin="${1}";
   local _destination="${2}";
-  local _rescode;
+  local -i _rescode;
 
   logInfo -n "Copying the contents of ${_origin} into ${_destination}";
   rsync -az "${_origin}"/ "${_destination}"/ > /dev/null;
   _rescode=$?;
-  if [ ${_rescode} -eq ${TRUE} ]; then
+  if isTrue ${_rescode}; then
     logInfoResult SUCCESS "done";
   else
     logInfoResult FAILURE "failed";
@@ -178,26 +28,35 @@ function copy_folder() {
   return ${_rescode};
 }
 
-## Preserves the permissions of given folder.
-## -> 1: The folder.
-## <- 0: if the permissions were restored successfully; 1 otherwise.
-## Example:
-##   if preserve_pemissions "/tmp"; then
-##     ...
-##   fi
+# fun: preserve_permissions
+# api: public
+# txt: Preserves the permissions of given folder to any file inside of that folder.
+# opt: folder: The folder.
+# txt: Returns 0/TRUE if the permissions were restored successfully; 1/FALSE otherwise.
+# use: if preserve_pemissions "/tmp"; then echo "/tmp contents permissions restored"; fi
 function preserve_permissions() {
   local _folder="${1}";
-  local _rescode;
+  local -i _rescode;
+  local _userId;
+  local _groupId;
 
-  retrieve_user_id "${_folder}";
-  local _userId="${RESULT}";
-  retrieve_group_id "${_folder}";
-  local _groupId="${RESULT}";
+  checkNotEmpty "folder" "${_folder}" 1;
+
+  if retrieveOwnerUid "${_folder}"; then
+    _userId="${RESULT}";
+  else
+    exitWithErrorCode CANNOT_RETRIEVE_UID_OF_FOLDER "${_folder}";
+  fi
+  if retrieveOwnerGid "${_folder}"; then
+    _groupId="${RESULT}";
+  else
+    exitWithErrorCode CANNOT_RETRIEVE_GID_OF_FOLDER "${_folder}";
+  fi
 
   logInfo -n "Restoring permissions of ${_folder}/* to ${_userId}:${_groupId}";
   chown -R ${_userId}:${_groupId} "${_folder}"/* > /dev/null;
   _rescode=$?;
-  if [ ${_rescode} -eq ${TRUE} ]; then
+  if isTrue ${_rescode}; then
     logInfoResult SUCCESS "done";
   else
     logInfoResult FAILURE "failed";
@@ -206,9 +65,61 @@ function preserve_permissions() {
   return ${_rescode};
 }
 
-## Main logic
-## dry-wit hook
+# fun: main
+# api: public
+# txt: Main logic
+# txt: Returns 0/TRUE always.
+# use: main
 function main() {
   copy_folder "${ORIGIN}" "${DESTINATION}";
   preserve_permissions "${DESTINATION}";
 }
+
+## Script metadata and CLI settings.
+
+setScriptDescription "A simple \"copy\" tool to copy files/folders from containers to host-mounted volumes, ensuring the permissions are kept after copying.";
+
+addCommandLineParameter "input" "The source file to copy" MANDATORY SINGLE;
+addCommandLineParameeter "output" "The destination" MANDATORY SINGLE;
+
+addError ORIGIN_PARAMETER_IS_MANDATORY "origin is mandatory";
+addError DESTINATION_PARAMETER_IS_MANDATORY "destination is mandatory";
+addError ORIGIN_DOES_NOT_EXIST "origin does not exist";
+addError ORIGIN_IS_NOT_READABLE "No permissions to read from ";
+addError CANNOT_WRITE_TO_DESTINATION "Cannot write to ";
+addError CANNOT_RETRIEVE_UID_OF_FOLDER "Cannot retrieve uid of folder ";
+addError CANNOT_RETRIEVE_GID_OF_FOLDER "Cannot retrieve gid of folder ";
+
+function dw_parse_input_cli_parameter() {
+  local _input="${1}";
+
+  if isEmpty "${_input}"; then
+    if isEmpty "${ORIGIN}"; then
+      exitWithErrorCode ORIGIN_PARAMETER_IS_MANDATORY;
+    else
+      _input="${ORIGIN}";
+    fi
+  fi
+  if ! fileExists "${_input}"; then
+    exitWithErrorCode ORIGIN_DOES_NOT_EXIST "${_input}";
+  fi
+  if ! fileIsReadable "${_input}"; then
+    exitWithErrorCode ORIGIN_IS_NOT_READABLE "${_input}";
+  fi
+}
+
+function dw_parse_output_cli_parameter() {
+  local _output="${1}";
+
+  if isEmpty "${_output}"; then
+    if isEmpty "${DESTINATION}"; then
+      exitWithErrorCode DESTINATION_PARAMETER_IS_MANDATORY;
+    else
+      _output="${DESTINATION}";
+    fi
+  fi
+  if ! fileIsWritable "${_output}"; then
+    exitWithErrorCode DESTINATION_IS_NOT_READABLE "${_output}";
+  fi
+}
+#
