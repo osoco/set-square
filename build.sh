@@ -209,7 +209,7 @@ function process_file() {
   fi
 
   if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
-     resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+      resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
       logTrace -n "Resolving @include_env in ${_file}";
       if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
           logTraceResult SUCCESS "done";
@@ -336,7 +336,7 @@ function resolve_includes() {
                   _files=($(find "${_folder}" -type f -name '*.template' 2> /dev/null));
 #                  shopt -u nullglob dotglob;
                   if [ ${#_files[@]} -gt 0 ]; then
-                      for p in ${_files}; do
+                      for p in ${_files[*]}; do
                           IFS="${_oldIFS}";
                           process_file "${p}" "$(dirname ${p})/$(basename ${p} .template)" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}";
                       done
@@ -569,7 +569,7 @@ function copy_license_file() {
 
   if fileExists "${_folder}/${LICENSE_FILE}"; then
     logDebug -n "Using ${LICENSE_FILE} for ${_repo} image";
-    cp "${_folder}/${LICENSE_FILE}" "${_repo}/LICENSE";
+    cp "${_folder}/${LICENSE_FILE}" "${_repo}/${LICENSE_FILE}";
     if isTrue $?; then
       logDebugResult SUCCESS "done";
     else
