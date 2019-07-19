@@ -5,7 +5,11 @@
 DW.import command;
 DW.import envvar;
 
-# Main logic. Gets called by dry-wit.
+# fun: main
+# api: public
+# txt: Main logic. Gets called by dry-wit.
+# txt: Returns 0/TRUE always, but may exit due to errors.
+# use: main
 function main() {
   local _repo;
   local _parents;
@@ -24,7 +28,7 @@ function main() {
     else
       retrieveNamespace;
       local _namespace="${RESULT}";
-       logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
+      logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
     if isTrue ${_buildRepo}; then
@@ -57,12 +61,11 @@ function main() {
   cleanup_images;
 }
 
-## Retrieves the namespace.
-## - 0/${TRUE} if the namespace gets built successfully; 1/${FALSE} otherwise.
-## Example:
-##   if retrieveNamespace "bla"; then
-##     echo "Namespace for bla";
-##   fi
+# fun: retrieveNamespace
+# api: public
+# txt: Retrieves the namespace.
+# txt: Returns 0/TRUE always.
+# use: if retrieveNamespace "bla"; then echo "Namespace for bla"; fi
 function retrieveNamespace() {
   local _flavor="";
 
@@ -74,12 +77,13 @@ function retrieveNamespace() {
   return ${TRUE};
 }
 
-## Does "${NAMESPACE}/${REPO}:${TAG}" exist?
-## -> 1: the repository.
-## -> 2: the tag.
-## <- 0 if it exists, 1 otherwise
-## Example:
-##   if repo_exists "myImage" "latest"; then [..]; fi
+# fun: repo_exists
+# api: public
+# txt: Does "${NAMESPACE}/${REPO}:${TAG}" exist?
+# opt: repo: The repository.
+# opt: tag: The tag.
+# txt: Returns 0/TRUE if it exists; 1/FALSE otherwise.
+# use: if repo_exists "myImage" "latest"; then echo "Repo exists"; fi
 function repo_exists() {
   local _repo="${1}";
   local _tag="${2}";
@@ -110,10 +114,11 @@ function repo_exists() {
   return ${_rescode};
 }
 
-## Builds the image if it's defined locally.
-## -> 1: the repository.
-## Example:
-##   build_repo_if_defined_locally "myImage:latest";
+# fun: build_repo_if_defined_locally
+# txt: Builds the image if it's defined locally.
+# opt: repo: The repository.
+# txt: Returns 0/TRUE always.
+# use: build_repo_if_defined_locally "myImage:latest";
 function build_repo_if_defined_locally() {
   local _repo="${1}";
   local _name="${_repo%:*}";
@@ -128,14 +133,15 @@ function build_repo_if_defined_locally() {
   fi
 }
 
-## Squashes the image with docker-squash [1]
-## [1] https://github.com/jwilder/docker-squash
-## -> 1: the namespace.
-## -> 2: the repo name.
-## -> 3: the current tag.
-## -> 4: the new tag for the squashed image.
-## Example:
-##   reduce_image_size "namespace" "myimage" "201508-raw" "201508"
+# fun: reduce_image_size
+# api: public
+# txt: Squashes the image with docker-squash [1]
+# txt: [1] https://github.com/jwilder/docker-squash
+# opt: namespace: The namespace.
+# opt: repo: The repo name.
+# opt: currentTag: The current tag.
+# opt: tag: The new tag for the squashed image.
+# use: reduce_image_size "namespace" "myimage" "201508-raw" "201508"
 function reduce_image_size() {
   local _namespace="${1}";
   local _repo="${2}";
@@ -158,21 +164,18 @@ function reduce_image_size() {
   fi
 }
 
-## Processes given file.
-## -> 1: the input file.
-## -> 2: the output file.
-## -> 3: the repo folder.
-## -> 4: the templates folder.
-## -> 5: the image.
-## -> 6: the root image.
-## -> 7: the namespace.
-## -> 8: the tag.
-## -> 10: the backup host's SSH port (optional).
-## <- 0: if the file is processed correctly; 1 otherwise.
-## Example:
-##  if process_file "my.template" "my" "my-image-folder" ".templates"; then
-##    echo "File processed successfully";
-##  fi
+# fun: process_file
+# api: public
+# txt: Processes given file.
+# opt: file: The input file.
+# opt: output: The output file.
+# opt: repoFolder: The repo folder.
+# opt: templateFolder: The template folder.
+# opt: repo: The image.
+# opt: rootImage: The root image.
+# opt: namespace: The namespace.
+# txt: Returns 0/TRUE if the file is processed correctly; 1/FALSE otherwise.
+# use: if process_file "my.template" "my" "my-image-folder" ".templates" "my" "base" "company"; then echo "File processed successfully"; fi
 function process_file() {
   local _file="${1}";
   local _output="${2}";
@@ -231,15 +234,14 @@ function process_file() {
   return ${_rescode};
 }
 
-## Resolves given included file.
-## -> 1: The file name.
-## -> 2: The templates folder.
-## -> 3: The repository's own folder.
-## <- 0: if the file is found; 1 otherwise.
-## Example:
-##   if ! resolve_included_file "footer" "my-image-folder" ".templates"; then
-##     echo "'footer' not found";
-##   fi
+# fun: resolve_included_file
+# api: public
+# txt: Resolves given included file.
+# opt: file: The file name.
+# opt: repoFolder: The repository folder.
+# opt: templateFolder: The template folder.
+# txt: Returns 0/TRUE if the file is found; 1/FALSE otherwise.
+# use: if ! resolve_included_file "footer" "my-image-folder" ".templates"; then echo "'footer' not found"; fi
 function resolve_included_file() {
   local _file="${1}";
   local _repoFolder="${2}";
@@ -276,18 +278,19 @@ function resolve_included_file() {
   return ${_rescode};
 }
 
-## Resolves any @include in given file.
-## -> 1: the input file.
-## -> 2: the output file.
-## -> 3: the templates folder.
-## -> 4: the repository folder.
-## -> 5: the image.
-## -> 6: the root image.
-## -> 7: the namespace.
-## -> 8: the backup host's SSH port for this image (optional).
-## <- 0: if the @include()s are resolved successfully; 1 otherwise.
-## Example:
-##  resolve_includes "my.template" "my" "my-image-folder" ".templates" "myImage" "myRoot" "example" "latest" "22"
+# fun: resolve_includes
+# api: public
+# txt: Resolves any @include in given file.
+# opt: input: The input file.
+# opt: output: The output file.
+# opt: repoFolder: The repository folder.
+# opt: templateFolder: The template folder.
+# opt: repo: The image.
+# opt: rootImage: The root image.
+# opt: namespace: The namespace.
+# opt: backupHostSshPort: The backup host's SSH port for this image (optional).
+# txt: Returns 0/TRUE if the @include()s are resolved successfully; 1/FALSE otherwise.
+# use: resolve_includes "my.template" "my" "my-image-folder" ".templates" "myImage" "myRoot" "example" "latest" "22"
 function resolve_includes() {
   local _input="${1}";
   local _output="${2}";
@@ -388,13 +391,12 @@ function resolve_includes() {
   return ${_rescode};
 }
 
-## Processes a settings file for a template.
-## -> 1: The settings file.
-## <- 0/${TRUE} if the settings file was processed successfully; 1/${FALSE} otherwise.
-## Example:
-##   if process_settings_file "my.settings"; then
-##     echo "my.settings processed successfully";
-##   fi
+# fun: process_settings_file
+# api: public
+# txt: Processes a settings file for a template.
+# opt: file: The settings file.
+# txt: Returns 0/TRUE if the settings file was processed successfully; 1/FALSE otherwise.
+# use: if process_settings_file "my.settings"; then echo "my.settings processed successfully"; fi
 function process_settings_file() {
   local _file="${1}";
   local -i _rescode=${FALSE};
@@ -413,19 +415,17 @@ function process_settings_file() {
   return ${_rescode};
 }
 
-## Processes placeholders in given file.
-## -> 1: the input file.
-## -> 2: the output file.
-## -> 3: the image.
-## -> 4: the root image.
-## -> 5: the namespace.
-## -> 6: the tag.
-## -> 8: the backup host's SSH port (optional).
-## <- 0 if the file was processed successfully; 1 otherwise.
-## Example:
-##  if process_placeholders my.template" "my" "myImage" "root" "example" "latest" "" "2222"; then
-##    echo "my.template -> my";
-##  fi
+# fun: process_placeholders
+# api: public
+# txt: Processes placeholders in given file.
+# opt: file: The input file.
+# opt: output: The output file.
+# opt: repo: The image.
+# opt: rootImage: The root image.
+# opt: namespace: The namespace.
+# opt: backupHostSshPort: The backup host's SSH port (optional).
+# txt: Returns 0/TRUE if the file was processed successfully; 1/FALSE otherwise.
+# use: if process_placeholders "my.template" "my" "myImage" "root" "example" "2222"; then echo "my.template -> my"; fi
 function process_placeholders() {
   local _file="${1}";
   local _output="${2}";
@@ -457,16 +457,17 @@ function process_placeholders() {
   return ${_rescode};
 }
 
-## Resolves any @include_env in given file.
-## -> 1: the input file.
-## -> 2: the output file.
-## -> 3: the image.
-## -> 4: the root image.
-## -> 5: the namespace.
-## -> 6: the backup host SSH port (optional).
-## <- 0/${TRUE}: if the @include_env is resolved successfully; 1/${FALSE} otherwise.
-## Example:
-##  resolve_include_env "my.template" "my"
+# fun: resolve_include_env
+# api: public
+# txt: Resolves any @include_env in given file.
+# opt: input: The input file.
+# opt: output: The output file.
+# opt: repo: The image.
+# opt: rootImage: The root image.
+# opt: namespace: The namespace.
+# opt: backupHostSshPort: The backup host SSH port (optional).
+# txt: Returns 0/TRUE if the @include_env is resolved successfully; 1/FALSE otherwise.
+# use: if resolve_include_env "my.template" "my" "image" "base" "example" 2222; then echo "@include_env resolved"; fi
 function resolve_include_env() {
   local _input="${1}";
   local _output="${2}";
@@ -534,10 +535,12 @@ function resolve_include_env() {
   return ${_rescode};
 }
 
-## Updates the log category to include the current image.
-## -> 1: the image.
-## Example:
-##   update_log_category "mysql"
+# fun: update_log_category
+# api: public
+# txt: Updates the log category to include the current image.
+# opt: image: The image.
+# txt: Returns 0/TRUE always.
+# use: update_log_category "mysql"
 function update_log_category() {
   local _image="${1}";
   local _logCategory;
@@ -546,12 +549,13 @@ function update_log_category() {
   setLogCategory "${_logCategory}";
 }
 
-## PUBLIC
-## Copies the license file from specified folder to the repository folder.
-## -> 1: the repository.
-## -> 2: the folder where the license file is included.
-## Example:
-##   copy_license_file "myImage" ${PWD}
+# fun: copy_license_file
+# api: public
+# txt: Copies the license file from specified folder to the repository folder.
+# opt: repo: The repository.
+# opt: folder: The folder where the license file is included.
+# txt: Returns 0/TRUE always.
+# use: copy_license_file "myImage" ${PWD}
 function copy_license_file() {
   local _repo="${1}";
   local _folder="${2}";
@@ -577,12 +581,13 @@ function copy_license_file() {
   fi
 }
 
-## PUBLIC
-## Copies the copyright-preamble file from specified folder to the repository folder.
-## -> 1: the repository.
-## -> 2: the folder where the copyright preamble file is included.
-## Example:
-##   copy_copyright_preamble_file "myImage" ${PWD}
+# fun: copy_copyright_preamble_file
+# api: public
+# txt: Copies the copyright-preamble file from specified folder to the repository folder.
+# opt: repo: The repository.
+# opt: folder: The folder where the copyright preamble file is included.
+# txt: Returns 0/TRUE always.
+# use: copy_copyright_preamble_file "myImage" ${PWD}
 function copy_copyright_preamble_file() {
   local _repo="${1}";
   local _folder="${2}";
@@ -608,13 +613,13 @@ function copy_copyright_preamble_file() {
   fi
 }
 
-## PUBLIC
-## Resolves the BACKUP_HOST_SSH_PORT variable.
-## -> 1: the image.
-## <- RESULT: the value of such variable.
-## Example:
-##   retrieve_backup_host_ssh_port mariadb;
-##   export BACKUP_HOST_SSH_PORT="${RESULT}";f
+# fun: retrieve_backup_host_ssh_port
+# api: public
+# txt: Resolves the BACKUP_HOST_SSH_PORT variable.
+# opt: repo: The image.
+# txt: Returns 0/TRUE always.
+# txt: RESULT contains the value of BACKUP_HOST_SSH_PORT variable.
+# use: retrieve_backup_host_ssh_port mariadb; export BACKUP_HOST_SSH_PORT="${RESULT}"; fi
 function retrieve_backup_host_ssh_port() {
   local _repo="${1}";
   local _result;
@@ -635,11 +640,12 @@ function retrieve_backup_host_ssh_port() {
   fi
 }
 
-## PUBLIC
-## Builds "${NAMESPACE}/${REPO}:${TAG}" image.
-## -> 1: the repository.
-## Example:
-##  build_repo "myImage" "latest" "";
+# fun: build_repo
+# api: public
+# txt: Builds "${NAMESPACE}/${REPO}:${TAG}" image.
+# opt: repo: The repository.
+# txt: Returns 0/TRUE always.
+# use: build_repo "myImage" "latest" "";
 function build_repo() {
   local _repo="${1}";
   local _canonicalTag="${2}";
@@ -724,11 +730,38 @@ function build_repo() {
   fi
 }
 
-## Tags the image anticipating it will be pushed to a Docker registry later.
-## -> 1: the repository.
-## -> 2: the tag.
-## Example:
-##   registry_tag "myImage" "latest"
+# fun: retrieveRemoteTag
+# api: public
+# txt: Retrieves the remote tag.
+# opt: repo: The repository name.
+# opt: tag: The tag.
+# txt: Returns 0/TRUE always.
+# txt: RESULT contains the remote tag.
+# use: retrieveRemoteTag "myImage" "latest"; echo "Remote tag: ${RESULT}";
+function retrieveRemoteTag() {
+  local _repo="${1}";
+  local _tag="${2}";
+
+  checkNotEmpty "repository" "${_repo}" 1;
+  checkNotEmpty "tag" "${_tag}" 2;
+
+  local _result;
+  if areEqual "${REGISTRY}" "cloud.docker.com"; then
+    _result="${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+  else
+    _result="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+  fi
+
+  export RESULT="${_result}";
+}
+
+# fun: registry_tag
+# api: public
+# txt: Tags the image anticipating it will be pushed to a Docker registry later.
+# opt: repo: The repository.
+# opt: tag: The tag.
+# txt: Returns 0/TRUE always.
+# use: registry_tag "myImage" "latest"
 function registry_tag() {
   local _repo="${1}";
   local _tag="${2}";
@@ -738,10 +771,8 @@ function registry_tag() {
 
   retrieveNamespace;
   local _namespace="${RESULT}";
-  local _remoteTag="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
-  if isTrue ${PUSH_TO_DOCKERHUB}; then
-    _remoteTag="${REGISTRY}/${_repo}:${_tag}";
-  fi
+  retrieveRemoteTag "${_repo}" "${_tag}";
+  local _remoteTag="${RESULT}";
 
   update_log_category "${_repo}";
   logInfo -n "Tagging ${_namespace}/${_repo}:${_tag} as ${_remoteTag}";
@@ -754,11 +785,13 @@ function registry_tag() {
   fi
 }
 
-## Pushes the image to a Docker registry.
-## -> 1: the repository.
-## -> 2: the tag.
-## Example:
-##   registry_push "myImage" "latest"
+# fun: registry_push
+# api: public
+# txt: Pushes the image to a Docker registry.
+# opt: repo: The repository.
+# opt: tag: The tag.
+# txt: Returns 0/TRUE always.
+# use: registry_push "myImage" "latest"
 function registry_push() {
   local _repo="${1}";
   local _tag="${2}";
@@ -766,10 +799,8 @@ function registry_push() {
   checkNotEmpty "repository" "${_repo}" 1;
   checkNotEmpty "tag" "${_tag}" 2;
 
-  local _remoteTag="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
-  if isTrue ${PUSH_TO_DOCKERHUB}; then
-    _remoteTag="${REGISTRY}/${_repo}:${_tag}";
-  fi
+  retrieveRemoteTag "${_repo}" "${_tag}";
+  local _remoteTag="${RESULT}";
 
   local -i _pushResult;
   update_log_category "${_repo}";
@@ -785,22 +816,24 @@ function registry_push() {
   fi
 }
 
-## Finds out if the architecture is 32 bits.
-## <- 0 if 32b, 1 otherwise.
-## Example:
-##   if is_32bit; then [..]; fi
+# fun: is_32bit
+# api: public
+# txt: Finds out if the architecture is 32 bits.
+# txt: Returns 0/TRUE if it 32b, 1/FALSE otherwise.
+# use: if is_32bit; then echo "32bit"; fi
 function is_32bit() {
   [ "$(uname -m)" == "i686" ]
 }
 
-## Finds the parent image for a given repo.
-## -> 1: the repository.
-## <- RESULT: the parent, if any, with the format name:tag.
-## Example:
-##   find_parent_repo "myImage"
-##   parent="${RESULT}"
+# fun: find_parent_repo
+# api: public
+# txt: Finds The parent image for a given repo.
+# opt: repo: The repository.
+# txt: Returns 0/TRUE always.
+# txt: RESULT contains the parent, if any, with the format name:tag.
+# use: find_parent_repo "myImage"; echo "parent: ${RESULT}";
 function find_parent_repo() {
-  local _repo="${1}"
+  local _repo="${1}";
   local _result="$(grep -e '^FROM ' ${_repo}/Dockerfile.template 2> /dev/null | head -n 1 | awk '{print $2;}')";
 
   retrieveNamespace;
@@ -818,15 +851,15 @@ function find_parent_repo() {
   export RESULT="${_result}";
 }
 
-## Recursively finds all parents for a given repo.
-## -> 1: the repository.
-## <- RESULT: a space-separated list with the parent images.
-## Example:
-##   find_parents "myImage"
-##   parents="${RESULT}"
-##   for p in ${parents}; do [..]; done
+# fun: find_parents
+# api: public
+# txt: Recursively finds all parents for a given repo.
+# opt: repo: The repository.
+# txt: Returns 0/TRUE always.
+# txt: RESULT is a space-separated list with the parent images.
+# use: find_parents "myImage"; parents="${RESULT}"; for p in ${parents}; do "Echo parent found: ${p}"; done
 function find_parents() {
-  local _repo="${1}"
+  local _repo="${1}";
   local _result=();
   declare -a _result;
   find_parent_repo "${_repo}";
@@ -839,11 +872,12 @@ function find_parents() {
   export RESULT="${_result[@]}"
 }
 
-## Resolves which base image should be used,
-## depending on the architecture.
-## Example:
-##   resolve_base_image;
-##   echo "the base image is ${BASE_IMAGE}"
+# fun: resolve_base_image
+# api: public
+# txt: Resolves which base image should be used, depending on the architecture.
+# txt: Returns 0/TRUE always.
+# txt: BASE_IMAGE contains the correct base image.
+# use: resolve_base_image; echo "the base image is ${BASE_IMAGE}";
 function resolve_base_image() {
   if is_32bit; then
     export BASE_IMAGE="${BASE_IMAGE_32BIT}";
@@ -852,14 +886,12 @@ function resolve_base_image() {
   fi
 }
 
-## Loads image-specific environment variables,
-## sourcing the build-settings.sh and .build-settings.sh files
-## in the repo folder, if they exist.
-## -> 1: The repository.
-## Example:
-##   echo 'defineEnvVar MY_VAR "My variable" "default value"' > myImage/build-settings.sh
-##   loadRepoEnvironmentVariables "myImage"
-##   echo "MY_VAR is ${MY_VAR}"
+# fun: loadRepoEnvironmentVariables
+# api: public
+# txt: Loads image-specific environment variables, sourcing the build-settings.sh and .build-settings.sh files in the repo folder, if they exist.
+# opt: repo: The repository.
+# txt: Returns 0/TRUE always.
+# use: echo 'defineEnvVar MY_VAR "My variable" "default value"' > myImage/build-settings.sh; loadRepoEnvironmentVariables "myImage"; echo "MY_VAR is ${MY_VAR}";
 function loadRepoEnvironmentVariables() {
   local _repos="${1}";
   local _repoSettings;
@@ -905,51 +937,65 @@ function loadRepoEnvironmentVariables() {
   IFS="${_oldIFS}";
 }
 
-## Checks whether the -f flag is enabled
-## Example:
-##   if force_mode_enabled; then [..]; fi
+# fun: force_mode_enabled
+# api: public
+# txt: Checks whether the -f flag is enabled
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if force_mode_enabled; then "force-mode enabled"; fi
 function force_mode_enabled() {
   flagEnabled FORCE_MODE;
 }
 
-## Checks whether the -o flag is enabled
-## Example:
-##   if overwrite_latest_enabled; then [..]; fi
+# fun: overwrite_latest_enabled
+# api: public
+# txt: Checks whether the -o flag is enabled
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if overwrite_latest_enabled; then echo "overwrite-latest enabled"; fi
 function overwrite_latest_enabled() {
   flagEnabled OVERWRITE_LATEST;
 }
 
-## Checks whether the -p flag is enabled
-## Example:
-##   if registry_push_enabled; then [..]; fi
+# fun: registry_push_enabled
+# api: public
+# txt: Checks whether the -p flag is enabled
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if registry_push_enabled; then echo "registry-push enabled"; fi
 function registry_push_enabled() {
   flagEnabled REGISTRY_PUSH;
 }
 
-## Checks whether the -rt flag is enabled
-## Example:
-##   if registry_tag_enabled; then [..]; fi
+# fun: registry_tag_enabled
+# api: public
+# txt: Checks whether the -rt flag is enabled
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if registry_tag_enabled; then echo "registry-tag enabled"; fi
 function registry_tag_enabled() {
   flagEnabled REGISTRY_TAG;
 }
 
-## Checks whether the -r flag is enabled
-## Example:
-##   if reduce_image_enabled; then [..]; fi
+# fun: reduce_image_enabled
+# api: public
+# txt: Checks whether the -r flag is enabled
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if reduce_image_enabled; then echo "reduce-image enabled"; fi
 function reduce_image_enabled() {
   flagEnabled REDUCE_IMAGE;
 }
 
-## Checks whether the -cc flag is enabled.
-## Example:
-##   if cleanup_containers_enabled; then [..]; fi
+# fun: cleanup_containers_enabled
+# api: public
+# txt: Checks whether the -cc flag is enabled.
+# txt: Returns 0/TRUE if the flag is enabled; 1/FALSE otherwise.
+# use: if cleanup_containers_enabled; then "cleanup-containers enabled"; fi
 function cleanup_containers_enabled() {
   flagEnabled CLEANUP_CONTAINERS;
 }
 
-## Cleans up the docker containers
-## Example:
-##   cleanup_containers
+# fun: cleanup_containers
+# api: public
+# txt: Cleans up the docker containers.
+# txt: Returns 0/TRUE always.
+# use: cleanup_containers
 function cleanup_containers() {
 
   if cleanup_containers_enabled; then
@@ -967,16 +1013,20 @@ function cleanup_containers() {
   fi
 }
 
-## Checks whether the -ci flag is enabled.
-## Example:
-##   if cleanup_images_enabled; then [..]; fi
+# fun: cleanup_images_enabled
+# api: public
+# txt: Checks whether the -ci flag is enabled.
+# txt: Returns 0/TRUE always.
+# use: if cleanup_images_enabled; then echo "cleanup-images enabled"; fi
 function cleanup_images_enabled() {
   flagEnabled CLEANUP_IMAGES;
 }
 
-## Cleans up unused docker images.
-## Example:
-##   cleanup_images
+# fun: cleanup_images
+# api: public
+# txt: Cleans up unused docker images.
+# txt: Returns 0/TRUE always.
+# use: cleanup_images
 function cleanup_images() {
   if cleanup_images_enabled; then
     local _count="$(${DOCKER} images | grep '<none>' | wc -l)";
@@ -994,15 +1044,15 @@ function cleanup_images() {
 
 ## Script metadata and CLI settings.
 
-setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built.";
+setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
 addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully" OPTIONAL EXPECTS_ARGUMENT "latest";
 addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to." OPTIONAL EXPECTS_ARGUMENT;
+addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to" OPTIONAL EXPECTS_ARGUMENT "";
 addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images." OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)." OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "X:eval-defaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
 addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
 
@@ -1047,8 +1097,12 @@ function dw_parse_tag_cli_flag() {
 }
 
 function dw_parse_registry_cli_flag() {
-  export REGISTRY_TAG=TRUE;
-	export REGISTRY_PUSH=TRUE;
+  local _flag="${1}";
+  if isTrue "${_flag}"; then
+    export REGISTRY_PUSH=TRUE;
+  else
+    export REGISTRY_PUSH=FALSE;
+  fi
 }
 
 function dw_parse_force_cli_flag() {
@@ -1065,10 +1119,6 @@ function dw_parse_reduce_image_cli_flag() {
 
 function dw_parse_cleanup_images_cli_flag() {
   export CLEAUP_IMAGES=TRUE;
-}
-
-function dw_parse_registry_tag_cli_flag() {
-  export REGISTRY_TAG=TRUE;
 }
 
 function dw_parse_tag_cli_envvar() {
