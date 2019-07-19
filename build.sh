@@ -365,7 +365,7 @@ function resolve_includes() {
           fi
       elif ! fileExists "${_ref}.template"; then
           logTraceResult FAILURE "failed";
-          exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_ref}";
+          exitWithErrorCode TEMPLATE_DOES_NOT_EXIST "${_ref}";
       else
         _match=${FALSE};
         _errorRef="${_ref}";
@@ -1079,6 +1079,7 @@ addError NO_REPOSITORIES_FOUND "no repositories found";
 addError INVALID_URL "Invalid url";
 addError TAG_IS_MANDATORY "Tag is mandatory";
 addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
+addError TEMPLATE_DOES_NOT_EXIST "Template does not exist: ";
 addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
 addError ERROR_BUILDING_REPOSITORY "Error building repository";
 addError ERROR_TAGGING_IMAGE "Error tagging image";
