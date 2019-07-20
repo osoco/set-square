@@ -8,3 +8,4 @@ fi
 if [[ -e ${conf} ]]; then
   exec /usr/share/logstash/bin/logstash -f ${conf}
 fi
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet

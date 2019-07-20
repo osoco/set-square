@@ -8,3 +8,4 @@ else
   echo "Environment variable not found";
   exit 1;
 fi
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet

@@ -1,6 +1,9 @@
 #!/bin/bash dry-wit
 # Copyright 2015-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
+# mod: common
+# api: public
+# txt: A simple "copy" tool to copy files/folders from containers to host-mounted volumes, ensuring the permissions are kept after copying.
 
 DW.import user;
 

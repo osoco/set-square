@@ -1,6 +1,9 @@
 #!/bin/bash /usr/local/bin/dry-wit
 # Copyright 2016-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
+# mod: common
+# api: public
+# txt: Processes a file, replacing any placeholders with the contents of the environment variables, and stores the result in the specified output file.
 
 # fun: replace_placeholders
 # api: public
@@ -41,9 +44,7 @@ environment variables, and stores the result in the specified output file.";
 addCommandLineFlag "output" "o" "The command"
 addCommandLineParameter "input" "The input file" MANDATORY SINGLE;
 
-checkReq envsubst ENVSUBST_NOT_INSTALLED;
-addError INVALID_OPTION "Unrecognized option";
-addError ENVSUBST_NOT_INSTALLED "envsubst is not installed";
+checkReq envsubst;
 addError NO_INPUT_FILE_SPECIFIED "The input file is mandatory";
 addError NO_OUTPUT_FILE_SPECIFIED "The output file is mandatory";
 
@@ -66,4 +67,3 @@ function dw_parse_output_cli_flag() {
   fi
 }
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
-

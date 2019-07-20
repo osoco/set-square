@@ -1,46 +1,85 @@
 #!/bin/bash
+# mod: gradle/run-gradle
+# api: public
+# txt: Runs gradle.
 
-# Splitting executable from arguments
-_cmd="${1}";
-shift
-_cmd="${_cmd} ${@}";
+# fun: main
+# api: public
+# txt: Runs gradle with some parameters.
+# txt: Returns the return code from running Gradle.
+# use: main
+function main() {
+  local -i _rescode;
+  local _dockerApiVersion;
+  local _gradleTag;
+  local _grailsTag;
+  local _nodeJsTag;
+  local _folder;
+  local _projectFolder;
 
-_dockerHost="${DOCKER_HOST:-unix:///run/docker.sock}"
+  _dockerApiVersion="${DOCKER_API_VERSION}";
+  if isNotEmpty "${_dockerApiVersion}"; then
+    _dockerApiVersion="-DAPI_VERSION=${_dockerApiVersion} -Dapi.version=${_dockerApiVersion} -DDOCKER_API_VERSION=${_dockerApiVersion}"
+  fi
 
-_dockerApiVersion="${DOCKER_API_VERSION:-${DEFAULT_DOCKER_API_VERSION}}"
-if [ -n "${_dockerApiVersion}" ]; then
-  _dockerApiVersion="-DAPI_VERSION=${_dockerApiVersion} -Dapi.version=${_dockerApiVersion} -DDOCKER_API_VERSION=${_dockerApiVersion}"
-fi
+  _gradleTag="${GRADLE_TAG}";
+  if isNotEmpty "${_gradleTag}"; then
+    _gradleTag="-DGRADLE_TAG=\"${_gradleTag}\"";
+  fi
 
-_gradleTag="${GRADLE_TAG:-${TAG}}";
-if [ -n "${_gradleTag}" ]; then
-  _gradleTag="-DGRADLE_TAG=\"${_gradleTag}\"";
-fi
-_grailsTag="${GRAILS_TAG:-${TAG}}";
-if [ -n "${_grailsTag}" ]; then
-  _grailsTag="-DGRAILS_TAG=\"${_grailsTag}\"";
-fi
-_nodeJsTag="${NODEJS_TAG:-${TAG}}";
-if [ -n "${_nodeJsTag}" ]; then
-  _nodeJsTag="-DNODEJS_TAG=\"${_nodeJsTag}\"";
-fi
+  _grailsTag="${GRAILS_TAG}";
+  if isNotEmpty "${_grailsTag}"; then
+    _grailsTag="-DGRAILS_TAG=\"${_grailsTag}\"";
+  fi
 
-_folder="/opt/workspace";
+  _nodeJsTag="${NODEJS_TAG}";
+  if isNotEmpty "${_nodeJsTag}"; then
+    _nodeJsTag="-DNODEJS_TAG=\"${_nodeJsTag}\"";
+  fi
 
-_projectFolder="${_folder}"
+  _folder="${GRADLE_WORKDIR}";
+  _projectFolder="${_folder}";
 
-if [ -n "${PROJECT_NAME}" ]; then
-  _projectFolder="${_folder}/${PROJECT_NAME}"
-fi
+  if isNotEmpty "${PROJECT_NAME}"; then
+    _projectFolder="${_folder}/${PROJECT_NAME}";
+  fi
 
-mkdir -p "${_projectFolder}";
+  mkdir -p "${_projectFolder}";
 
-[ ! -e ${_folder}/.gradle ] && mkdir ${_folder}/.gradle > /dev/null 2>&1 && chown ${SERVICE_USER}:${SERVICE_GROUP} ${_folder}/.gradle > /dev/null 2>&1
+  [ ! -e ${_folder}/.gradle ] && mkdir ${_folder}/.gradle > /dev/null 2>&1 && chown ${SERVICE_USER}:${SERVICE_GROUP} ${_folder}/.gradle > /dev/null 2>&1
 
-exec /usr/local/bin/run-as.sh -- ${_projectFolder} gradle -g /opt/workspace/.gradle -DDOCKER_HOST=${_dockerHost} -DHOST_PROJECTDIR=${HOST_PROJECTDIR:-${_folder}} -DHOST_USERHOME=${HOST_USERHOME:-${HOME}} ${_dockerApiVersion} ${_gradleTag} ${_grailsTag} ${_nodeJsTag} ${_cmd};
-_rescode=$?;
-if [ ${_rescode} -ne 0 ]; then
-  echo "Returning error code ${_rescode}";
-fi
-exit ${_rescode}
-# vim: syntax=sh ts=4 sw=4 sts=4 sr noet
+  exec /usr/local/bin/run-as.sh -- ${_projectFolder} gradle -g /opt/workspace/.gradle -DDOCKER_HOST=${_dockerHost} -DHOST_PROJECTDIR=${HOST_PROJECTDIR:-${_folder}} -DHOST_USERHOME=${HOST_USERHOME:-${HOME}} ${_dockerApiVersion} ${_gradleTag} ${_grailsTag} ${_nodeJsTag} ${_cmd};
+  _rescode=$?;
+
+  if isFalse ${_rescode}; then
+    echo "Returning error code ${_rescode}";
+  fi
+  return ${_rescode};
+}
+
+## Script metadata and CLI settings.
+setScriptDescription "Runs gradle";
+
+addCommandLineParameter "cmd" MANDATORY MULTIPLE;
+defineEnvVar DOCKER_HOST OPTIONAL "How to access the Docker daemon" "unix:///run/docker.sock";
+defineEnvVar DOCKER_API_VERSION MANDATORY "The version of the Docker API" "${DEFAULT_DOCKER_API_VERSION}";
+defineEnvVar TAG OPTIONAL "The tag" "";
+defineEnvVar GRADLE_TAG OPTIONAL "The Gradle tag" "${TAG}";
+defineEnvVar GRAILS_TAG OPTIONAL "The Grails tag" "${TAG}";
+defineEnvVar NODEJS_TAG OPTIONAL "The Node.js tag" "${TAG}";
+defineEnvVar GRADLE_WORKDIR MANDATORY "The folder where Gradle will run" "/opt/workspace";
+defineEnvVar PROJECT_NAME OPTIONAL "The name of the project" "";
+defineEnvVar SERVICE_USER MANDATORY "The name of the user" "";
+defineEnvVar SERVICE_GROUP MANDATORY "The name of the group" "";
+defineEnvVar HOST_USERHOME MANDATORY "The home folder of the user" "${SERVICE_USER_HOME}";
+
+function dw_parse_cmd_cli_parameter() {
+  local _cmd="${1}";
+  shift
+  _cmd="${_cmd} ${@}";
+  export CMD="${_cmd}";
+}
+
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet
+
+

@@ -1,6 +1,10 @@
 #!/bin/bash dry-wit
 # Copyright 2015-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
+# mod: common
+# api: public
+# txt: Runs a command within given folder, under certain user/group.
+# txt: If userId and groupId are omitted, those values are taken from the ownership information of the folder parameter.
 
 # fun: update_account
 # api: public
@@ -118,7 +122,6 @@ addCommandLineParameter "folder" "The folder where the command should run" MANDA
 addCommandLineParameter "command" "The command to run" MANDATORY SINGLE;
 addCommandLineParameter "args" "The command arguments" OPTIONAL MULTIPLE;
 
-addError INVALID_OPTION "Unrecognized option";
 addError NO_FOLDER_SPECIFIED "No folder specified";
 addError NO_COMMAND_SPECIFIED "No command specified";
 addError NO_RUN_AS_USER_SPECIFIED "No RUN_AS_USER specified";
@@ -237,4 +240,4 @@ function dw_check_runasuser_cli_flagr() {
       exitWithErrorCode NO_RUN_AS_USER_SPECIFIED;
   fi
 }
-#
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet

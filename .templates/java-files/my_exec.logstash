@@ -1,9 +1,26 @@
-#!/bin/bash
+#!/bin/bash dry-wit
+# mod: java/my_exec.logstash
+# api: public
+# txt: Disables logstash (depending or ENABLE_LOGSTASH environment variable), or disables logging altogether (depending on DISABLE_ALL environment variable).
 
-_logstashEnabled=${ENABLE_LOGSTASH};
+# fun: main
+# api: public
+# txt: Disables logstash (depending or ENABLE_LOGSTASH environment variable), or disables logging altogether (depending on DISABLE_ALL environment variable).
+# txt: Returns 0/TRUE always.
+# use: main
+function main() {
+  local _logstashEnabled=${ENABLE_LOGSTASH};
 
-if    [ "${ENABLE_LOGSTASH}" == "false" ] \
-   || [ -n "${DISABLE_ALL}" ]; then
-  chmod -x /etc/service/.template/log/run > /dev/null 2>&1
-  rm -rf /etc/service/*/log> /dev/null 2>&1
-fi
+  if isFalse "${ENABLE_LOGSTASH}" || isNotEmpty "${DISABLE_ALL}"; then
+    chmod -x /etc/service/.template/log/run > /dev/null 2>&1
+    rm -rf /etc/service/*/log> /dev/null 2>&1
+  fi
+}
+
+## Script metadata and CLI settings.
+
+setScriptDescription "Disables logstash (depending or ENABLE_LOGSTASH environment variable), or disables logging altogether (depending on DISABLE_ALL environment variable)."
+
+defineEnvVar ENABLE_LOGSTASH OPTIONAL "Whether to enable logstash-based logging" FALSE;
+defineEnvVar DISABLE_ALL OPTIONAL "Whether to disable logging globally" "";
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet
