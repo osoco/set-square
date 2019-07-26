@@ -640,6 +640,22 @@ function retrieve_backup_host_ssh_port() {
   fi
 }
 
+# fun: retrieveDockerBuildOpts
+# api: public
+# txt: Retrieves the options for docker build.
+# txt: Returns 0/TRUE always.
+# txt: The variable RESULT contains the build options.
+# use: retrieveDockerBuildOpts; docker build ${RESULT} .
+function retrieveDockerBuildOpts() {
+  local _result;
+
+  if isTrue ${NO_CACHE}; then
+    _result="--no-cache";
+  fi
+
+  export RESULT="${_result}";
+}
+
 # fun: build_repo
 # api: public
 # txt: Builds "${NAMESPACE}/${REPO}:${TAG}" image.
@@ -655,6 +671,7 @@ function build_repo() {
   local _f;
   retrieveNamespace;
   local _namespace="${RESULT}";
+  local _buildOpts;
   local _oldIFS="${IFS}";
 
   checkNotEmpty "repo" "${_repo}" 1;
@@ -690,10 +707,9 @@ function build_repo() {
 
   loadRepoEnvironmentVariables "${_repo}";
   evalEnvVars;
+  _tag="${TAG}";
   if reduce_image_enabled; then
     _rawTag="${TAG}-raw";
-  else
-    _tag="${TAG}";
   fi
   _f="${_repo}/Dockerfile.template";
   logDebug -n "Processing ${_f}";
@@ -704,9 +720,11 @@ function build_repo() {
     exitWithErrorCode CANNOT_PROCESS_TEMPLATE "${_f}";
   fi
 
-  logInfo "Building ${_namespace}/${_repo}:${_tag}";
-#  echo docker build ${BUILD_OPTS} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "${DOCKER} build ${BUILD_OPTS} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
+  retrieveDockerBuildOpts;
+  _buildOpts="${RESULT}";
+  logInfo "docker build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
+#  echo docker build ${_buildOpts} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
+  runCommandLongOutput "${DOCKER} build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
   _cmdResult=$?
   logInfo -n "${_namespace}/${_repo}:${_tag}";
   if isTrue ${_cmdResult}; then
@@ -1045,15 +1063,16 @@ function cleanup_images() {
 ## Script metadata and CLI settings.
 
 setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
+addCommandLineFlag "nocache" "nc" "Whether to use the cached images or not" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully" OPTIONAL EXPECTS_ARGUMENT "latest";
 addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "overwrite-latest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "overwritelatest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to" OPTIONAL EXPECTS_ARGUMENT "";
-addCommandLineFlag "reduce-image" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "cleanup-images" "ci" "Whether to try to cleanup images" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "cleanup-containers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registry-tag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "X:eval-defaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
+addCommandLineFlag "reduceimage" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "cleanupimages" "ci" "Whether to try to cleanup images" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "cleanupcontainers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "registrytag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "X:evaldefaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
 addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
 
 DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
@@ -1093,6 +1112,10 @@ addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COP
 addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
 
+function dw_parse_nocache_cli_flag() {
+  export NO_CACHE=TRUE;
+}
+
 function dw_parse_tag_cli_flag() {
   export TAG="${1}";
 }
@@ -1110,15 +1133,15 @@ function dw_parse_force_cli_flag() {
   export FORCE_MODE=TRUE;
 }
 
-function dw_parse_overwrite_latest_cli_flag() {
+function dw_parse_overwritelatest_cli_flag() {
   export OVERWRITE_LATEST=TRUE;
 }
 
-function dw_parse_reduce_image_cli_flag() {
+function dw_parse_reduceimage_cli_flag() {
   export REDUCE_IMAGE=TRUE;
 }
 
-function dw_parse_cleanup_images_cli_flag() {
+function dw_parse_cleanupimages_cli_flag() {
   export CLEAUP_IMAGES=TRUE;
 }
 
