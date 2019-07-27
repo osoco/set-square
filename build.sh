@@ -92,7 +92,7 @@ function repo_exists() {
   checkNotEmpty "repository" "${_repo}" 1;
   checkNotEmpty "tag" "${_tag}" 2;
 
-  if _evalEnvVar "${_tag}"; then
+  if evalEnvVar "${_tag}"; then
     _aux="${RESULT}";
     if isNotEmpty "${_aux}"; then
       _tag="${_aux}";
@@ -1113,7 +1113,11 @@ addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preambl
 addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
 
 function dw_parse_nocache_cli_flag() {
-  export NO_CACHE=TRUE;
+  if isTrue "${NO_CACHE}" || isEmpty "${1}" || isTrue "${1}"; then
+    export NO_CACHE=TRUE;
+  else
+    export NO_CACHE=FALSE;
+  fi
 }
 
 function dw_parse_tag_cli_flag() {
@@ -1122,7 +1126,7 @@ function dw_parse_tag_cli_flag() {
 
 function dw_parse_registry_cli_flag() {
   local _flag="${1}";
-  if isTrue "${_flag}"; then
+  if isTrue "${REGISTRY_PUSH}" || isEmpty "${1}" || isTrue "${_flag}"; then
     export REGISTRY_PUSH=TRUE;
   else
     export REGISTRY_PUSH=FALSE;
@@ -1130,19 +1134,35 @@ function dw_parse_registry_cli_flag() {
 }
 
 function dw_parse_force_cli_flag() {
-  export FORCE_MODE=TRUE;
+  if isTrue "${FORCE_MODE}" || isTrue "${1}" || isEmpty "${1}"; then
+    export FORCE_MODE=TRUE;
+  else
+    export FORCE_MODE=FALSE;
+  fi
 }
 
 function dw_parse_overwritelatest_cli_flag() {
-  export OVERWRITE_LATEST=TRUE;
+  if isTrue "${OVERWRITE_LATEST}" || isEmpty "${1}" || isTrue "${1}"; then
+    export OVERWRITE_LATEST=TRUE;
+  else
+    export OVERWRITE_LATEST=FALSE;
+  fi
 }
 
 function dw_parse_reduceimage_cli_flag() {
-  export REDUCE_IMAGE=TRUE;
+  if isTrue "${REDUCE_IMAGE}" || isEmpty "${1}" || isTrue "${1}"; then
+    export REDUCE_IMAGE=TRUE;
+  else
+    export REDUCE_IMAGE=FALSE;
+  fi
 }
 
 function dw_parse_cleanupimages_cli_flag() {
-  export CLEAUP_IMAGES=TRUE;
+  if isTrue "${CLEANUP_IMAGES}" || isEmpty "${1}" || isTrue "${1}"; then
+    export CLEANUP_IMAGES=TRUE;
+  else
+    export CLEANUP_IMAGES=FALSE;
+  fi
 }
 
 function dw_parse_tag_cli_envvar() {
