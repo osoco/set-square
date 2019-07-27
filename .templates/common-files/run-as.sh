@@ -6,46 +6,7 @@
 # txt: Runs a command within given folder, under certain user/group.
 # txt: If userId and groupId are omitted, those values are taken from the ownership information of the folder parameter.
 
-# fun: update_account
-# api: public
-# txt: Updates given account.
-# opt: user: The user name.
-# opt: userId: The new user id.
-# opt: groupId: The new group id.
-# txt: Returns 0/TRUE always, unless an error is detected.
-# use: update_service_user_account guest 1000 1000
-function update_account() {
-  local _user="${1}";
-  local _tempGroup;
-  local _deleteGroup=${FALSE};
-  local _tempGroup;
-
-  checkNotEmpty "user" "${_user}" 1;
-
-  local _userId="${2}";
-  checkNotEmpty "userId" "${_userId}" 2;
-
-  local _groupId="${3}";
-  checkNotEmpty "groupId" "${_groupId}" 3;
-
-  if ! updateUserUid ${_user} ${_userId}; then
-    exitWithErrorCode CANNOT_CHANGE_UID "${_user}";
-  fi
-
-  if ! gidAlreadyExists "${_groupId}"; then
-    _tempGroup="temp$$";
-    createGroup "${_tempGroup}" "${_groupId}";
-    _deleteGroup=${TRUE};
-  fi
-
-  if ! updateUserGid "${_user}" ${_groupId}; then
-    exitWithErrorCode CANNOT_CHANGE_GID "${_user} -> ${_groupId}";
-  fi
-
-  if isTrue ${_deleteGroup}; then
-    deleteGroup "${_tempGroup}";
-  fi
-}
+DW.import user;
 
 # fun: main
 # api: public
@@ -108,6 +69,47 @@ function main() {
   fi
 }
 
+# fun: update_account
+# api: public
+# txt: Updates given account.
+# opt: user: The user name.
+# opt: userId: The new user id.
+# opt: groupId: The new group id.
+# txt: Returns 0/TRUE always, unless an error is detected.
+# use: update_service_user_account guest 1000 1000
+function update_account() {
+  local _user="${1}";
+  local _tempGroup;
+  local _deleteGroup=${FALSE};
+  local _tempGroup;
+
+  checkNotEmpty "user" "${_user}" 1;
+
+  local _userId="${2}";
+  checkNotEmpty "userId" "${_userId}" 2;
+
+  local _groupId="${3}";
+  checkNotEmpty "groupId" "${_groupId}" 3;
+
+  if ! updateUserUid ${_user} ${_userId}; then
+    exitWithErrorCode CANNOT_CHANGE_UID "${_user}";
+  fi
+
+  if ! gidAlreadyExists "${_groupId}"; then
+    _tempGroup="temp$$";
+    createGroup "${_tempGroup}" "${_groupId}";
+    _deleteGroup=${TRUE};
+  fi
+
+  if ! updateUserGid "${_user}" ${_groupId}; then
+    exitWithErrorCode CANNOT_CHANGE_GID "${_user} -> ${_groupId}";
+  fi
+
+  if isTrue ${_deleteGroup}; then
+    deleteGroup "${_tempGroup}";
+  fi
+}
+
 ## Script metadata and CLI settings.
 
 setScriptDescription "Runs a command within given folder, under certain user/group.
@@ -122,13 +124,15 @@ addCommandLineParameter "folder" "The folder where the command should run" MANDA
 addCommandLineParameter "command" "The command to run" MANDATORY SINGLE;
 addCommandLineParameter "args" "The command arguments" OPTIONAL MULTIPLE;
 
+defineEnvVar RUN_AS_USER OPTIONAL "The user we'll run on her behalf" "${SQ_SERVICE_USER:-${USER}}";
+
 addError NO_FOLDER_SPECIFIED "No folder specified";
 addError NO_COMMAND_SPECIFIED "No command specified";
 addError NO_RUN_AS_USER_SPECIFIED "No RUN_AS_USER specified";
 addError CANNOT_CHANGE_UID "Cannot change the uid of ";
 addError CANNOT_CHANGE_GID 'Cannot change the gid of ';
-addError CANNOT_RETRIEVE_USER_UID_OF_FOLDER "Cannot retrieve the user uid of ";
-addError CANNOT_RETRIEVE_GROUP_GID_OF_FOLDER "Cannot retrieve the group gid of ";
+addError CANNOT_RETRIEVE_USER_UID_OF_FOLDER "Cannot retrieve the user uid who owns folder ";
+addError CANNOT_RETRIEVE_GROUP_GID_OF_FOLDER "Cannot retrieve the group gid which owns folder ";
 addError USER_ID_IS_MANDATORY "The user id is mandatory if the -u flag is provided";
 addError USER_DOES_NOT_EXIST "The user does not exist";
 addError USER_NAME_IS_MANDATORY "The user name is mandatory if the -U flag is provided";
@@ -137,44 +141,6 @@ addError GROUP_ID_IS_MANDATORY "The group id is mandatory if the -g flag is prov
 addError GROUP_NAME_IS_MANDATORY "The group name is mandatory if the -G flag is provided";
 addError GROUP_DOES_NOT_EXIST "The group does not exist";
 addError INVALID_GROUP_NAME "Invalid group name";
-
-function dw_parse_userid_cli_flag() {
-  export USER_ID="${1}";
-}
-
-function dw_parse_username_cli_flag() {
-  export USER_NAME="${1}";
-  if retrieveUidFromUser "${1}"; then
-    export USER_ID="${RESULT}";
-  else
-    exitWithErrorCode USER_DOES_NOT_EXIST;
-  fi
-}
-
-function dw_parse_groupid_cli_flag() {
-  export GROUP_ID="${1}";
-}
-
-function dw_parse_groupname_cli_flag() {
-  export GROUP_NAME="${1}";
-  if retrieveUidFromGroup "${1}"; then
-    export GROUP_ID="${RESULT}";
-  else
-    exitWithErrorCode GROUP_DOES_NOT_EXIST;
-  fi
-}
-
-function dw_parse_folder_cli_parameter() {
-  export FOLDER="${1}";
-}
-
-function dw_parse_command_cli_parameter() {
-  export COMMAND="${1}";
-}
-
-function dw_parse_args_cli_parameter() {
-  export ARGS="${*}";
-}
 
 function dw_check_userid_cli_flag() {
   if isEmpty "${1}"; then
@@ -235,9 +201,41 @@ function dw_check_command_cli_parameter() {
   fi
 }
 
-function dw_check_runasuser_cli_flagr() {
-  if isEmpty "${USER_ID}" && isEmpty "${USER_NAME}" && isEmpty "${RUN_AS_USER}"; then
-      exitWithErrorCode NO_RUN_AS_USER_SPECIFIED;
+function dw_parse_userid_cli_flag() {
+  export USER_ID="${1}";
+}
+
+function dw_parse_username_cli_flag() {
+  export USER_NAME="${1}";
+  if retrieveUidFromUser "${1}"; then
+    export USER_ID="${RESULT}";
+  else
+    exitWithErrorCode USER_DOES_NOT_EXIST;
   fi
+}
+
+function dw_parse_groupid_cli_flag() {
+  export GROUP_ID="${1}";
+}
+
+function dw_parse_groupname_cli_flag() {
+  export GROUP_NAME="${1}";
+  if retrieveGidFromGroup "${1}"; then
+    export GROUP_ID="${RESULT}";
+  else
+    exitWithErrorCode GROUP_DOES_NOT_EXIST;
+  fi
+}
+
+function dw_parse_folder_cli_parameter() {
+  export FOLDER="${1}";
+}
+
+function dw_parse_command_cli_parameter() {
+  export COMMAND="${1}";
+}
+
+function dw_parse_args_cli_parameter() {
+  export ARGS="${*}";
 }
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
