@@ -13,7 +13,7 @@ else
     source $s
   done
 
-  trap 'run_help' ERR
+  trap 'help' ERR
 
   $*
 fi
