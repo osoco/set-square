@@ -223,11 +223,11 @@ function process_file() {
       fi
 
       if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
-              resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+         debugDuration resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
           logTrace -n "Resolving @include_env in ${_file}";
-          if resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+          if debugDuration resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
               logTraceResult SUCCESS "done";
-              if process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+              if debugDuration process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
                   _rescode=${TRUE};
                   logTraceResult SUCCESS "done"
               else
@@ -1227,6 +1227,8 @@ function dw_parse_repositories_cli_parameter() {
     export REPOSITORIES="$(find . -maxdepth 1 -type d | grep -v '^\.$' | sed 's \./  g' | grep -v '^\.')";
   fi
 }
+
+setDebugEchoEnabled TRUE;
 
 # env: processedTemplates: The list of processed templates.
 declare -a __PROCESSED_TEMPLATES=();
