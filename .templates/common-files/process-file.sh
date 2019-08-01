@@ -1,4 +1,4 @@
-#!/bin/bash /usr/local/bin/dry-wit
+#!/bin/bash dry-wit
 # Copyright 2016-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 # mod: common
@@ -15,18 +15,12 @@
 function replace_placeholders() {
   local _file="${1}";
   local _output="${2}";
-  local -i _rescode;
+
+  checkNotEmpty file "${_file}" 1;
+  checkNotEmpty output "${_output}" 2;
+
   local _env="$(IFS=" \t" env | awk -F'=' '{printf("%s=\"%s\" ", $1, $2);}')";
-  local _envsubstDecl=$(echo -n "'"; IFS=" \t" env | cut -d'=' -f 1 | awk '{printf("${%s} ", $0);}'; echo -n "'";);
-
-  echo "${_env} envsubst ${_envsubstDecl} < ${_file} > ${_output}" | sh;
-  _rescode=$?;
-
-  if isTrue ${_rescode}; then
-    export RESULT="${_output}";
-  fi
-
-  return ${_rescode};
+  replaceVariablesInFile "${_file}" "${_output}" ${_env};
 }
 
 # fun: main
@@ -38,6 +32,7 @@ function main() {
   replace_placeholders "${INPUT_FILE}" "${OUTPUT_FILE}";
 }
 
+## Script metadata and CLI options
 setScriptDescription "Processes a file, replacing any placeholders with the contents of the \
 environment variables, and stores the result in the specified output file.";
 
