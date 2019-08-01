@@ -20,14 +20,16 @@ function main() {
   IFS="${DWIFS}";
   for _repo in ${REPOSITORIES}; do
     IFS="${_oldIFS}";
+    loadRepoEnvironmentVariables "${_repo}";
+    evalEnvVars;
+    retrieveNamespace;
+    local _namespace="${RESULT}";
     _buildRepo=${FALSE};
     if force_mode_enabled; then
       _buildRepo=${TRUE};
     elif ! repo_exists "${_repo}" "${TAG}"; then
       _buildRepo=${TRUE};
     else
-      retrieveNamespace;
-      local _namespace="${RESULT}";
       logInfo -n "Not building ${_namespace}/${_repo}:${TAG} since it's already built";
       logInfoResult SUCCESS "skipped";
     fi
@@ -43,12 +45,16 @@ function main() {
 
       build_repo "${_repo}";
     fi
-    if registry_tag_enabled; then
+
+    overwrite_latest_tag "${_namespace}" "${_repo}" "${TAG}";
+
+    if registry_push_enabled || registry_tag_enabled; then
         registry_tag "${_repo}" "${TAG}";
         if overwrite_latest_enabled; then
             registry_tag "${_repo}" "latest";
         fi
     fi
+
     if registry_push_enabled; then
       registry_push "${_repo}" "${TAG}";
       if overwrite_latest_enabled; then
@@ -717,8 +723,6 @@ function build_repo() {
 
   copy_license_file "${_repo}" "${PWD}";
   copy_copyright_preamble_file "${_repo}" "${PWD}";
-  loadRepoEnvironmentVariables "${_repo}";
-  evalEnvVars;
 
   if [ $(ls ${_repo}/*.template | grep -e '\.template$' | grep -v -e 'Dockerfile\.template$' | wc -l) -gt 0 ]; then
     IFS="${DWIFS}";
@@ -764,6 +768,26 @@ function build_repo() {
   if reduce_image_enabled; then
     reduce_image_size "${_namespace}" "${_repo}" "${_tag}" "${_canonicalTag}";
   fi
+}
+
+# fun: overwrite_latest_tag
+# api: public
+# txt: Overwrites the "latest" tag if requested.
+# opt: namespace: The namespace.
+# opt: repo: The repository.
+# opt: tag: The tag.
+# txt: Conditionally overwrites the "latest" tag.
+# txt: Returns 0/TRUE always.
+# use: overwrite_latest_tag "mycompany" "myimage" "0.11";
+function overwrite_latest_tag() {
+  local _namespace="${1}";
+  local _repo="${2}";
+  local _tag="${3}";
+
+  checkNotEmpty namespace "${_namespace}" 1;
+  checkNotEmpty repo "${_repo}" 2;
+  checkNotEmpty tag "${_tag}" 3;
+
   if overwrite_latest_enabled; then
     logInfo -n "Tagging ${_namespace}/${_repo}:${_tag} as ${_namespace}/${_repo}:latest"
     docker tag "${_namespace}/${_repo}:${_tag}" "${_namespace}/${_repo}:latest"
@@ -779,23 +803,26 @@ function build_repo() {
 # fun: retrieveRemoteTag
 # api: public
 # txt: Retrieves the remote tag.
+# opt: namespace: The namespace.
 # opt: repo: The repository name.
 # opt: tag: The tag.
 # txt: Returns 0/TRUE always.
 # txt: RESULT contains the remote tag.
-# use: retrieveRemoteTag "myImage" "latest"; echo "Remote tag: ${RESULT}";
+# use: retrieveRemoteTag "mycompany" "myImage" "latest"; echo "Remote tag: ${RESULT}";
 function retrieveRemoteTag() {
-  local _repo="${1}";
-  local _tag="${2}";
+  local _namespace="${1}";
+  local _repo="${2}";
+  local _tag="${3}";
 
-  checkNotEmpty "repository" "${_repo}" 1;
-  checkNotEmpty "tag" "${_tag}" 2;
+  checkNotEmpty "namespace" "${_namespace}" 1;
+  checkNotEmpty "repo" "${_repo}" 2;
+  checkNotEmpty "tag" "${_tag}" 3;
 
   local _result;
   if areEqual "${REGISTRY}" "cloud.docker.com"; then
-    _result="${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+    _result="${REGISTRY_NAMESPACE}/${_namespace}/${_repo}:${_tag}";
   else
-    _result="${REGISTRY}/${REGISTRY_NAMESPACE}/${_repo}:${_tag}";
+    _result="${REGISTRY}/${_namespace}/${_repo}:${_tag}";
   fi
 
   export RESULT="${_result}";
@@ -817,7 +844,7 @@ function registry_tag() {
 
   retrieveNamespace;
   local _namespace="${RESULT}";
-  retrieveRemoteTag "${_repo}" "${_tag}";
+  retrieveRemoteTag "${_namespace}" "${_repo}" "${_tag}";
   local _remoteTag="${RESULT}";
 
   update_log_category "${_repo}";
@@ -1092,32 +1119,26 @@ function cleanup_images() {
 
 setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
 addCommandLineFlag "noCache" "nc" "Whether to use the cached images or not" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "tag" "t" "The tag to use once the image is built successfully" OPTIONAL EXPECTS_ARGUMENT "latest";
 addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "overwriteLatest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registry" "p" "Optionally, the registry to push the image to" OPTIONAL EXPECTS_ARGUMENT "";
+addCommandLineFlag "registryTag" "rt" "Whether to tag also for pushing the image to the remote registry (implicit if -rp is enabled)" OPTIONAL NO_ARGUMENT "false";
+addCommandLineFlag "registryPush" "rp" "Optionally, whether to push the image to a remote registry" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "reduceImage" "ri" "Whether to reduce the size of the resulting image" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "cleanupImages" "ci" "Whether to try to cleanup images" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "cleanupContainers" "cc" "Whether to try to cleanup containers" OPTIONAL NO_ARGUMENT "false";
-addCommandLineFlag "registryTag" "rt" "Whether to tag also for pushing to a registry later (implicit if -p is enabled)" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "X:evalDefaults" "X:e" "Whether to eval all default values, which potentially slows down the script unnecessarily" OPTIONAL NO_ARGUMENT;
 addCommandLineParameter "repositories" "The repositories to build" MANDATORY MULTIPLE;
 
 DOCKER=$(which docker.io 2> /dev/null || which docker 2> /dev/null)
 
-addError INVALID_OPTION "Unrecognized option";
-checkReq docker DOCKER_NOT_INSTALLED;
-checkReq date DATE_NOT_INSTALLED;
-checkReq realpath REALPATH_NOT_INSTALLED;
-checkReq envsubst ENVSUBST_NOT_INSTALLED;
-checkReq head HEAD_NOT_INSTALLED;
-checkReq grep GREP_NOT_INSTALLED;
-checkReq awk AWK_NOT_INSTALLED;
+checkReq docker;
+checkReq head;
+checkReq grep;
+checkReq awk;
 addError DOCKER_SQUASH_NOT_INSTALLED "docker-squash is not installed. Check out https://github.com/jwilder/docker-squash for details";
 
 addError NO_REPOSITORIES_FOUND "no repositories found";
 addError INVALID_URL "Invalid url";
-addError TAG_IS_MANDATORY "Tag is mandatory";
 addError CANNOT_PROCESS_TEMPLATE "Cannot process template";
 addError TEMPLATE_DOES_NOT_EXIST "Template does not exist: ";
 addError INCLUDED_FILE_NOT_FOUND "The included file is missing";
@@ -1141,17 +1162,22 @@ function dw_parse_noCache_cli_flag() {
   fi
 }
 
-function dw_parse_tag_cli_flag() {
-  export TAG="${1}";
-}
-
-function dw_parse_registry_cli_flag() {
+function dw_parse_registryPush_cli_flag() {
   local _flag="${1}";
   if isTrue "${REGISTRY_PUSH}" || isEmpty "${1}" || isTrue "${_flag}"; then
     export REGISTRY_PUSH=TRUE;
   else
     export REGISTRY_PUSH=FALSE;
   fi
+}
+
+function dw_parse_registryTag_cli_flag() {
+    local _flag="${1}";
+    if isTrue "${REGISTRY_TAG}" || isEmpty "${1}" || isTrue "${_flag}"; then
+        export REGISTRY_TAG=TRUE;
+    else
+        export REGISTRY_TAG=FALSE;
+    fi
 }
 
 function dw_parse_force_cli_flag() {
