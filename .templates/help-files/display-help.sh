@@ -60,6 +60,8 @@ function main() {
   local _namespace;
   local _image;
   local _tag;
+  local _parents;
+  local -i _firstParent;
 
   if retrieveNamespace; then
     _namespace="${RESULT}";
@@ -84,6 +86,9 @@ EOF
 
   [ -f /README ] && NAMESPACE="${_namespace}" IMAGE="${_image}" TAG="${_tag}" envsubst '${NAMESPACE} ${IMAGE} ${TAG}' < /README
 
+  _parents="$(  ls -t /Dockerfiles/* | grep -v -e '^/Dockerfiles/Dockerfile$' | grep -v -e "^/Dockerfiles/${_namespace}-${_image}\.${_tag}$")";
+  _firstParent=${TRUE};
+
   cat <<EOF
 
 This image was generated with set-square:
@@ -94,17 +99,16 @@ This Dockerfile:
 > docker run -it ${_namespace}/${_image}:${_tag} Dockerfile
 or
 > docker run -it ${_namespace}/${_image}:${_tag} Dockerfile ${_namespace}-${_image}.${_tag}
-Its parents (in order):
 EOF
 
   local _oldIFS="${IFS}";
   IFS="${DWIFS}";
-  for d in \
-    $(  ls -t /Dockerfiles/* \
-      | grep -v -e '^/Dockerfiles/copyright-preamble.txt$' \
-      | grep -v -e '^/Dockerfiles/Dockerfile$' \
-      | grep -v -e "^/Dockerfiles/${_namespace}-${_image}\.${_tag}$"); do
+  for d in ${_parents}; do
     IFS="${_oldIFS}";
+    if isTrue ${_firstParent}; then
+      echo "Its parents:";
+      _firstParent=${FALSE};
+    fi
     echo "> docker run -it ${_namespace}/${_image}:${_tag} Dockerfile $(basename $d)";
   done
   IFS="${_oldIFS}";

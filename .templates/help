@@ -12,6 +12,5 @@ RUN chmod +x -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/display-file
     ln -s -- /usr/local/bin/display-help.sh /usr/local/bin/help && \
     for f in "-h" "--help"; do \
       ln -s -- /usr/local/bin/display-help.sh /usr/local/bin/"${f}"; \
-    done && \
-    ln -s -- /usr/local/bin/display-help.sh /etc/my_exec.d/help
+    done
 # ^ help
