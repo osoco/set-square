@@ -36,29 +36,16 @@ function main() {
 setScriptDescription "Processes a file, replacing any placeholders with the contents of the \
 environment variables, and stores the result in the specified output file.";
 
-addCommandLineFlag "output" "o" "The command"
+addCommandLineFlag "output" "o" "The command" MANDATORY EXPECTS_ARGUMENT;
 addCommandLineParameter "input" "The input file" MANDATORY SINGLE;
 
 checkReq envsubst;
-addError NO_INPUT_FILE_SPECIFIED "The input file is mandatory";
-addError NO_OUTPUT_FILE_SPECIFIED "The output file is mandatory";
 
 function dw_parse_input_cli_parameter() {
-  local _input="${1}";
-  if isEmpty "${_input}"; then
-    if isEmpty ${INPUT_FILE}; then
-      exitWithErrorCode NO_INPUT_FILE_SPECIFIED;
-    fi
-  fi
+  export INPUT_FILE="${1}";
 }
 
 function dw_parse_output_cli_flag() {
-  local _output="$[1]";
-
-  if isEmpty "${_output}"; then
-    if isEmpty ${OUTPUT_FILE}; then
-      exitWithErrorCode NO_OUTPUT_FILE_SPECIFIED;
-    fi
-  fi
+  export OUTPUT_FILE="${1}";
 }
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
