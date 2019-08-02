@@ -13,7 +13,7 @@ else
     source $s
   done
 
-  trap '/usr/local/bin/help' ERR
+  trap '/usr/local/bin/display-help.sh' ERR
 
   $*
 fi
