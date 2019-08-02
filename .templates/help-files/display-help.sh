@@ -92,7 +92,7 @@ EOF
 This image was generated with set-square:
 https://github.com/rydnr/set-square
 
-The Dockerfiles used to build this image can be inspected.
+The Dockerfiles used to build this image can be inspected:
 > docker run -it ${_namespace}/${_image}:${_tag} Dockerfile
 EOF
 
