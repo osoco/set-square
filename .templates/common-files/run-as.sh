@@ -7,6 +7,7 @@
 # txt: If userId and groupId are omitted, those values are taken from the ownership information of the folder parameter.
 
 DW.import user;
+DW.import command;
 
 # fun: main
 # api: public
