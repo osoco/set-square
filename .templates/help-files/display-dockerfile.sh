@@ -18,7 +18,6 @@ function main() {
 
 ## Script metadata and CLI settings.
 setScriptDescription "Displays a Dockerfile";
-
 addCommandLineParameter "file" "The Dockerfile to display" OPTIONAL EXPECTS_ARGUMENT "";
 
 # Callback to parse the file parameter.

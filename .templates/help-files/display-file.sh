@@ -18,8 +18,7 @@ function main() {
 
 ## Script metadata and CLI settings.
 setScriptDescription "Displays a file";
-
-addCommandLineParameter "file" MANDATORY "The file to display" EXPECTS_ARGUMENT;
+addCommandLineParameter "file" "The file to display" MANDATORY SINGLE;
 
 # Callback to check the file parameter.
 function dw_check_file_cli_parameter() {
