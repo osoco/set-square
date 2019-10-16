@@ -10,7 +10,7 @@ if [ "${1}" == "bash" ]; then
     bash $*;
 else
   for s in /etc/my_exec.d/*; do
-    source $s
+    source $s $@
   done
 
   trap '/usr/local/bin/display-help.sh' ERR
