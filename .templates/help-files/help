@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cli="$*";
+
+if [ "${cli}" != "$(echo "${cli}" | sed 's| --help ||g' | sed 's| -h ||g')" ]; then
+  /usr/local/bin/display-help.sh $@
+fi
+#

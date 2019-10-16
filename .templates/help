@@ -4,6 +4,8 @@ COPY help-files/display-dockerfile.sh \
      help-files/display-help.sh \
      /usr/local/bin/
 
+COPY help-files/my_exec.help /etc/my_exec.d/
+
 RUN chmod +x -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/display-file.sh /usr/local/bin/display-help.sh && \
     for f in "Dockerfile" "dockerfile" "-d" "--dockerfile"; do \
       ln -s -- /usr/local/bin/display-dockerfile.sh /usr/local/bin/"${f}"; \

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+cli="$*";
+aux="$(echo "${cli}" | sed 's| --help ||g' | sed 's| -h ||g' | sed 's|^--help ?||g' | sed 's|^-h *||g' | sed 's|--help *$||g' | sed 's|-h *$||g')";
+
+if [ "${cli}" != "${aux}" ]; then
+  /usr/local/bin/display-help.sh $@
+fi
+# vim: syntax=sh ts=2 sw=2 sts=4 sr noet
