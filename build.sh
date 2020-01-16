@@ -198,7 +198,7 @@ function process_file() {
 
   checkNotEmpty "file" "${_file}" 1;
 
-  if arrayContains "${__PROCESSED_FILES[@]}" "${_file}"; then
+  if arrayContains "${_file}" "${__PROCESSED_FILES[@]}"; then
       _rescode=${TRUE};
   else
       __PROCESSED_FILES+="${_file}";
