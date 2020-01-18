@@ -199,48 +199,47 @@ function process_file() {
   checkNotEmpty "file" "${_file}" 1;
 
   if arrayContains "${_file}" "${__PROCESSED_FILES[@]}"; then
-      _rescode=${TRUE};
+    _rescode=${TRUE};
   else
-      __PROCESSED_FILES+="${_file}";
-      checkNotEmpty "output" "${_output}" 2;
-      checkNotEmpty "repoFolder" "${_repoFolder}" 3;
-      checkNotEmpty "templateFolder" "${_templateFolder}" 4;
-      checkNotEmpty "repository" "${_repo}" 5;
-      checkNotEmpty "rootImage" "${_rootImage}" 6;
-      checkNotEmpty "namespace" "${_namespace}" 7;
+    __PROCESSED_FILES+="${_file}";
+    checkNotEmpty "output" "${_output}" 2;
+    checkNotEmpty "repoFolder" "${_repoFolder}" 3;
+    checkNotEmpty "templateFolder" "${_templateFolder}" 4;
+    checkNotEmpty "repository" "${_repo}" 5;
+    checkNotEmpty "rootImage" "${_rootImage}" 6;
+    checkNotEmpty "namespace" "${_namespace}" 7;
 
-      local _settingsFile="$(dirname ${_file})/$(basename ${_file} .template).settings";
-      if fileExists "${_settingsFile}"; then
-          process_settings_file "${_settingsFile}";
-      fi
+    local _settingsFile="$(dirname ${_file})/$(basename ${_file} .template).settings";
+    if fileExists "${_settingsFile}"; then
+      process_settings_file "${_settingsFile}";
+    fi
 
-      if createTempFile; then
-          _temp1="${RESULT}";
-      fi
+    if createTempFile; then
+      _temp1="${RESULT}";
+    fi
 
-      if createTempFile; then
-          _temp2="${RESULT}";
-      fi
+    if createTempFile; then
+      _temp2="${RESULT}";
+    fi
 
-      if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
-         debugDuration resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
-          logTrace -n "Resolving @include_env in ${_file}";
-          if debugDuration resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
-              logTraceResult SUCCESS "done";
-              if debugDuration process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
-                  _rescode=${TRUE};
-                  logTraceResult SUCCESS "done"
-              else
-                  _rescode=${FALSE};
-                  logTraceResult FAILURE "failed";
-              fi
-          else
-              _rescode=${FALSE};
-              logTraceResult FAILURE "failed";
-          fi
-      else
+    if isNotEmpty "${_temp1}" && isNotEmpty "${_temp2}" && \
+        debugDuration resolve_includes "${_file}" "${_temp1}" "${_repoFolder}" "${_templateFolder}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+      logTrace -n "Resolving @include_env in ${_file}";
+      if debugDuration resolve_include_env "${_temp1}" "${_temp2}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+        if debugDuration process_placeholders "${_temp2}" "${_output}" "${_repo}" "${_rootImage}" "${_namespace}" "${_backupHostSshPort}"; then
+          _rescode=${TRUE};
+          logTraceResult SUCCESS "done"
+        else
           _rescode=${FALSE};
+          logTraceResult FAILURE "failed";
+        fi
+      else
+        _rescode=${FALSE};
+        logTraceResult FAILURE "failed";
       fi
+    else
+      _rescode=${FALSE};
+    fi
   fi
 
   return ${_rescode};
