@@ -16,7 +16,7 @@ function main() {
   local _buildRepo;
   local _oldIFS="${IFS}";
 
-  resolve_base_image
+  resolve_base_image;
   IFS="${DWIFS}";
   for _repo in ${REPOSITORIES}; do
     IFS="${_oldIFS}";
@@ -1228,7 +1228,7 @@ function dw_parse_repositories_cli_parameter() {
 }
 
 setDebugEchoEnabled TRUE;
-
+setDebugLogFile "/tmp/build.log";
 # env: processedTemplates: The list of processed templates.
 declare -a __PROCESSED_TEMPLATES=();
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
