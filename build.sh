@@ -2,9 +2,6 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-DW.import command;
-DW.import envvar;
-
 # fun: main
 # api: public
 # txt: Main logic. Gets called by dry-wit.
@@ -1117,6 +1114,9 @@ function cleanup_images() {
 ## Script metadata and CLI settings.
 
 setScriptDescription "Builds Docker images from templates, similar to wking's. If no repository (image folder) is specified, all repositories will be built";
+setScriptLicenseSummary "Distributed under the terms of the GNU General Public License v3";
+setScriptCopyright "Copyleft 2014-today Automated Computing Machinery S.L.";
+
 addCommandLineFlag "noCache" "nc" "Whether to use the cached images or not" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "force" "f" "Whether to build the image even if it's already built" OPTIONAL NO_ARGUMENT "false";
 addCommandLineFlag "overwriteLatest" "o" "Whether to overwrite the \"latest\" tag with the new one (default: false)" OPTIONAL NO_ARGUMENT "false";
