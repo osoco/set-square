@@ -22,12 +22,12 @@ function main() {
 # txt: The variable RESULT contains the path of the processed file if the function returns 0/TRUE.
 function replace_placeholders() {
   local _file="${1}";
-  local _output="${2}";
-
   checkNotEmpty file "${_file}" 1;
+
+  local _output="${2}";
   checkNotEmpty output "${_output}" 2;
 
-  local _env="$(IFS=" \t" env | grep -v 'DWIFS' | awk -F'=' '{printf("%s=\"%s\" ", $1, $2);}')";
+  local _env="$(IFS=" \t" env | grep -v 'DWIFS' | grep -v ':' | awk -F'=' '{printf("%s=\"%s\" ", $1, $2);}')";
   replaceVariablesInFile "${_file}" "${_output}" ${_env};
 }
 
