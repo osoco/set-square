@@ -2,7 +2,7 @@
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
-DW.import command;
+# DW.import command;
 
 # fun: main
 # api: public
@@ -46,6 +46,8 @@ function main() {
     fi
 
     overwrite_latest_tag "${_namespace}" "${_repo}" "${TAG}";
+
+    annotate_successful_build "${_repo}" "${TAG}";
 
     if registry_push_enabled || registry_tag_enabled; then
       registry_tag "${_repo}" "${TAG}";
@@ -486,7 +488,7 @@ function process_placeholders() {
   done;
   IFS="${_oldIFS}";
 
-  _variables="${_variables} MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR='$' ";
+  _variables="${_variables} MAINTAINER=\"${AUTHOR} <${AUTHOR_EMAIL}>\" REPO=\"${_repo}\" IMAGE=\"${_repo}\" ROOT_IMAGE=\"${_rootImage}\" NAMESPACE=\"${_namespace}\" BACKUP_HOST_SSH_PORT=\"${_backupHostSshPort}\" DOLLAR=$ ";
 
   replaceVariablesInFile "${_file}" "${_output}" ${_variables};
   logTraceResult SUCCESS "done";
@@ -728,6 +730,11 @@ function build_repo() {
 
   defineEnvVar IMAGE MANDATORY "The image to build" "${_repo}";
 
+  local _logFile="${PWD}"/"${_repo}"/build.log;
+  rm -f "${_logFile}";
+  touch "${_logFile}";
+  logToFile "${_logFile}";
+
   copy_license_file "${_repo}" "${PWD}";
   copy_copyright_preamble_file "${_repo}" "${PWD}";
 
@@ -763,17 +770,135 @@ function build_repo() {
   _buildOpts="${RESULT}";
   logInfo "docker build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
   #  echo docker build ${_buildOpts} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
-  runCommandLongOutput "${DOCKER} build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
+
+  DW.import command;
+
+  runCommandLongOutput "${DOCKER} build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag}-b --rm=true ${_repo}";
   _cmdResult=$?
-  logInfo -n "${_namespace}/${_repo}:${_tag}";
+  logInfo -n "${_namespace}/${_repo}:${_tag}-b";
   if isTrue ${_cmdResult}; then
     logInfoResult SUCCESS "built"
   else
     logInfoResult FAILURE "not built"
     exitWithErrorCode ERROR_BUILDING_REPOSITORY "${_repo}";
   fi
+
+  add_file_to_image "${_logFile}" "/${IMAGE}.log" "${_namespace}/${_repo}:${_tag}-b" "${_namespace}/${_repo}:${_tag}";
+
   if reduce_image_enabled; then
     reduce_image_size "${_namespace}" "${_repo}" "${_tag}" "${_canonicalTag}";
+  fi
+}
+
+# fun: add_file_to_image file destPath oldImage newImage
+# api: public
+# txt: Adds a file to given image, creating a new one.
+# opt: file: The file to add.
+# opt: destPath: The destination path.
+# opt: oldImage: The old image.
+# opt: newImage: The new image.
+# txt: Returns 0/TRUE always, but can exit with an error.
+# use: add_file_to_image build.log /build.log myImage:old myImage:new
+function add_file_to_image() {
+  local _file="${1}";
+  checkNotEmpty file "${_file}" 1;
+
+  local _destPath="${2}";
+  checkNotEmpty destPath "${_destPath}" 2;
+
+  local _oldImage="${3}";
+  checkNotEmpty oldImage "${_oldImage}" 3;
+
+  local _newImage="${4}";
+  checkNotEmpty newImage "${_newImage}" 4;
+
+  createTempFolder;
+  local _tempFolder="${RESULT}";
+  local _dockerfile="${_tempFolder}/Dockerfile";
+
+  cp "${_file}" "${_tempFolder}";
+  local _fileName="$(basename "${_file}")";
+
+  logDebug -n "Creating Dockerfile";
+  cat <<EOF > "${_dockerfile}"
+FROM ${_oldImage}
+
+COPY ${_fileName} ${_destPath}
+EOF
+  logDebugResult SUCCESS "done";
+
+  logDebug "Creating image ${_newImage}";
+  pushd "${_tempFolder}";
+  docker build -t ${_newImage} .;
+  _rescode=$?;
+  popd;
+
+  logDebug -n "Creating image ${_newImage}";
+  if isTrue ${_rescode}; then
+    logDebugResult SUCCESS "done";
+  else
+    logDebugResult FAILURE "failed";
+  fi
+
+  return ${_rescode};
+}
+
+# fun: add_file_to_image_using_a_temporary_container file destPath oldImage newImage
+# api: public
+# txt: Adds a file to given image, creating a new one.
+# opt: file: The file to add.
+# opt: destPath: The destination path.
+# opt: oldImage: The old image.
+# opt: newImage: The new image.
+# txt: Returns 0/TRUE always, but can exit with an error.
+# use: add_file_to_image_using_a_temporary_container build.log /build.log myImage:old myImage:new
+function add_file_to_image_using_a_temporary_container() {
+  local _file="${1}";
+  checkNotEmpty file "${_file}" 1;
+
+  local _destPath="${2}";
+  checkNotEmpty destPath "${_destPath}" 2;
+
+  local _oldImage="${3}";
+  checkNotEmpty oldImage "${_oldImage}" 3;
+
+  local _newImage="${4}";
+  checkNotEmpty newImage "${_newImage}" 4;
+
+  logInfo -n "Creating a temporary container for ${_oldImage}";
+  local _containerId="$(docker create ${_oldImage})";
+  if isTrue $?; then
+    logInfoResult SUCCESS "${_containerId}";
+  else
+    logInfoResult FAILURE "failed";
+    exitWithErrorCode CANNOT_CREATE_A_DEAD_CONTAINER "${_oldImage}";
+  fi
+
+  logInfo -n "Copying ${_file} to ${_containerId} (${_oldImage})";
+  docker cp "${_file}" ${_containerId}:"${_destPath}";
+  if isTrue $?; then
+    logInfoResult SUCCESS "${_containerId}";
+  else
+    logInfoResult FAILURE "failed";
+    exitWithErrorCode CANNOT_COPY_FILE_TO_CONTAINER "${_oldImage}";
+  fi
+
+  logInfo -n "Committing ${_containerId}";
+  docker commit ${_containerId} "${_newImage}";
+  if isTrue $?; then
+    logInfoResult SUCCESS "${_newImage}";
+  else
+    logInfoResult FAILURE "failed";
+    exitWithErrorCode CANNOT_COMMIT_CONTAINER;
+  fi
+
+  logInfo -n "Deleting temporary container";
+  docker rm ${_containerId};
+  if isTrue $?; then
+    logInfoResult SUCCESS "${_containerId}";
+  else
+    logInfoResult FAILURE "failed";
+    exitWithErrorCode CANNOT_DELETE_CONTAINER "${_containerId}";
   fi
 }
 
@@ -804,6 +929,30 @@ function overwrite_latest_tag() {
       exitWithErrorCode ERROR_TAGGING_IMAGE "${_repo}";
     fi
   fi
+}
+
+# fun: annotate_successful_build repo tag
+# api: public
+# txt: Annotates a successful build.
+# opt: repo: The repository.
+# opt: tag: The tag.
+# txt: Returns 0/TRUE if the build could be annotated successfully; 1/FALSE otherwise.
+# use: if annotate_successful_build "myimage" "0.11"; then echo "Build annotated"; fi
+function annotate_successful_build() {
+  local _repo="${1}";
+  checkNotEmpty repo "${_repo}" 1;
+
+  local _tag="${2}";
+  checkNotEmpty tag "${_tag}" 2;
+
+  touch "${_repo}"/.builds;
+  local -i _rescode=$?;
+
+  if isTrue ${_rescode}; then
+    echo "${_tag}: $(date)" >> "${_repo}"/.builds;
+  fi
+
+  return ${_rescode};
 }
 
 # fun: retrieveRemoteTag namespace repo tag
@@ -976,7 +1125,8 @@ function loadRepoEnvironmentVariables() {
   local _repoSettings;
   local _privateSettings;
   local _oldIFS="${IFS}";
-  local f;
+  local _f;
+  local _repo;
 
   checkNotEmpty "repositories" "${_repos}" 1;
 
@@ -1166,6 +1316,10 @@ addError COPYRIGHT_PREAMBLE_FILE_IS_MANDATORY "COPYRIGHT_PREAMBLE_FILE needs to 
 addError CANNOT_COPY_COPYRIGHT_PREAMBLE_FILE "Cannot copy the license file ${COPYRIGHT_PREAMBLE_FILE}";
 addError COPYRIGHT_PREAMBLE_FILE_DOES_NOT_EXIST "The specified copyright-preamble file ${COPYRIGHT_PREAMBLE_FILE} does not exist";
 addError PARENT_REPO_NOT_AVAILABLE "The parent repository is not available";
+addError CANNOT_CREATE_A_DEAD_CONTAINER "Cannot create a dead container";
+addError CANNOT_COPY_FILE_TO_CONTAINER "Cannot copy file to the container";
+addError CANNOT_COMMIT_CONTAINER "Cannot commit container as new image";
+addError CANNOT_DELETE_CONTAINER "Cannot delete container";
 
 function dw_parse_noCache_cli_flag() {
   if isTrue "${NO_CACHE}" || isEmpty "${1}" || isTrue "${1}"; then
