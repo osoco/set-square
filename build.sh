@@ -783,7 +783,18 @@ function build_repo() {
     exitWithErrorCode ERROR_BUILDING_REPOSITORY "${_repo}";
   fi
 
-  add_file_to_image "${_logFile}" "/${IMAGE}.log" "${_namespace}/${_repo}:${_tag}-b" "${_namespace}/${_repo}:${_tag}";
+  logInfo -n "Adding build log to the resulting image";
+  if add_file_to_image "${_logFile}" "/${IMAGE}.log" "${_namespace}/${_repo}:${_tag}-b" "${_namespace}/${_repo}:${_tag}"; then
+    logInfoResult SUCCESS "done";
+    logInfo -n "Removing intermediate image";
+    if docker rmi "${_namespace}/${_repo}:${_tag}-b"; then
+      logInfoResult SUCCESS "done";
+    else
+      logInfoResult FAILURE "failed";
+    fi
+  else
+    logInfoResult FAILURE "failed";
+  fi
 
   if reduce_image_enabled; then
     reduce_image_size "${_namespace}" "${_repo}" "${_tag}" "${_canonicalTag}";
@@ -797,8 +808,8 @@ function build_repo() {
 # opt: destPath: The destination path.
 # opt: oldImage: The old image.
 # opt: newImage: The new image.
-# txt: Returns 0/TRUE always, but can exit with an error.
-# use: add_file_to_image build.log /build.log myImage:old myImage:new
+# txt: Returns 0/TRUE if the image could be built; 1/FALSE otherwise.
+# use: if add_file_to_image build.log /build.log myImage:old myImage:new; then echo "Image built"; fi
 function add_file_to_image() {
   local _file="${1}";
   checkNotEmpty file "${_file}" 1;
