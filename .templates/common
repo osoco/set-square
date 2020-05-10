@@ -4,13 +4,9 @@ ENV TERM="linux" \
 
 RUN mkdir -p /etc/my_exec.d \
  && mkdir -p /etc/service/.template/log \
- && mkdir -p /root/.dry-wit/src \
  && cd /usr/local/bin \
- && ln -s /root/.dry-wit/src/dry-wit dry-wit \
  && mkdir /Dockerfiles \
  && cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
-
-ADD common-files/dry-wit/ /root/.dry-wit/
 
 COPY common-files/process-file.sh \
      common-files/data \
