@@ -80,10 +80,6 @@ function main() {
 # use: update_service_user_account guest 1000 1000
 function update_account() {
   local _user="${1}";
-  local _tempGroup;
-  local _deleteGroup=${FALSE};
-  local _tempGroup;
-
   checkNotEmpty "user" "${_user}" 1;
 
   local _userId="${2}";
@@ -91,6 +87,10 @@ function update_account() {
 
   local _groupId="${3}";
   checkNotEmpty "groupId" "${_groupId}" 3;
+
+  local _tempGroup;
+  local _deleteGroup=${FALSE};
+  local _tempGroup;
 
   if ! updateUserUid ${_user} ${_userId}; then
     exitWithErrorCode CANNOT_CHANGE_UID "${_user}";
