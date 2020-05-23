@@ -12,7 +12,6 @@ COPY common-files/process-file.sh \
      common-files/data \
      common-files/copy.sh \
      common-files/run-as.sh \
-     common-files/run-as.inc.sh \
      common-files/restart.sh \
      common-files/envvar.sh \
      /usr/local/sbin/
