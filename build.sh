@@ -552,7 +552,8 @@ function resolve_include_env() {
     IFS="${_oldIFS}";
     _includedFile="";
     if [[ "${line#@include_env}" != "$line" ]]; then
-      echo -n "ENV " >> "${_output}";
+      echo "ENV DW_DISABLE_ANSI_COLORS=TRUE \\" >> "${_output}";
+      echo -n "    " >> "${_output}";
       for ((i = 0; i < ${#_envVars[@]}; i++)); do \
         _envVar="${_envVars[$i]}";
         if [ "${_envVar#ENABLE_}" == "${_envVar}" ]; then
@@ -691,7 +692,7 @@ function retrieve_backup_host_ssh_port() {
 # txt: The variable RESULT contains the build options.
 # use: retrieveDockerBuildOpts; docker build ${RESULT} .
 function retrieveDockerBuildOpts() {
-  local _result;
+  local _result="--net=host ";
 
   if isTrue ${NO_CACHE}; then
     _result="--no-cache";
