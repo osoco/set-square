@@ -1,4 +1,4 @@
-#!/bin/bash dry-wit
+#!/bin/bash /home/chous/.dry-wit/src/dry-wit
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
