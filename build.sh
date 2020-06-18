@@ -692,7 +692,7 @@ function retrieve_backup_host_ssh_port() {
 # txt: The variable RESULT contains the build options.
 # use: retrieveDockerBuildOpts; docker build ${RESULT} .
 function retrieveDockerBuildOpts() {
-  local _result="--net=host ";
+  local _result=""; #--net=host ";
 
   if isTrue ${NO_CACHE}; then
     _result="--no-cache";
@@ -1189,6 +1189,9 @@ function loadRepoEnvironmentVariables() {
 # use: if force_mode_enabled; then "force-mode enabled"; fi
 function force_mode_enabled() {
   flagEnabled FORCE_MODE;
+  local -i _rescode=$?;
+  echo "force mode? ${_rescode}. FORCE_MODE=${FORCE_MODE}";
+  return ${_rescode};
 }
 
 # fun: overwrite_latest_enabled
@@ -1335,59 +1338,59 @@ addError CANNOT_DELETE_CONTAINER "Cannot delete container";
 
 function dw_parse_noCache_cli_flag() {
   if isTrue "${NO_CACHE}" || isEmpty "${1}" || isTrue "${1}"; then
-    export NO_CACHE=TRUE;
+    export NO_CACHE=${TRUE};
   else
-    export NO_CACHE=FALSE;
+    export NO_CACHE=${FALSE};
   fi
 }
 
 function dw_parse_registryPush_cli_flag() {
   local _flag="${1}";
   if isTrue "${REGISTRY_PUSH}" || isEmpty "${1}" || isTrue "${_flag}"; then
-    export REGISTRY_PUSH=TRUE;
+    export REGISTRY_PUSH=${TRUE};
   else
-    export REGISTRY_PUSH=FALSE;
+    export REGISTRY_PUSH=${FALSE};
   fi
 }
 
 function dw_parse_registryTag_cli_flag() {
   local _flag="${1}";
   if isTrue "${REGISTRY_TAG}" || isEmpty "${1}" || isTrue "${_flag}"; then
-    export REGISTRY_TAG=TRUE;
+    export REGISTRY_TAG=${TRUE};
   else
-    export REGISTRY_TAG=FALSE;
+    export REGISTRY_TAG=${FALSE};
   fi
 }
 
 function dw_parse_force_cli_flag() {
   if isTrue "${FORCE_MODE}" || isTrue "${1}" || isEmpty "${1}"; then
-    export FORCE_MODE=TRUE;
+    export FORCE_MODE=${TRUE};
   else
-    export FORCE_MODE=FALSE;
+    export FORCE_MODE=${FALSE};
   fi
 }
 
 function dw_parse_overwriteLatest_cli_flag() {
   if isTrue "${OVERWRITE_LATEST}" || isEmpty "${1}" || isTrue "${1}"; then
-    export OVERWRITE_LATEST=TRUE;
+    export OVERWRITE_LATEST=${TRUE};
   else
-    export OVERWRITE_LATEST=FALSE;
+    export OVERWRITE_LATEST=${FALSE};
   fi
 }
 
 function dw_parse_reduceImage_cli_flag() {
   if isTrue "${REDUCE_IMAGE}" || isEmpty "${1}" || isTrue "${1}"; then
-    export REDUCE_IMAGE=TRUE;
+    export REDUCE_IMAGE=${TRUE};
   else
-    export REDUCE_IMAGE=FALSE;
+    export REDUCE_IMAGE=${FALSE};
   fi
 }
 
 function dw_parse_cleanupImages_cli_flag() {
   if isTrue "${CLEANUP_IMAGES}" || isEmpty "${1}" || isTrue "${1}"; then
-    export CLEANUP_IMAGES=TRUE;
+    export CLEANUP_IMAGES=${TRUE};
   else
-    export CLEANUP_IMAGES=FALSE;
+    export CLEANUP_IMAGES=${FALSE};
   fi
 }
 
