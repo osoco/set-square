@@ -1,12 +1,9 @@
 # v install
 ENV DEBIAN_FRONTEND="noninteractive"
 COPY install-files/pkg-install.sh \
-     install-files/pkg-install.inc.sh \
      install-files/pkg-cleanup.sh \
      install-files/system-update.sh \
-     install-files/system-update.inc.sh \
      install-files/system-cleanup.sh \
-     install-files/system-cleanup.inc.sh \
      /usr/local/sbin/
 
 RUN chmod +x /usr/local/sbin/pkg-install.sh /usr/local/sbin/pkg-cleanup.sh /usr/local/sbin/system-update.sh /usr/local/sbin/system-cleanup.sh && \
