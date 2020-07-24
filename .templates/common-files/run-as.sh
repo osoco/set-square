@@ -17,57 +17,88 @@ DW.import command;
 function main() {
   local _uid="${USER_ID}";
   local _gid="${GROUP_ID}";
-  local _restoreUid=${FALSE};
+  local -i _restoreUid=${FALSE};
   local _uidUser;
   local _temporaryUser;
   local _temporaryUid;
   local _command;
 
   if isEmpty "${_uid}"; then
-    retrieveOwnerUid "${FOLDER}";
-    _uid="${RESULT}";
+    if retrieveOwnerUid "${FOLDER}"; then
+      _uid="${RESULT}";
+    else
+      exitWithErrorCode CANNOT_RETRIEVE_USER_UID_OF_FOLDER "${FOLDER}";
+    fi
   fi
-  if isEmpty "${_uid}"; then
-    exitWithErrorCode CANNOT_RETRIEVE_USER_UID_OF_FOLDER "${FOLDER}";
-  fi
+
   if isEmpty "${_gid}"; then
-    retrieveOwnerGid "${FOLDER}";
-    _gid="${RESULT}";
-  fi
-  if isEmpty "${_gid}"; then
-    exitWithErrorCode CANNOT_RETRIEVE_GROUP_GID_OF_FOLDER "${FOLDER}";
-  fi
-
-  retrieveUidFromUser "${RUN_AS_USER}";
-  _serviceUserId="${RESULT}";
-
-  if uidAlreadyExists "${_uid}" && [ "${_uid}" != "${_serviceUserId}" ]; then
-    _restoreUid=${TRUE};
-    retrieveUserFromUid "${_uid}";
-    _uidUser="${RESULT}";
-    _temporaryUser="temp$$";
-    createUser "${_temporaryUser}";
-    retrieveUidFromUser "${_temporaryUser}";
-    _temporaryUid="${RESULT}";
-    deleteUser "${_temporaryUser}";
-    update_account "${_uidUser}" "${_temporaryUid}" "${_gid}";
+    if retrieveOwnerGid "${FOLDER}"; then
+      _gid="${RESULT}";
+    else
+      exitWithErrorCode CANNOT_RETRIEVE_GROUP_GID_OF_FOLDER "${FOLDER}";
+    fi
   fi
 
-  update_account "${RUN_AS_USER}" "${_uid}" "${_gid}";
+  if retrieveUidFromUser "${RUN_AS_USER}"; then
+    _serviceUserId="${RESULT}";
+  fi
 
-  resolveCommandForUser "${RUN_AS_USER}" "${COMMAND}";
-  _command="${RESULT}";
+  if isEmpty "${_serviceUserId}"; then
+    logInfo "Updating a temporary user to get a new uid";
+    if    uidAlreadyExists "${_uid}" \
+       && areNotEqual "${_uid}" "${_serviceUserId}"; then
+      _restoreUid=${TRUE};
+      if retrieveUserFromUid "${_uid}"; then
+        _uidUser="${RESULT}";
+      else
+        exitWithErrorCode CANNOT_RETRIEVE_USER_FROM_UID "${_uid}";
+      fi
+      _temporaryUser="temp$$";
+
+      if ! createUser "${_temporaryUser}"; then
+        exitWithErrorCode CANNOT_CREATE_USER "${_temporaryUser}";
+      fi
+
+      if retrieveUidFromUser "${_temporaryUser}"; then
+        _temporaryUid="${RESULT}";
+      else
+        exitWithErrorCode CANNOT_RETRIEVE_UID_FROM_USER "${_temporaryUser}";
+      fi
+      if ! deleteUser "${_temporaryUser}"; then
+        exitWithErrorCode CANNOT_DELETE_USER "${_temporaryUser}";
+      fi
+      if ! update_account "${_uidUser}" "${_temporaryUid}" "${_gid}"; then
+        exitWithErrorCode CANNOT_UPDATE_ACCOUNT "${_uidUser}";
+      fi
+    fi
+  fi
+
+  if ! update_account "${RUN_AS_USER}" "${_uid}" "${_gid}"; then
+    exitWithErrorCode CANNOT_UPDATE_ACCOUNT "${_uid}";
+  fi
+
+  if resolveCommandForUser "${RUN_AS_USER}" "${COMMAND}"; then
+    _command="${RESULT}";
+  fi
+
   if isEmpty "${_command}"; then
      _command="${COMMAND}";
   fi
 
   runCommandAsUidGid "${_uid}" "${_gid}" "${FOLDER}" "${_command}" "${ARGS}";
+  local -i _rescode=$?;
 
-  update_account "${RUN_AS_USER}" "${_serviceUserId}" "${_gid}";
+  if ! update_account "${RUN_AS_USER}" "${_serviceUserId}" "${_gid}"; then
+    exitWithErrorCode CANNOT_UPDATE_ACCOUNT "${_uidUser}";
+  fi
 
   if isTrue ${_restoreUid}; then
-    update_account "${_uidUser}" "${_uid}" "${_gid}";
+    if ! update_account "${_uidUser}" "${_uid}" "${_gid}"; then
+      exitWithErrorCode CANNOT_UPDATE_ACCOUNT "${_uidUser}";
+    fi
   fi
+
+  return ${_rescode};
 }
 
 # fun: update_account
@@ -81,15 +112,13 @@ function main() {
 function update_account() {
   local _user="${1}";
   checkNotEmpty "user" "${_user}" 1;
-
   local _userId="${2}";
   checkNotEmpty "userId" "${_userId}" 2;
-
   local _groupId="${3}";
   checkNotEmpty "groupId" "${_groupId}" 3;
 
   local _tempGroup;
-  local _deleteGroup=${FALSE};
+  local -i _deleteGroup=${FALSE};
   local _tempGroup;
 
   if ! updateUserUid ${_user} ${_userId}; then
@@ -98,8 +127,11 @@ function update_account() {
 
   if ! gidAlreadyExists "${_groupId}"; then
     _tempGroup="temp$$";
-    createGroup "${_tempGroup}" "${_groupId}";
-    _deleteGroup=${TRUE};
+    if createGroup "${_tempGroup}" "${_groupId}"; then
+      _deleteGroup=${TRUE};
+    else
+      exitWithErrorCode CANNOT_CREATE_GROUP "${_tempGroup}";
+    fi
   fi
 
   if ! updateUserGid "${_user}" ${_groupId}; then
@@ -107,7 +139,9 @@ function update_account() {
   fi
 
   if isTrue ${_deleteGroup}; then
-    deleteGroup "${_tempGroup}";
+    if ! deleteGroup "${_tempGroup}"; then
+      exitWithErrorCode CANNOT_DELETE_GROUP "${_tempGroup}";
+    fi
   fi
 }
 
@@ -142,6 +176,13 @@ addError GROUP_ID_IS_MANDATORY "The group id is mandatory if the -g flag is prov
 addError GROUP_NAME_IS_MANDATORY "The group name is mandatory if the -G flag is provided";
 addError GROUP_DOES_NOT_EXIST "The group does not exist";
 addError INVALID_GROUP_NAME "Invalid group name";
+addError CANNOT_RETRIEVE_USER_FROM_UID "Cannot retrieve the user associated to uid ";
+addError CANNOT_RETRIEVE_UID_FROM_USER "Cannot retrieve the uid associated to user ";
+addError CANNOT_CREATE_USER "Cannot create user ";
+addError CANNOT_DELETE_USER "Cannot delete user ";
+addError CANNOT_UPDATE_ACCOUNT "Cannot updated account ";
+addError CANNOT_CREATE_GROUP "Cannot create group ";
+addError CANNOT_DELETE_GROUP "Cannot delete group ";
 
 function dw_check_userid_cli_flag() {
   if isEmpty "${1}"; then
