@@ -14,6 +14,7 @@ COPY common-files/process-file.sh \
      common-files/run-as.sh \
      common-files/restart.sh \
      common-files/envvar.sh \
+     common-files/pending_scripts.sh \
      /usr/local/sbin/
 
 COPY common-files/logger /etc/service/.template/log/run
