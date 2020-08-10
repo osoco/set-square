@@ -47,6 +47,7 @@ function find_pending_scripts() {
   for _candidate in ${_candidates}; do
     IFS="${_oldIFS}";
     if   isExecutable "${_candidate}" \
+      && ! folderExists "${_candidate}" \
       && ! endsWith "${_candidate}" ".inc.sh" \
       && ! already_done "${_candidate}"; then
       _rescode=${TRUE};
