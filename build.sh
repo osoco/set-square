@@ -1,4 +1,4 @@
-#!/bin/bash /home/chous/.dry-wit/src/dry-wit
+#!/bin/bash dry-wit
 # Copyright 2014-today Automated Computing Machinery S.L.
 # Distributed under the terms of the GNU General Public License v3
 
@@ -1189,9 +1189,6 @@ function loadRepoEnvironmentVariables() {
 # use: if force_mode_enabled; then "force-mode enabled"; fi
 function force_mode_enabled() {
   flagEnabled FORCE_MODE;
-  local -i _rescode=$?;
-  echo "force mode? ${_rescode}. FORCE_MODE=${FORCE_MODE}";
-  return ${_rescode};
 }
 
 # fun: overwrite_latest_enabled
