@@ -5,13 +5,17 @@
 # api: public
 # txt: Detects pending scripts, and runs them.
 
+DW.import process;
+
 # fun: main
 # api: public
 # txt: Detects pending scripts, and runs them.
 # txt: Returns 0/TRUE always, but can exit in case of error.
 # use: main
 function main() {
-  if find_pending_scripts; then
+  if anotherProcessAlreadyRunning; then
+    logInfo "Another process is already running.";
+  elif find_pending_scripts; then
     local _scripts="${RESULT}";
 
     local _oldIFS="${IFS}";
