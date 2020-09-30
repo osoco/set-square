@@ -184,10 +184,14 @@ addError CANNOT_REMOVE_LOCK_FILE "Cannot remove the lock file";
 DW.getScriptName;
 # env: TYPE: The type of the scripts: rabbitmq, mongodb, etc. Defaults to basename ${0} .sh | sed 's/^.*_\(.*\)_.*$/\1/g'
 defineEnvVar TYPE MANDATORY "The type of the scripts: rabbitmq, mongodb, etc." "$(basename ${RESULT} .sh | sed 's/^.*_\(.*\)_.*$/\1/g')";
+
 # env: PENDING_SCRIPTS_FOLDER: The folder with the pending scripts.
 defineEnvVar PENDING_SCRIPTS_FOLDER MANDATORY "The folder with the pending scripts" "/backup/${TYPE}/changesets";
+
 # env: DONE_SCRIPTS_FOLDER: The folder with the scripts already executed.
 defineEnvVar DONE_SCRIPTS_FOLDER MANDATORY "The folder with the scripts already executed" "/backup/${TYPE}/changesets";
+
+DW.getScriptName;
 # env: LOCK_FILE: The lock file.
-defineEnvVar LOCK_FILE MANDATORY "The lock file" "${PENDING_SCRIPTS_FOLDER}/.lock";
+defineEnvVar LOCK_FILE MANDATORY "The lock file" "${PENDING_SCRIPTS_FOLDER}/.${RESULT}.lock";
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
