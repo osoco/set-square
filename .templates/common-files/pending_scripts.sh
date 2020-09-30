@@ -13,22 +13,64 @@ DW.import process;
 # txt: Returns 0/TRUE always, but can exit in case of error.
 # use: main
 function main() {
-  if anotherProcessAlreadyRunning; then
+  if lock_file_exists; then
     logInfo "Another process is already running.";
   elif find_pending_scripts; then
-    local _scripts="${RESULT}";
+    if create_lock_file; then
+      local _scripts="${RESULT}";
 
-    local _oldIFS="${IFS}";
-    local _script;
-    IFS="${DWIFS}";
-    for _script in ${_scripts}; do
+      local _oldIFS="${IFS}";
+      local _script;
+      IFS="${DWIFS}";
+      for _script in ${_scripts}; do
+        IFS="${_oldIFS}";
+        if run_script "${_script}"; then
+          mark_script_as_done "${_script}";
+        fi
+      done;
       IFS="${_oldIFS}";
-      if run_script "${_script}"; then
-        mark_script_as_done "${_script}";
+      if ! remove_lock_file; then
+        exitWithErrorCode CANNOT_REMOVE_LOCK_FILE;
       fi
-    done;
-    IFS="${_oldIFS}";
+    else
+      exitWithErrorCode CANNOT_CREATE_LOCK_FILE;
+    fi
   fi
+}
+
+# fun: lock_file_exists
+# api: public
+# txt: Checks whether the lock file exists.
+# txt: Returns 0/TRUE if the lock file exists; 1/FALSE otherwise.
+# use: if lock_file_exists; then
+# use:   echo "Lock file exists";
+# use: fi
+function lock_file_exists() {
+  fileExists "${LOCK_FILE}";
+}
+
+# fun: create_lock_file
+# api: public
+# txt: Creates the lock file.
+# txt: Returns 0/TRUE if the lock file could be created; 1/FALSE otherwise.
+# use: if create_lock_file; then
+# use:   echo "Lock file created";
+# use: fi
+function create_lock_file() {
+
+  touch "${LOCK_FILE}" 2> /dev/null;
+}
+
+# fun: remove_lock_file
+# api: public
+# txt: Removes the lock file.
+# txt: Returns 0/TRUE if the lock file could be removed; 1/FALSE otherwise.
+# use: if remove_lock_file; then
+# use:   echo "Lock file removed";
+# use: fi
+function remove_lock_file() {
+
+  rm -f "${LOCK_FILE}" 2> /dev/null;
 }
 
 # fun: find_pending_scripts
@@ -135,6 +177,10 @@ function run_script() {
 # script metadata
 setScriptDescription "Detects pending scripts, and runs them.";
 
+# errors
+addError CANNOT_CREATE_LOCK_FILE "Cannot create the lock file";
+addError CANNOT_REMOVE_LOCK_FILE "Cannot remove the lock file";
+
 DW.getScriptName;
 # env: TYPE: The type of the scripts: rabbitmq, mongodb, etc. Defaults to basename ${0} .sh | sed 's/^.*_\(.*\)_.*$/\1/g'
 defineEnvVar TYPE MANDATORY "The type of the scripts: rabbitmq, mongodb, etc." "$(basename ${RESULT} .sh | sed 's/^.*_\(.*\)_.*$/\1/g')";
@@ -142,4 +188,6 @@ defineEnvVar TYPE MANDATORY "The type of the scripts: rabbitmq, mongodb, etc." "
 defineEnvVar PENDING_SCRIPTS_FOLDER MANDATORY "The folder with the pending scripts" "/backup/${TYPE}/changesets";
 # env: DONE_SCRIPTS_FOLDER: The folder with the scripts already executed.
 defineEnvVar DONE_SCRIPTS_FOLDER MANDATORY "The folder with the scripts already executed" "/backup/${TYPE}/changesets";
+# env: LOCK_FILE: The lock file.
+defineEnvVar LOCK_FILE MANDATORY "The lock file" "${PENDING_SCRIPTS_FOLDER}/.lock";
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
