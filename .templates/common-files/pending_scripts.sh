@@ -191,7 +191,10 @@ defineEnvVar PENDING_SCRIPTS_FOLDER MANDATORY "The folder with the pending scrip
 # env: DONE_SCRIPTS_FOLDER: The folder with the scripts already executed.
 defineEnvVar DONE_SCRIPTS_FOLDER MANDATORY "The folder with the scripts already executed" "/backup/${TYPE}/changesets";
 
+# env: LOCK_FILE_FOLDER: The folder with the lock file.
+defineEnvVar LOCK_FILE_FOLDER MANDATORY "The folder with the lock file" "/tmp";
+
 DW.getScriptName;
 # env: LOCK_FILE: The lock file.
-defineEnvVar LOCK_FILE MANDATORY "The lock file" "${PENDING_SCRIPTS_FOLDER}/.${RESULT}.lock";
+defineEnvVar LOCK_FILE MANDATORY "The lock file" "${LOCK_FILE_FOLDER}/.${RESULT}.lock";
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
