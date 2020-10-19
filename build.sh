@@ -671,7 +671,8 @@ function retrieve_backup_host_ssh_port() {
   checkNotEmpty repo "${_repo}" 1;
   local _result;
 
-  if fileExists "${SSHPORTS_FILE}"; then
+  if     isNotEmpty "${SSHPORTS_FILE}" \
+      && fileExists "${SSHPORTS_FILE}"; then
     logDebug -n "Retrieving the ssh port of the backup host for ${_repo}";
     _result="$(echo -n ''; (grep -e ${_repo} ${SSHPORTS_FILE} || echo ${_repo} 22) | awk '{print $2;}' | head -n 1)";
     if isTrue $?; then
