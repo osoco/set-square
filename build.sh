@@ -771,7 +771,6 @@ function build_repo() {
   retrieveDockerBuildOpts;
   _buildOpts="${RESULT}";
   logInfo "docker build ${_buildOpts} -t ${_namespace}/${_repo}:${_tag} --rm=true ${_repo}";
-  #  echo docker build ${_buildOpts} -t "${_namespace}/${_repo}:${_tag}" --rm=true "${_repo}"
 
   DW.import command;
 
