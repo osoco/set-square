@@ -6,7 +6,7 @@ RUN mkdir -p /etc/my_exec.d \
  && mkdir -p /etc/service/.template/log \
  && cd /usr/local/bin \
  && mkdir /Dockerfiles \
- && cd /bin && rm -f /bin/sh && ln -s /bin/bash sh
+ && cd /bin && rm -f /bin/sh && ln -s /bin/bash sh && ln -s /usr/bin/env
 
 COPY common-files/process-file.sh \
      common-files/data \
