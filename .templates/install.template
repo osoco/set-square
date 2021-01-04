@@ -6,10 +6,10 @@ COPY install-files/pkg-install.sh \
      install-files/system-cleanup.sh \
      /usr/local/sbin/
 
-RUN chmod +x /usr/local/sbin/pkg-install.sh /usr/local/sbin/pkg-cleanup.sh /usr/local/sbin/system-update.sh /usr/local/sbin/system-cleanup.sh && \
-    mkdir -p /var/local/ && \
-    touch /var/local/docker-installed-packages.txt && \
-    ${SYSTEM_UPDATE} && \
-    ${PKG_INSTALL} wget gettext sudo && \
-    ${SYSTEM_CLEANUP}
+RUN chmod +x /usr/local/sbin/pkg-install.sh /usr/local/sbin/pkg-cleanup.sh /usr/local/sbin/system-update.sh /usr/local/sbin/system-cleanup.sh \
+ && mkdir -p /var/local/ \
+ && touch /var/local/docker-installed-packages.txt \
+ && ${SYSTEM_UPDATE} \
+ && ${PKG_INSTALL} wget gettext sudo gosu \
+ && ${SYSTEM_CLEANUP}
 # ^ install
