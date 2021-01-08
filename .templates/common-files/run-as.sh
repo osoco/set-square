@@ -44,7 +44,7 @@ function main() {
   fi
 
   if isEmpty "${_serviceUserId}"; then
-    logInfo "Updating a temporary user to get a new uid";
+    logDebug "Updating a temporary user to get a new uid";
     if    uidAlreadyExists "${_uid}" \
        && areNotEqual "${_uid}" "${_serviceUserId}"; then
       _restoreUid=${TRUE};
