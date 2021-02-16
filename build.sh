@@ -1140,12 +1140,15 @@ function loadRepoEnvironmentVariables() {
   local _f;
   local _repo;
 
+  local _file;
+
   checkNotEmpty "repositories" "${_repos}" 1;
 
   DW.getScriptFolder;
   local _scriptFolder="${RESULT}";
 
   IFS="${DWIFS}";
+	local _repo;
   for _repo in ${_repos}; do
     for _f in "${_scriptFolder}/${_repo}/build-settings.sh" \
                "./${_repo}/build-settings.sh"; do
