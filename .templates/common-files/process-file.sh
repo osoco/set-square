@@ -39,7 +39,7 @@ environment variables, and stores the result in the specified output file."
 addCommandLineFlag "output" "o" "The output file" MANDATORY EXPECTS_ARGUMENT
 addCommandLineParameter "input" "The input file" MANDATORY SINGLE
 
-addError ENVSUBST_NOT_INSTALLED "envsubst is not installed"
+addError ENVSUBST_NOT_INSTALLED "envsubst is not installed. Please install gettext package"
 checkReq envsubst ENVSUBST_NOT_INSTALLED
 
 # fun: dw_parse_input_cli_parameter
