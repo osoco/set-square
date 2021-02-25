@@ -10,7 +10,7 @@
 # txt: Main logic (dry-wit hook).
 # txt: Retuns 0/TRUE always.
 function main() {
-  replace_placeholders "${INPUT_FILE}" "${OUTPUT_FILE}";
+	replace_placeholders "${INPUT_FILE}" "${OUTPUT_FILE}"
 }
 
 # fun: replace_placeholders
@@ -21,31 +21,33 @@ function main() {
 # txt: Returns 0/TRUE if the file is processed, 1/FALSE otherwise.
 # txt: The variable RESULT contains the path of the processed file if the function returns 0/TRUE.
 function replace_placeholders() {
-  local _file="${1}";
-  checkNotEmpty file "${_file}" 1;
+	local _file="${1}"
+	checkNotEmpty file "${_file}" 1
 
-  local _output="${2}";
-  checkNotEmpty output "${_output}" 2;
+	local _output="${2}"
+	checkNotEmpty output "${_output}" 2
 
-  local _env="$(IFS=" \t" env | grep -v 'DWIFS' | grep -v ':' | awk -F'=' '{printf("%s=\"%s\" ", $1, $2);}')";
-  replaceVariablesInFile "${_file}" "${_output}" ${_env};
+	local _env
+	_env="$(IFS=" \t" env | grep -v 'DWIFS' | grep -v ':' | awk -F'=' '{printf("%s=\"%s\" ", $1, $2);}')"
+	replaceVariablesInFile "${_file}" "${_output}" ${_env}
 }
 
 ## Script metadata and CLI options
 setScriptDescription "Processes a file, replacing any placeholders with the contents of the \
-environment variables, and stores the result in the specified output file.";
+environment variables, and stores the result in the specified output file."
 
-addCommandLineFlag "output" "o" "The output file" MANDATORY EXPECTS_ARGUMENT;
-addCommandLineParameter "input" "The input file" MANDATORY SINGLE;
+addCommandLineFlag "output" "o" "The output file" MANDATORY EXPECTS_ARGUMENT
+addCommandLineParameter "input" "The input file" MANDATORY SINGLE
 
-checkReq envsubst;
+addError ENVSUBST_NOT_INSTALLED "envsubst is not installed"
+checkReq envsubst ENVSUBST_NOT_INSTALLED
 
 # fun: dw_parse_input_cli_parameter
 # api: public
 # txt: Parses the "input" parameter (dry-wit hook).
 # txt: Returns 0/TRUE always.
 function dw_parse_input_cli_parameter() {
-  export INPUT_FILE="${1}";
+	export INPUT_FILE="${1}"
 }
 
 # fun: dw_parse_output_cli_flag
@@ -53,6 +55,6 @@ function dw_parse_input_cli_parameter() {
 # txt: Parses the "output" flag (dry-wit hook).
 # txt: Returns 0/TRUE always.
 function dw_parse_output_cli_flag() {
-  export OUTPUT_FILE="${1}";
+	export OUTPUT_FILE="${1}"
 }
 # vim: syntax=sh ts=2 sw=2 sts=4 sr noet
